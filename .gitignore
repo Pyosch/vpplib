@@ -1,0 +1,3 @@
+#Verzeichnis __pycache__ ignorieren
+__pycache__/
+Results/
