@@ -12,8 +12,6 @@ class VPPComponent(object):
     
     
     
-    
-    
     # This function takes a timestamp as the parameter and returns the
     # corresponding value for that timestamp. A positiv result represents
     # a load. A negative result represents a generation.
