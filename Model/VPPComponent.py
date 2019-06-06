@@ -1,12 +1,18 @@
 
+# TODO: Implement valueForTimestamp with reference to the environment object in child classes!
+
 class VPPComponent(object):
     
     # The parameter timebase determines the resolution of the given data.
-    def __init__(self, timebase):
+    # Furthermore the parameter environment (VPPEnvironment) is given to provide weather data and further external influences.
+    # To account for different people using a component, a use case (VPPUseCase) can be passed in to improve the simulation.
+    def __init__(self, timebase, environment, useCase):
     
         # Configure attributes
         self.unit = "kW"
         self.dataResolution = timebase
+        self.environment = environment
+        self.useCase = useCase
     
     
     
