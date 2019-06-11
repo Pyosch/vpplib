@@ -1,5 +1,5 @@
 
-import VPPComponent #from .VPPComponent 
+from .VPPComponent import VPPComponent
 
 import pandas as pd
 
@@ -52,10 +52,7 @@ class VPPPhotovoltaik(VPPComponent):
     
     
     
-    def prepareTimeSeries(self):
-        
-        weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
-        weather_data.set_index("index", inplace = True)
+    def prepareTimeSeries(self, weather_data):
     
         # -> Functions stub <-
         self.modelchain.run_model(times = weather_data.index, weather = weather_data)
