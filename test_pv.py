@@ -21,3 +21,15 @@ pv = VPPPhotovoltaik.VPPPhotovoltaik(timebase=1, identifier=name, latitude=latit
 
 pv.prepareTimeSeries(weather_data)
 pv.timeseries.plot()
+
+i = pv.timeseries.index[15024]
+print(pv.timeseries[pv.identifier][i])
+
+#timestamp = pv.timeseries.index[15024]
+#timestamp = 15024
+#
+#print(timestamp)
+#
+#timestepvalue = pv.valueForTimestamp(i)
+#
+#print(timestepvalue)
