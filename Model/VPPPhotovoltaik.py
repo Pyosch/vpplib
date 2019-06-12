@@ -88,10 +88,10 @@ class VPPPhotovoltaik(VPPComponent):
         
             # Paramter is invalid
             return
-
-
-
-
+        
+    def print_value(self, time):
+        
+        print(time+200)
 
     # ===================================================================================
     # Balancing Functions
@@ -100,5 +100,9 @@ class VPPPhotovoltaik(VPPComponent):
     # Override balancing function from super class.
     def valueForTimestamp(self, timestamp):
 
-        # -> Function stub <-
-        return self.timeseries[timestamp] * self.limit
+        # -> Function stub <- pv.timeseries[pv.identifier][pv.timeseries.index[15024]]
+#        print("Timestamp: ", timestamp)
+#        print("identifier: ", self.identifier)
+#        print(self.timeseries[self.identifier])
+        
+        return self.timeseries[self.identifier][self.timeseries.index[timestamp]] * self.limit

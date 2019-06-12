@@ -19,17 +19,16 @@ weather_data.set_index("index", inplace = True)
 
 pv = VPPPhotovoltaik.VPPPhotovoltaik(timebase=1, identifier=name, latitude=latitude, longitude=longitude, modules_per_string=1, strings_per_inverter=1)
 
-pv.prepareTimeSeries(weather_data)
-pv.timeseries.plot()
+def test_prepareTimeSeries(pv, weather_data):
+    
+    pv.prepareTimeSeries(weather_data)
+    print(pv.timeseries.head())
 
-i = pv.timeseries.index[15024]
-print(pv.timeseries[pv.identifier][i])
-
-#timestamp = pv.timeseries.index[15024]
-#timestamp = 15024
-#
-#print(timestamp)
-#
-#timestepvalue = pv.valueForTimestamp(i)
-#
-#print(timestepvalue)
+def test_valueForTimestamp(pv):
+    
+    i = 15024
+    timestepvalue = pv.valueForTimestamp(timestamp = i)
+    print(timestepvalue)
+    
+test_prepareTimeSeries(pv, weather_data)
+test_valueForTimestamp(pv)
