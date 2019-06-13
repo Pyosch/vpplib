@@ -135,7 +135,10 @@ class HeatPump(VPPComponent):
     def valueForTimestamp(self, timestamp):
 
         # -> Function stub <-
-        return self.timeseries[timestamp] * self.limit
+        demand, cop = self.timeseries.loc[self.timeseries.index[timestamp]]
+        # TODO: cop would change if power of heatpump is limited. 
+        # Dropping limiting factor for heatpumps
+        return demand, cop
 
 
 class HeatStorage:

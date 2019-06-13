@@ -38,6 +38,15 @@ def test_prepareTimeseries(hp):
     hp.timeseries.plot()
     plt.show()
     
+def test_valueForTimestamp(hp):
+    
+    i = 15024
+    demand, cop = hp.valueForTimestamp(timestamp = i)
+    print("Demand: ",demand)
+    print("cop: ", cop)
+    
+    
 test_prepareTimeseries(hp)  
 test_get_heat_demand(hp)
 test_get_cop(hp)
+test_valueForTimestamp(hp)
