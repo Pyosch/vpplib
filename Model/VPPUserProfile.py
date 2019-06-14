@@ -1,9 +1,9 @@
 
-# The class "VPPUseCase" reflects different patterns of use and behaviour. This makes it possible, for example, to simulate different usage profiles of electric vehicles.
+# The class "VPPUserProfile" reflects different patterns of use and behaviour. This makes it possible, for example, to simulate different usage profiles of electric vehicles.
 
 # TODO: Collect information about parameters that must be represented in a use case.
 
-class VPPUseCase(object):
+class VPPUserProfile(object):
 
     def __init__(self):
 

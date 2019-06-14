@@ -6,13 +6,13 @@ class VPPComponent(object):
     # The parameter timebase determines the resolution of the given data.
     # Furthermore the parameter environment (VPPEnvironment) is given to provide weather data and further external influences.
     # To account for different people using a component, a use case (VPPUseCase) can be passed in to improve the simulation.
-    def __init__(self, timebase, environment, useCase):
+    def __init__(self, timebase, environment, userProfile):
     
         # Configure attributes
         self.unit = "kW"
         self.dataResolution = timebase
         self.environment = environment
-        self.useCase = useCase
+        self.userProfile = userProfile
     
     
     
