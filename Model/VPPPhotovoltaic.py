@@ -1,3 +1,9 @@
+"""
+Info
+----
+This file contains the basic functionalities of the VPPPhotovoltaic class.
+
+"""
 
 from .VPPComponent import VPPComponent
 
@@ -10,19 +16,50 @@ from pvlib.pvsystem import PVSystem
 from pvlib.location import Location
 from pvlib.modelchain import ModelChain
 
-class VPPPhotovoltaik(VPPComponent):
+class VPPPhotovoltaic(VPPComponent):
 
     # The constructor takes an identifier (String) for referencing the current
-    # photovoltaik power plant. The parameter peak power (Float) determines the maximum
-    # power that the photovoltaik power plant can generate.
+    # photovoltaic power plant. The parameter peak power (Float) determines the maximum
+    # power that the photovoltaic power plant can generate.
     def __init__(self, timebase, identifier, latitude, longitude, environment = None, userProfile = None,
                  module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
                  inverter_lib = 'cecinverter', inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
                  surface_tilt = 20, surface_azimuth = 200,
                  modules_per_string = 1, strings_per_inverter = 1):
+        """
+        Info
+        ----
+        ...
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Call to super class
-        super(VPPPhotovoltaik, self).__init__(timebase, environment, userProfile)
+        super(VPPPhotovoltaic, self).__init__(timebase, environment, userProfile)
     
     
         # Configure attributes
@@ -47,11 +84,8 @@ class VPPPhotovoltaik(VPPComponent):
                           strings_per_inverter=strings_per_inverter)
         
         self.modelchain = ModelChain(self.system, self.location, name=identifier)
-    
-    
-    
-    
-    
+
+
     def prepareTimeSeries(self, weather_data):
     
         # -> Functions stub <-
@@ -66,14 +100,11 @@ class VPPPhotovoltaik(VPPComponent):
         return timeseries
 
 
-
-
-
     # ===================================================================================
     # Controlling functions
     # ===================================================================================
 
-    # This function limits the power of the photovoltaik to the given percentage.
+    # This function limits the power of the photovoltaic to the given percentage.
     # It cuts the current power production down to the peak power multiplied by
     # the limit (Float [0;1]).
     def limitPowerTo(self, limit):

@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jun 18 15:34:00 2019
+Info
+----
+In this testfile the basic functionalities of the VPPBEV class are tested.
+Run each time you make changes on an existing function.
+Adjust if a new function is added or 
+parameters in an existing function are changed.
 
-@author: Sascha Birk
 """
 
 from Model.VPPBEV import VPPBEV
+import matplotlib.pyplot as plt
 
 bev = VPPBEV(1,2,3,2017)
 
@@ -14,7 +19,9 @@ def test_prepareTimeSeries(bev):
     bev.prepareTimeSeries()
     bev.prepareBEV()
     print("prepareTimeSeries:")
-    print(bev.timeseries.head())    
+    print(bev.timeseries.head()) 
+    bev.timeseries.plot()
+    plt.show()
     
 def test_valueForTimestamp(bev):
     

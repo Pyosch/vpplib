@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 29 10:18:08 2019
+Info
+----
+In this testfile the basic functionalities of the VPPHeatPump class are tested.
+Run each time you make changes on an existing function.
+Adjust if a new function is added or 
+parameters in an existing function are changed.
 
-@author: Sascha Birk
 """
 
-import heat
+from Model.VPPHeatPump import VPPHeatPump
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -17,7 +21,7 @@ freq = "15 min"
 
 df_index = pd.DataFrame(pd.date_range(start, end, periods, freq, name ='Time'))
 
-hp = heat.HeatPump(identifier = "House 1", df_index = df_index)
+hp = VPPHeatPump(identifier = "House 1", df_index = df_index)
 
 def test_get_heat_demand(hp):
     

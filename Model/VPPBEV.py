@@ -1,4 +1,9 @@
+"""
+Info
+----
+This file contains the basic functionalities of the VPPBEV class.
 
+"""
 from .VPPComponent import VPPComponent
 
 import pandas as pd
@@ -12,9 +17,11 @@ class VPPBEV(VPPComponent):
         # Call to super class
         super(VPPBEV, self).__init__(timebase,2,3)
         
-        # Configure attributes
-        
         """
+        Info
+        ----
+        ...
+        
         Parameters
         ----------
         year: int
@@ -43,6 +50,22 @@ class VPPBEV(VPPComponent):
             
         at_home: pandas.core.frame.DataFrame
             DataFrame containing 1 if car is at home and 0 if not
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
         """
         
         if calendar.isleap(year):
@@ -61,22 +84,90 @@ class VPPBEV(VPPComponent):
         self.identifier = identifier
         self.peakPower = peakPower
       
-    def prepareTimeSeries(self, start = '2017-01-01 00:00:00', end = '2017-12-31 23:59:59', freq = "15min"):
-        self.timeseries = self.new_scenario(column = 'demand')
-        # -> Functions stub <-
-        #self.timeseries = pd.DataFrame(pd.date_range(start, end, freq = freq, name ='Time'))
+    def prepareTimeSeries(self, start = '2017-01-01 00:00:00', 
+                          end = '2017-12-31 23:59:59', freq = "15min"):
         
-        #self.timeseries["demand"] = np.zeros((35040,))
+        self.timeseries = self.new_scenario(column = 'demand')
+
     
-    def prepareBEVLoadshape(self, work_start, work_end, weekend_trip_start, weekend_trip_end, battery_min, battery_max, charging_power, efficiency, battery_usage, time_base, df):
+    def prepareBEVLoadshape(self, work_start, work_end, weekend_trip_start, 
+                            weekend_trip_end, battery_min, battery_max, 
+                            charging_power, efficiency, battery_usage, 
+                            time_base, df):
+        
+        """
+        Info
+        ----
+        ...
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
     
         self.split_time(df)    
         df = self.set_at_home(df, work_start, work_end, weekend_trip_start, weekend_trip_end)
         df = self.charge(df, battery_min, battery_max, charging_power, efficiency, battery_usage, time_base)
         self.timeseries.set_index('Time', inplace = True, drop = True)
+        
         return df
 
     def prepareBEV(self):
+        
+        """
+        Info
+        ----
+        ...
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        
         #time_base = 1 #for hourly loadshapes
         time_base = 15/60 #for loadshapes with steps, smaller than one hour (eg. 15 minutes)
         
@@ -131,23 +222,91 @@ class VPPBEV(VPPComponent):
         
         return df_main
     
-    def loadshape(self, work_start, work_end, weekend_trip_start, weekend_trip_end, battery_min, battery_max, charging_power, efficiency, battery_usage, time_base = (15/60)):
+    def loadshape(self, work_start, work_end, weekend_trip_start, 
+                  weekend_trip_end, battery_min, battery_max, charging_power, 
+                  efficiency, battery_usage, time_base = (15/60)):
+        
+        """
+        Info
+        ----
+        ...
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        
         df = self.new_scenario()
         df = self.split_time(df)
         df = self.at_home(df, work_start, work_end, weekend_trip_start, weekend_trip_end)
         df = self.charge(df, battery_min, battery_max, charging_power, efficiency, battery_usage, time_base )
         
         return df
+    
     # ===================================================================================
     # Controlling functions
     # ===================================================================================
-    def charge(self, df, battery_min, battery_max, charging_power, efficiency, battery_usage, time_base ):
+    def charge(self, df, battery_min, battery_max, charging_power, efficiency, 
+               battery_usage, time_base ):
         
-        #Determine the charge of the car battery and the power drawn by the charger.
-        #The charger power will add to the el. demand of the house.
-        #For later implementation in the house model, consider 'grid friendly' charging
+        """
+        Info
+        ----
+        Determine the charge of the car battery and the power drawn by the charger.
+        The charger power will add to the el. demand of the house.
+        
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        For later implementation consider 'grid friendly' charging
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        
         load_degradiation_begin = 0.8
-        battery_charge = battery_max#(battery_min + battery_max)/2
+        battery_charge = battery_max
         lst_battery = []
         lst_charger = []
     
@@ -203,7 +362,38 @@ class VPPBEV(VPPComponent):
 
     def split_time(self, df):
         
-        #Add column with Hours to determine start and end of charging
+        """
+        Info
+        ----
+        Add column with Hours to determine start and end of charging.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        
         df = pd.DataFrame(self.date_time_index.astype(
                 'str').str.split().tolist(), columns="date hour".split())
         self.date = df.date
@@ -213,26 +403,82 @@ class VPPBEV(VPPComponent):
 # In[Determine weekdays according to date time index]:
         
     def set_weekday(self):
+        
         """
         Add weekday: 0 = Monday
         if 'Time' is already the index use : df['weekday'] = df.index.weekday
         """
-#        self.weekday = pd.DataFrame({ "weekday" : self.date_time_index.weekday})
-        self.weekday = self.date_time_index.weekday
+        """
+        Info
+        ----
+        ...
         
-    def get_weekday(self):
-        return self.weekday
-    
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        self.weekday = self.date_time_index.weekday
+   
 
 # In[Determine times when car is at home]:
     
     def set_at_home(self, df, work_start, work_end, weekend_trip_start, weekend_trip_end):
         
         """
+        Info
+        ----
         Determine the Times when the car is at home. During the week (weekday < 5) and on the weekend (weekday >= 5).
         Pick departure and arrival times from the preconfigured lists: work_start, work_end, weekend_trip_start, weekend_trip_end.
         (len(...)-1) is necessary because len() starts counting at 1 and randrange() starts indexing at 0.
         If the car is at home add 1 to the list. If not add 0 to the list
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
         """
 
         lst = []
@@ -252,8 +498,8 @@ class VPPBEV(VPPComponent):
                 lst.append(0) 
     
         df["at_home"] = pd.DataFrame({ "at home" : lst})
+        
         return df
-
 
     # ===================================================================================
     # Balancing Functions

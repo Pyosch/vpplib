@@ -1,14 +1,51 @@
+"""
+Info
+----
+This file contains the basic functionalities of the VPPCombinedHeatAndPower class.
 
-import VPPComponent
+"""
+
+from .VPPComponent import VPPComponent
 
 class VPPCombinedHeatAndPower(VPPComponent):
 
-    # The constructor takes an identifier (String) for referencing the current
-    # combined heat and power plant. The parameters nominal power (Float) determines the
-    # nominal power both electrical and thermal.
-    # The parameters ramp up time and ramp down time (Int [s]) as well as the minimum running
-    # time and minimum stop time (Int [s]) are given for controlling the combined heat and power plant.
     def __init__(self, timebase, identifier, nominalPowerEl, nominalPowerTh, rampUpTime, rampDownTime, minimumRunningTime, minimumStopTime):
+        
+        """
+        Info
+        ----
+        The constructor takes an identifier (String) for referencing the current
+        combined heat and power plant. The parameters nominal power (Float) determines the
+        nominal power both electrical and thermal.
+        The parameters ramp up time and ramp down time (Int [s]) as well as the minimum running
+        time and minimum stop time (Int [s]) are given for controlling the combined heat and power plant.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Call to super class
         super(VPPCombinedHeatAndPower, self).__init__(timebase)
@@ -27,27 +64,52 @@ class VPPCombinedHeatAndPower(VPPComponent):
         self.lastRampDown = None
         self.limit = 1.0
     
-    
-    
-    
-    
+
     def prepareTimeSeries(self):
     
         # -> Functions stub <-
         self.timeseries = []
 
 
-
-
-
     # ===================================================================================
     # Controlling functions
     # ===================================================================================
 
-    # This function limits the power of the combined heat and power plant to the given percentage.
-    # It cuts the current power production down to the peak power multiplied by
-    # the limit (Float [0;1]).
     def limitPowerTo(self, limit):
+        
+        """
+        Info
+        ----
+        This function limits the power of the combined heat and power plant to the given percentage.
+        It cuts the current power production down to the peak power multiplied by
+        the limit (Float [0;1])
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Validate input parameter
         if limit >= 0 and limit <= 1:
@@ -59,9 +121,6 @@ class VPPCombinedHeatAndPower(VPPComponent):
         
             # Paramter is invalid
             return
-
-
-
 
 
     def isRunning(self):
@@ -85,16 +144,44 @@ class VPPCombinedHeatAndPower(VPPComponent):
                         return False
 
 
-
-
-
-    # This function ramps up the combined heat and power plant. The timestamp is neccessary to calculate
-    # if the combined heat and power plant is running in later iterations of balancing. The possible
-    # return values are:
-    # - None:       Ramp up has no effect since the combined heat and power plant is already running
-    # - True:       Ramp up was successful
-    # - False:      Ramp up was not successful (due to constraints for minimum running and stop times)
     def rampUp(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function ramps up the combined heat and power plant. The timestamp is neccessary to calculate
+        if the combined heat and power plant is running in later iterations of balancing. The possible
+        return values are:
+            - None:       Ramp up has no effect since the combined heat and power plant is already running
+            - True:       Ramp up was successful
+            - False:      Ramp up was not successful (due to constraints for minimum running and stop times)
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Check if already running
         if self.isRunning():
@@ -123,17 +210,45 @@ class VPPCombinedHeatAndPower(VPPComponent):
                     # Ramp up is not allowed
                     return False
     
-    
-    
 
-
-    # This function ramps down the combined heat and power plant. The timestamp is neccessary to calculate
-    # if the combined heat and power plant is running in later iterations of balancing. The possible
-    # return values are:
-    # - None:       Ramp down has no effect since the combined heat and power plant is already running
-    # - True:       Ramp down was successful
-    # - False:      Ramp down was not successful (due to constraints for minimum running and stop times)
     def rampDown(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function ramps down the combined heat and power plant. The timestamp is neccessary to calculate
+        if the combined heat and power plant is running in later iterations of balancing. The possible
+        return values are:
+            - None:       Ramp down has no effect since the combined heat and power plant is already running
+            - True:       Ramp down was successful
+            - False:      Ramp down was not successful (due to constraints for minimum running and stop times)
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
     
         # Check if running
         if not self.isRunning():
@@ -163,27 +278,80 @@ class VPPCombinedHeatAndPower(VPPComponent):
                     return False
 
 
-
-
-
-    # This function forces a ramp up, ignoring the constraints for minimum running and stop tiimes.
     def forceRampUp(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function forces a ramp up, ignoring the constraints for minimum running and stop tiimes.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Ramp up
         self.lastRampUp = timestamp
     
     
-    
-
-    
-    # This function forces a ramp down, ignoring the constraints for minimum running and stop tiimes.
     def forceRampDown(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function forces a ramp down, ignoring the constraints for minimum running and stop times.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Ramp up
         self.lastRampDown = timestamp
-
-
-
 
 
     # ===================================================================================
@@ -197,7 +365,7 @@ class VPPCombinedHeatAndPower(VPPComponent):
         if self.isRunning():
         
             # Return current value
-            return self.nominalPowerEl * limit
+            return self.nominalPowerEl * self.limit
         
         else:
         

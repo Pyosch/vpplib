@@ -1,18 +1,53 @@
+"""
+Info
+----
+This file contains the basic functionalities of the VPPEnergyStorage class.
 
-# The class "VPPEnergyStorage" adds functionality to implement an electrical energy storage to the virtual power plant
+"""
+
+from .VPPComponent import VPPComponent
 
 class VPPEnergyStorage(VPPComponent):
 
-    # The constructor of the "VPPEnergyStorage"-object takes the following parameters
-    # capacity [kWh]
-    # chargeEfficiency [-] (between 0 and 1)
-    # dischargeEfficiency [-] (between 0 and 1)
-    # maxPower [kW]
-    # maxC [-]
-    
-    # The state of charge [kWh] is set to zero by default.
-
-    def __init__(self, capacity, chargeEfficiency, dischargeEfficiency, maxPower, maxC):
+    def __init__(self, timebase, capacity, chargeEfficiency, dischargeEfficiency, maxPower, maxC):
+        
+        """
+        Info
+        ----
+        The class "VPPEnergyStorage" adds functionality to implement an 
+        electrical energy storage to the virtual power plant.
+        
+        
+        Parameters
+        ----------
+        
+        capacity [kWh]
+        chargeEfficiency [-] (between 0 and 1)
+        dischargeEfficiency [-] (between 0 and 1)
+        maxPower [kW]
+        maxC [-]
+        	
+        Attributes
+        ----------
+        
+        The stateOfCharge [kWh] is set to zero by default.
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Call to super class
         super(VPPEnergyStorage, self).__init__(timebase)
@@ -43,22 +78,49 @@ class VPPEnergyStorage(VPPComponent):
     # ===================================================================================
 
     def observationsForTimestamp(self, timestamp):
-    
+        
+        pass
         # TODO: Implement dataframe to return state of charge
-
-
-
-
 
     # ===================================================================================
     # Controlling functions
     # ===================================================================================
 
-    # This function takes the energy [kWh] that should be charged and the timebase as
-    # parameters. The timebase [minutes] is neccessary to calculate if the maximum
-    # power is exceeded.
-
     def charge(self, energy, timebase, timestamp):
+        
+        """
+        Info
+        ----
+        This function takes the energy [kWh] that should be charged and the timebase as
+        parameters. The timebase [minutes] is neccessary to calculate if the maximum
+        power is exceeded.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Check if power exceeds max power
         power = energy / (timebase / 60)
@@ -83,14 +145,41 @@ class VPPEnergyStorage(VPPComponent):
             self.timeseries[timestamp] = energy
 
 
-
-
-
-    # This function takes the energy [kWh] that should be discharged and the timebase as
-    # parameters. The timebase [minutes] is neccessary to calculate if the maximum
-    # power is exceeded.
-
     def discharge(self, energy, timebase, timestamp):
+        
+        """
+        Info
+        ----
+        This function takes the energy [kWh] that should be discharged and the timebase as
+        parameters. The timebase [minutes] is neccessary to calculate if the maximum
+        power is exceeded.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
 
         # Check if power exceeds max power
         power = energy / (timebase / 60)
