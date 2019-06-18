@@ -1,10 +1,8 @@
 
-from VPPComponent import VPPComponent
-#import VPPComponent
+from .VPPComponent import VPPComponent
+
 import pandas as pd
-import numpy as np
 import calendar
-import math
 import random
 
 class VPPBEV(VPPComponent):
@@ -83,7 +81,6 @@ class VPPBEV(VPPComponent):
         time_base = 15/60 #for loadshapes with steps, smaller than one hour (eg. 15 minutes)
         
         #Input electric vehicle
-        bev_percentage = 100 #%
         
         efficiency = 0.98
         charging_power = 11 #kW
@@ -267,9 +264,3 @@ class VPPBEV(VPPComponent):
         # -> Function stub <-
         return self.timeseries.iloc[timestamp][3]
     
-if __name__ == "__main__":
-    bev = VPPBEV(1,2,3,2017)
-    bev.prepareTimeSeries()
-    bev.prepareBEV()
-    a = bev.timeseries
-    print(bev.valueForTimestamp('2017-01-01 23:00:00'))
