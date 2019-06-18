@@ -27,8 +27,8 @@ class VPPComponent(object):
     # This function takes a timestamp as the parameter and returns a dictionary with key (String) value (Any) pairs. Depending on the type of component, different status parameters of the respective component can be queried. For example, a power store can report its "State of Charge".
     def observationsForTimestamp(self, timestamp):
     
-        # Raise error since this function needs to be implemented by child classes.
-        raise NotImplementedError("observationsForTimestamp needs to be implemented by child classes!")
+        # Return empty dictionary since this function needs to be implemented by child classes.
+        return {}
 
     
     
