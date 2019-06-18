@@ -16,14 +16,37 @@ periods = None
 freq = "15 min"
 
 df_index = pd.DataFrame(pd.date_range(start, end, periods, freq, name ='Time'))
-#df_index = smart_home.new_scenario(column = 'weekday')
 
-hp = heat.HeatPump(df_index)
+hp = heat.HeatPump(identifier = "House 1", df_index = df_index)
 
-hp.get_heat_demand()
-hp.heat_demand.plot()
-plt.show()
+def test_get_heat_demand(hp):
+    
+    hp.get_heat_demand()
+    hp.heat_demand.plot()
+    plt.show()
 
-hp.get_cop()
-hp.cop.plot()
-plt.show()
+def test_get_cop(hp):
+    
+    hp.get_cop()
+    hp.cop.plot()
+    plt.show()
+    
+    
+def test_prepareTimeseries(hp):
+    
+    hp.prepareTimeSeries()
+    hp.timeseries.plot()
+    plt.show()
+    
+def test_valueForTimestamp(hp):
+    
+    i = 15024
+    demand, cop = hp.valueForTimestamp(timestamp = i)
+    print("Demand: ",demand)
+    print("cop: ", cop)
+    
+    
+test_prepareTimeseries(hp)  
+test_get_heat_demand(hp)
+test_get_cop(hp)
+test_valueForTimestamp(hp)

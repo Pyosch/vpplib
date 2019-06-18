@@ -2,14 +2,22 @@
 import pandas as pd
 import demandlib.bdew as bdew
 import heatpump
+from Model.VPPComponent import VPPComponent
 
 
-class HeatPump():
+class HeatPump(VPPComponent):
     
-    def __init__(self, df_index, heatpump_type = "Air", heat_sys_temp = 60, 
+    def __init__(self, identifier, df_index, timebase = 1, heatpump_type = "Air", 
+                 heat_sys_temp = 60, environment = None, useCase = None, 
                  heatpump_power = 10.6, full_load_hours = 2100, 
                  building_type = 'DE_HEF33', start = '2017-01-01 00:00:00',
                  end = '2017-12-31 23:45:00'):
+        
+        # Call to super class
+        super(HeatPump, self).__init__(timebase, environment, useCase)
+        
+        # Configure attributes
+        self.identifier = identifier
         
         #heatpump parameters
         self.cop = None
@@ -85,6 +93,53 @@ class HeatPump():
         
         return self.cop  
      
+    #from VPPComponents
+    def prepareTimeSeries(self):
+        
+        if self.cop == None:
+            self.get_cop()
+            
+            
+        if self.heat_demand == None:
+            self.get_heat_demand()
+            
+        self.timeseries = self.heat_demand
+        self.timeseries["cop"] = self.cop.cop
+        self.timeseries.cop.interpolate(inplace = True)
+
+    # ===================================================================================
+    # Controlling functions
+    # ===================================================================================
+
+    # This function limits the power of the photovoltaik to the given percentage.
+    # It cuts the current power production down to the peak power multiplied by
+    # the limit (Float [0;1]).
+    def limitPowerTo(self, limit):
+
+        # Validate input parameter
+        if limit >= 0 and limit <= 1:
+
+            # Parameter is valid
+            self.limit = limit
+
+        else:
+        
+            # Paramter is invalid
+            return
+
+    # ===================================================================================
+    # Balancing Functions
+    # ===================================================================================
+
+    # Override balancing function from super class.
+    def valueForTimestamp(self, timestamp):
+
+        # -> Function stub <-
+        demand, cop = self.timeseries.loc[self.timeseries.index[timestamp]]
+        # TODO: cop would change if power of heatpump is limited. 
+        # Dropping limiting factor for heatpumps
+        return demand, cop
+
 
 class HeatStorage:
     """        
