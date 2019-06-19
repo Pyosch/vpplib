@@ -9,7 +9,7 @@ parameters in an existing function are changed.
 
 """
 
-from Model.VPPBEV import VPPBEV
+from model.VPPBEV import VPPBEV
 import matplotlib.pyplot as plt
 
 bev = VPPBEV(1,2,3,2017)

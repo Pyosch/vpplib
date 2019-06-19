@@ -12,7 +12,7 @@ parameters in an existing function are changed.
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from Model.VPPPhotovoltaic import VPPPhotovoltaic
+from model.VPPPhotovoltaic import VPPPhotovoltaic
 
 
 latitude = 50.941357

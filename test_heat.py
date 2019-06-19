@@ -9,7 +9,7 @@ parameters in an existing function are changed.
 
 """
 
-from Model.VPPHeatPump import VPPHeatPump
+from model.VPPHeatPump import VPPHeatPump
 import matplotlib.pyplot as plt
 import pandas as pd
 
