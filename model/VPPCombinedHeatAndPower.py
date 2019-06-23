@@ -354,6 +354,23 @@ class VPPCombinedHeatAndPower(VPPComponent):
         self.lastRampDown = timestamp
 
 
+    
+    # ===================================================================================
+    # Balancing Functions
+    # ===================================================================================
+
+    def observationsForTimestamp(self, timestamp):
+
+        # Return result
+        return {
+            "isRunning": self.isRunning(),
+            "lastRampUp": self.lastRampUp,
+            "lastRampDown": self.lastRampDown,
+            "limit": self.limit
+        }
+
+
+
     # ===================================================================================
     # Balancing Functions
     # ===================================================================================
