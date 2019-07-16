@@ -131,4 +131,13 @@ class VPPPhotovoltaic(VPPComponent):
     # Override balancing function from super class.
     def valueForTimestamp(self, timestamp):
         
-        return self.timeseries[self.identifier][self.timeseries.index[timestamp]] * self.limit
+        if type(timestamp) == int:
+            
+            return self.timeseries[self.identifier][self.timeseries.index[timestamp]] * self.limit
+        
+        if type(timestamp) == str:
+            
+            return self.timeseries[self.identifier][timestamp] * self.limit
+        
+        else:
+            return -9999

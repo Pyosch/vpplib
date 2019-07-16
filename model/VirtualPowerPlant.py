@@ -45,7 +45,7 @@ class VirtualPowerPlant(object):
         # Configure attributes
         self.name = name
     
-        self.components = []
+        self.components = {}
 
 
     def addComponent(self, component):
@@ -86,7 +86,8 @@ class VirtualPowerPlant(object):
         """
 
         # Append component
-        self.components.append(component)
+        #self.components.append(component)
+        self.components[component.identifier] = component
 
 
     def removeComponent(self, component):

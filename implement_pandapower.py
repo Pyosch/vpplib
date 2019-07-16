@@ -7,9 +7,11 @@ Created on Tue Jul  2 10:38:17 2019
 
 import pandas as pd
 import math
+import random
 import pandapower as pp
 import pandapower.networks as pn
 from model.VPPPhotovoltaic import VPPPhotovoltaic
+from model.VirtualPowerPlant import VirtualPowerPlant
 
 latitude = 50.941357
 longitude = 6.958307
@@ -18,20 +20,95 @@ name = 'pv1'
 weather_data = pd.read_csv("./Input_House/PV/20170601_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
 
-pv = VPPPhotovoltaic(timebase=1, identifier=name, latitude=latitude, longitude=longitude, modules_per_string=1, strings_per_inverter=1)
-
-pv.prepareTimeSeries(weather_data)
+"""
+Create virtual Powerplant:
+"""
+#%% create instance of VirtualPowerPlant and the designated grid
+vpp = VirtualPowerPlant("Master")
 
 net = pn.create_kerber_landnetz_kabel_2()
-pp.create_gen(net, bus=3, p_mw= (pv.module.Vmpo*pv.module.Impo/1000000), vm_pu = 1.0, name=pv.identifier)
 
+#%% define the amount of components in the grid
 
+pv_percentage = 30
+storage_percentage = 0
+bev_percentage = 0
+hp_percentage = 0
+#%% initialize components
 
+pv = VPPPhotovoltaic(timebase=1, identifier=name, latitude=latitude, longitude=longitude, modules_per_string=1, strings_per_inverter=1)
+pv.prepareTimeSeries(weather_data)
+
+#%% assign components to the bus names
+
+#TODO: put in function:
+pv_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (pv_percentage/100)), 0))
+buses_with_pv = random.sample(list(net.bus.name[net.bus.type == 'b']), pv_amount)
+
+hp_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (hp_percentage/100)), 0))
+buses_with_hp = random.sample(list(net.bus.name[net.bus.type == 'b']), hp_amount)
+
+bev_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (bev_percentage/100)), 0))
+buses_with_bev = random.sample(list(net.bus.name[net.bus.type == 'b']), bev_amount)
+
+#Distribution of el storage is only done for houses with pv
+storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
+buses_with_storage = random.sample(buses_with_pv, storage_amount)
+
+#%% create components and assign components to the Virtual Powerplant
+
+for bus in buses_with_pv:
+    
+    vpp.addComponent(VPPPhotovoltaic(timebase=1, identifier=(bus + "_PV"), 
+                                     latitude=latitude, longitude=longitude, 
+                                     modules_per_string=1, strings_per_inverter=1))
+    
+    #access dictionary keys via: vpp.components.keys()
+    #access elements: vpp.components['KV_1_2_PV'].prepareTimeSeries(weather_data)
+    
+#%% create generators in the pandapower.net
+
+for bus in buses_with_pv:
+    
+    pp.create_gen(net, bus=net.bus[net.bus.name == bus].index[0], p_mw=(pv.module.Vmpo*pv.module.Impo/1000000), vm_pu = 1.0, name=(bus+'_PV'))
+
+#%% assign values of generation over time and run powerflow
+    
+net_dict = {}
+for idx in pv.timeseries.index:
+    for component in vpp.components.keys():
+
+        valueForTimestamp = pv.valueForTimestamp(idx)
+        
+        if math.isnan(valueForTimestamp):
+            valueForTimestamp = 0
+            
+        net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to Generation
+        
+    pp.runpp(net)
+    
+    net_dict[idx] = {}
+    net_dict[idx]['res_bus'] = net.res_bus
+    net_dict[idx]['res_line'] = net.res_line
+    net_dict[idx]['res_trafo'] = net.res_trafo
+    net_dict[idx]['res_load'] = net.res_load
+    net_dict[idx]['res_gen'] = net.res_gen
+    net_dict[idx]['res_ext_grid'] = net.res_ext_grid
+    
+    #access single elements: net_dict[pv.timeseries.index[48]]['res_gen']['p_mw'][0]
+    
+#%% basic implementations without VirtualPowerPlant class
+    
+"""
+run powerflow and save results:
+"""
 
 def saveAllOfNet(net, pv):
     
     net_dict = {}
-    for pv_gen, idx in zip(pv.timeseries[pv.identifier], pv.timeseries.index):
+    for idx in pv.timeseries.index:
+    
+        pv_gen = pv.valueForTimestamp(idx)
         
         if math.isnan(pv_gen):
             pv_gen = 0
@@ -43,13 +120,15 @@ def saveAllOfNet(net, pv):
     return net_dict
 
 #net_dict = saveAllOfNet(net, pv)
-##access dictionary    
+#access dictionary    
 #net_dict[pv.timeseries.index[48]].res_line
 
 def saveNetRes(net, pv):
     
     net_dict = {}
-    for pv_gen, idx in zip(pv.timeseries[pv.identifier], pv.timeseries.index):
+    for idx in pv.timeseries.index:
+    
+        pv_gen = pv.valueForTimestamp(idx)
         
         if math.isnan(pv_gen):
             pv_gen = 0
@@ -66,6 +145,6 @@ def saveNetRes(net, pv):
     
     return net_dict
 
-net_dict = saveNetRes(net, pv)
+#net_dict = saveNetRes(net, pv)
 ##access dictionary    
-net_dict[pv.timeseries.index[48]]['res_line']
+#net_dict[pv.timeseries.index[48]]['res_line']
