@@ -30,7 +30,7 @@ net = pn.create_kerber_landnetz_kabel_2()
 
 #%% define the amount of components in the grid
 
-pv_percentage = 30
+pv_percentage = 10
 storage_percentage = 0
 bev_percentage = 0
 hp_percentage = 0
@@ -63,6 +63,8 @@ for bus in buses_with_pv:
                                      latitude=latitude, longitude=longitude, 
                                      modules_per_string=1, strings_per_inverter=1))
     
+    vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries(weather_data)
+    
     #access dictionary keys via: vpp.components.keys()
     #access elements: vpp.components['KV_1_2_PV'].prepareTimeSeries(weather_data)
     
@@ -71,19 +73,19 @@ for bus in buses_with_pv:
 for bus in buses_with_pv:
     
     pp.create_gen(net, bus=net.bus[net.bus.name == bus].index[0], p_mw=(pv.module.Vmpo*pv.module.Impo/1000000), vm_pu = 1.0, name=(bus+'_PV'))
-
+  
 #%% assign values of generation over time and run powerflow
-    
+
 net_dict = {}
-for idx in pv.timeseries.index:
+for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
     for component in vpp.components.keys():
 
-        valueForTimestamp = pv.valueForTimestamp(idx)
+        valueForTimestamp = vpp.components[component].valueForTimestamp(idx)
         
         if math.isnan(valueForTimestamp):
             valueForTimestamp = 0
             
-        net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to Generation
+        net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation
         
     pp.runpp(net)
     
@@ -95,8 +97,7 @@ for idx in pv.timeseries.index:
     net_dict[idx]['res_gen'] = net.res_gen
     net_dict[idx]['res_ext_grid'] = net.res_ext_grid
     
-    #access single elements: net_dict[pv.timeseries.index[48]]['res_gen']['p_mw'][0]
-    
+    #access single elements: net_dict[vpp.components[next(iter(vpp.components))].timeseries.index[48]]['res_gen']['p_mw'][0]
 #%% basic implementations without VirtualPowerPlant class
     
 """
