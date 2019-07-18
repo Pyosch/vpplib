@@ -20,6 +20,9 @@ name = 'pv1'
 weather_data = pd.read_csv("./Input_House/PV/20170601_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
 
+baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
+baseload.set_index("Time", inplace=True)
+
 """
 Create virtual Powerplant:
 """
@@ -34,10 +37,6 @@ pv_percentage = 100
 storage_percentage = 0
 bev_percentage = 0
 hp_percentage = 0
-#%% initialize components
-
-pv = VPPPhotovoltaic(timebase=1, identifier=name, latitude=latitude, longitude=longitude, modules_per_string=1, strings_per_inverter=1)
-pv.prepareTimeSeries(weather_data)
 
 #%% assign components to the bus names
 
@@ -59,7 +58,7 @@ buses_with_storage = random.sample(buses_with_pv, storage_amount)
 
 for bus in buses_with_pv:
     
-    vpp.addComponent(VPPPhotovoltaic(timebase=1, identifier=(bus + "_PV"), 
+    vpp.addComponent(VPPPhotovoltaic(timebase=1, identifier=(bus+'_PV'), 
                                      latitude=latitude, longitude=longitude, 
                                      modules_per_string=1, strings_per_inverter=1))
     
@@ -72,7 +71,9 @@ for bus in buses_with_pv:
 
 for bus in buses_with_pv:
     
-    pp.create_gen(net, bus=net.bus[net.bus.name == bus].index[0], p_mw=(pv.module.Vmpo*pv.module.Impo/1000000), vm_pu = 1.0, name=(bus+'_PV'))
+    pp.create_gen(net, bus=net.bus[net.bus.name == bus].index[0], 
+                  p_mw=(vpp.components[bus+'_PV'].module.Impo*vpp.components[bus+'_PV'].module.Vmpo/1000000), 
+                  vm_pu = 1.0, name=(bus+'_PV'))
   
 #%% assign values of generation over time and run powerflow
 
@@ -86,6 +87,10 @@ for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
             valueForTimestamp = 0
             
         net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation
+        
+    for bus in net.load.bus:
+        
+        net.load.p_mw[net.load.bus == bus] = baseload[str(bus)][idx]/1000000
         
     pp.runpp(net)
     
@@ -127,6 +132,10 @@ def extractResults(net_dict):
 
 
 ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw = extractResults(net_dict)
+
+trafo_loading_percent.plot()
+line_loading_percent.plot()
+bus_vm_pu.plot()
 
 #%% extract results of single component categories
 
@@ -179,56 +188,3 @@ def extract_trafo(net_dict):
     trafo_loading_percent = trafo_loading_percent.T
     
     return trafo_loading_percent
-
-
-#%% basic powerflow implementations without VirtualPowerPlant class
-    
-"""
-run powerflow and save results:
-"""
-
-def saveAllOfNet(net, pv):
-    
-    net_dict = {}
-    for idx in pv.timeseries.index:
-    
-        pv_gen = pv.valueForTimestamp(idx)
-        
-        if math.isnan(pv_gen):
-            pv_gen = 0
-            
-        net.gen.p_mw[net.gen.name == pv.identifier] = pv_gen/-1000000 #W to MW; negative due to Generation
-        pp.runpp(net)
-        net_dict[idx] = net
-        
-    return net_dict
-
-#net_dict = saveAllOfNet(net, pv)
-#access dictionary    
-#net_dict[pv.timeseries.index[48]].res_line
-
-def saveNetRes(net, pv):
-    
-    net_dict = {}
-    for idx in pv.timeseries.index:
-    
-        pv_gen = pv.valueForTimestamp(idx)
-        
-        if math.isnan(pv_gen):
-            pv_gen = 0
-            
-        net.gen.p_mw[net.gen.name == pv.identifier] = pv_gen/-1000000 #W to MW; negative due to Generation
-        pp.runpp(net)
-        
-        net_dict[idx] = {}
-        net_dict[idx]['res_bus'] = net.res_bus
-        net_dict[idx]['res_line'] = net.res_line
-        net_dict[idx]['res_trafo'] = net.res_trafo
-        net_dict[idx]['res_load'] = net.res_load
-        net_dict[idx]['res_ext_grid'] = net.res_ext_grid
-    
-    return net_dict
-
-#net_dict = saveNetRes(net, pv)
-##access dictionary    
-#net_dict[pv.timeseries.index[48]]['res_line']
