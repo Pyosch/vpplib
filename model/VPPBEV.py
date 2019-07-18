@@ -12,10 +12,12 @@ import random
 
 class VPPBEV(VPPComponent):
 
-    def __init__(self, timebase, identifier, peakPower, year, battery_max = 16, charging_power = 11):
+    def __init__(self, timebase, identifier, year, battery_max = 16, 
+                 battery_min = 0, battery_usage = 1, charging_power = 11, 
+                 chargeEfficiency = 0.98, environment=None, userProfile=None):
 
         # Call to super class
-        super(VPPBEV, self).__init__(timebase,2,3)
+        super(VPPBEV, self).__init__(timebase=timebase, environment=environment, userProfile=userProfile)
         
         """
         Info
@@ -74,20 +76,57 @@ class VPPBEV(VPPComponent):
             hoy = 8760
         self.date_time_index = pd.date_range(pd.datetime(year, 1, 1, 0), 
                                              periods=hoy * 4, freq='15Min')
+        self.timebase = timebase #time_base = 15/60 #for loadshapes with steps, smaller than one hour (eg. 15 minutes)
+        self.limit = 1
         self.date = []
         self.hour = []
         self.weekday = []
         self.at_home = []
         self.battery_max = battery_max 
+        self.battery_min = battery_min
+        self.battery_usage = battery_usage
         self.charging_power = charging_power
+        self.chargeEfficiency = chargeEfficiency
         self.set_weekday()
         self.identifier = identifier
-        self.peakPower = peakPower
       
     def prepareTimeSeries(self, start = '2017-01-01 00:00:00', 
                           end = '2017-12-31 23:59:59', freq = "15min"):
         
-        self.timeseries = self.new_scenario(column = 'demand')
+        self.timeseries = self.new_scenario(column = 'car_charger')
+        
+        #TODO: export to VPPUserProfile
+        weekend_trip_start = ['08:00:00', '08:15:00', '08:30:00', '08:45:00', 
+                              '09:00:00', '09:15:00', '09:30:00', '09:45:00',
+                              '10:00:00', '10:15:00', '10:30:00', '10:45:00', 
+                              '11:00:00', '11:15:00', '11:30:00', '11:45:00', 
+                              '12:00:00', '12:15:00', '12:30:00', '12:45:00', 
+                              '13:00:00']
+        
+        weekend_trip_end = ['17:00:00', '17:15:00', '17:30:00', '17:45:00', 
+                            '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
+                            '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
+                            '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
+                            '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
+                            '22:00:00', '22:15:00', '22:30:00', '22:45:00', 
+                            '23:00:00']
+        
+        work_start = ['07:00:00', '07:15:00', '07:30:00', '07:45:00', 
+                      '08:00:00', '08:15:00', '08:30:00', '08:45:00', 
+                      '09:00:00']
+        
+        work_end = ['16:00:00', '16:15:00', '16:30:00', '16:45:00', 
+                    '17:00:00', '17:15:00', '17:30:00', '17:45:00', 
+                    '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
+                    '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
+                    '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
+                    '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
+                    '22:00:00']
+        
+        self.df = self.prepareBEVLoadshape(work_start, work_end, 
+                                         weekend_trip_start, weekend_trip_end, 
+                                         self.battery_min, self.battery_max, self.charging_power, 
+                                         self.chargeEfficiency, self.battery_usage, self.timebase, self.timeseries)
 
     
     def prepareBEVLoadshape(self, work_start, work_end, weekend_trip_start, 
@@ -133,84 +172,6 @@ class VPPBEV(VPPComponent):
         self.timeseries.set_index('Time', inplace = True, drop = True)
         
         return df
-
-    def prepareBEV(self):
-        
-        """
-        Info
-        ----
-        ...
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
-        """
-        
-        #time_base = 1 #for hourly loadshapes
-        time_base = 15/60 #for loadshapes with steps, smaller than one hour (eg. 15 minutes)
-        
-        #Input electric vehicle
-        
-        efficiency = 0.98
-        charging_power = 11 #kW
-        battery_max = 50 #max capacity in kWh
-        battery_min = 2 #min capacity in kWh
-        #kW, discharge car battery with battery_usage * time_base. 
-        #Determines charge needed when returned home
-        battery_usage = 1
-        weekend_trip_start = ['08:00:00', '08:15:00', '08:30:00', '08:45:00', 
-                              '09:00:00', '09:15:00', '09:30:00', '09:45:00',
-                              '10:00:00', '10:15:00', '10:30:00', '10:45:00', 
-                              '11:00:00', '11:15:00', '11:30:00', '11:45:00', 
-                              '12:00:00', '12:15:00', '12:30:00', '12:45:00', 
-                              '13:00:00']
-        
-        weekend_trip_end = ['17:00:00', '17:15:00', '17:30:00', '17:45:00', 
-                            '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
-                            '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
-                            '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
-                            '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
-                            '22:00:00', '22:15:00', '22:30:00', '22:45:00', 
-                            '23:00:00']
-        
-        work_start = ['07:00:00', '07:15:00', '07:30:00', '07:45:00', 
-                      '08:00:00', '08:15:00', '08:30:00', '08:45:00', 
-                      '09:00:00']
-        
-        work_end = ['16:00:00', '16:15:00', '16:30:00', '16:45:00', 
-                    '17:00:00', '17:15:00', '17:30:00', '17:45:00', 
-                    '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
-                    '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
-                    '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
-                    '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
-                    '22:00:00']
-        
-        self.df = self.prepareBEVLoadshape(work_start, work_end, 
-                                         weekend_trip_start, weekend_trip_end, 
-                                         battery_min, battery_max, charging_power, 
-                                         efficiency, battery_usage, time_base, self.timeseries)
 
 
     def new_scenario(self, start = '2017-01-01 00:00:00', 
@@ -306,7 +267,7 @@ class VPPBEV(VPPComponent):
         """
         
         load_degradiation_begin = 0.8
-        battery_charge = battery_max
+        battery_charge = battery_max #initial state of charge at the first timestep
         lst_battery = []
         lst_charger = []
     
@@ -508,5 +469,18 @@ class VPPBEV(VPPComponent):
     # Override balancing function from super class.
     def valueForTimestamp(self, timestamp):
         # -> Function stub <-
-        return self.timeseries.iloc[timestamp][3]
+        
+        if type(timestamp) == int:
+            
+            return self.timeseries['car_charger'][self.timeseries.index[timestamp]] * self.limit
+        
+        if type(timestamp) == str:
+            
+            return self.timeseries['car_charger'][timestamp] * self.limit
+        
+        else:
+            return -9999
+        
+       # return self.timeseries.iloc[timestamp][3]
+    
     
