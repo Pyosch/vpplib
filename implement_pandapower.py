@@ -30,7 +30,7 @@ net = pn.create_kerber_landnetz_kabel_2()
 
 #%% define the amount of components in the grid
 
-pv_percentage = 10
+pv_percentage = 100
 storage_percentage = 0
 bev_percentage = 0
 hp_percentage = 0
@@ -98,7 +98,90 @@ for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
     net_dict[idx]['res_ext_grid'] = net.res_ext_grid
     
     #access single elements: net_dict[vpp.components[next(iter(vpp.components))].timeseries.index[48]]['res_gen']['p_mw'][0]
-#%% basic implementations without VirtualPowerPlant class
+    
+
+#%% extract results from powerflow
+def extractResults(net_dict):
+    
+    ext_grid = pd.DataFrame()
+    line_loading_percent = pd.DataFrame()
+    bus_vm_pu = pd.DataFrame()
+    trafo_loading_percent = pd.DataFrame()
+    gen_p_mw = pd.DataFrame()
+    
+    for idx in net_dict.keys():
+        
+        ext_grid = ext_grid.append(net_dict[idx]['res_ext_grid'], ignore_index=True)
+        line_loading_percent[idx] = net_dict[idx]['res_line'].loading_percent
+        bus_vm_pu[idx] = net_dict[idx]['res_bus'].vm_pu
+        trafo_loading_percent[idx] = net_dict[idx]['res_trafo'].loading_percent
+        gen_p_mw[idx] = net_dict[idx]['res_gen'].p_mw
+    
+
+    line_loading_percent = line_loading_percent.T
+    bus_vm_pu = bus_vm_pu.T
+    trafo_loading_percent = trafo_loading_percent.T
+    gen_p_mw = gen_p_mw.T
+        
+    return ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw
+
+
+ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw = extractResults(net_dict)
+
+#%% extract results of single component categories
+
+def extract_ext_grid(net_dict):
+    
+    ext_grid = pd.DataFrame()
+    
+    for idx in net_dict.keys():
+        
+        ext_grid = ext_grid.append(net_dict[idx]['res_ext_grid'], ignore_index=True)
+        
+        
+    return ext_grid
+
+
+def extract_line(net_dict):
+    
+    line = pd.DataFrame()
+    
+    for idx in net_dict.keys():
+        
+        line[idx] = net_dict[idx]['res_line'].loading_percent
+    
+    line = line.T
+    
+    return line
+
+
+def extract_bus(net_dict):
+    
+    bus = pd.DataFrame()
+    
+    for idx in net_dict.keys():
+        
+        bus[idx] = net_dict[idx]['res_bus'].vm_pu
+        
+    bus = bus.T
+    
+    return bus
+
+
+def extract_trafo(net_dict):
+    
+    trafo_loading_percent = pd.DataFrame()
+    
+    for idx in net_dict.keys():
+        
+        trafo_loading_percent[idx] = net_dict[idx]['res_trafo'].loading_percent
+    
+    trafo_loading_percent = trafo_loading_percent.T
+    
+    return trafo_loading_percent
+
+
+#%% basic powerflow implementations without VirtualPowerPlant class
     
 """
 run powerflow and save results:
