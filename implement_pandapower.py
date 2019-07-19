@@ -11,6 +11,7 @@ import random
 import pandapower as pp
 import pandapower.networks as pn
 from model.VPPPhotovoltaic import VPPPhotovoltaic
+from model.VPPBEV import VPPBEV
 from model.VirtualPowerPlant import VirtualPowerPlant
 
 latitude = 50.941357
@@ -33,9 +34,9 @@ net = pn.create_kerber_landnetz_kabel_2()
 
 #%% define the amount of components in the grid
 
-pv_percentage = 100
+pv_percentage = 0
 storage_percentage = 0
-bev_percentage = 0
+bev_percentage = 10
 hp_percentage = 0
 
 #%% assign components to the bus names
@@ -67,6 +68,16 @@ for bus in buses_with_pv:
     #access dictionary keys via: vpp.components.keys()
     #access elements: vpp.components['KV_1_2_PV'].prepareTimeSeries(weather_data)
     
+
+for bus in buses_with_bev:
+    
+    vpp.addComponent(VPPBEV(timebase=15/60, identifier=(bus+'_BEV'), year=2017, 
+                            battery_max = 16, battery_min = 0, battery_usage = 1, 
+                            charging_power = 11, chargeEfficiency = 0.98, 
+                            environment=None, userProfile=None))
+    
+    vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries()
+
 #%% create generators in the pandapower.net
 
 for bus in buses_with_pv:
@@ -75,22 +86,36 @@ for bus in buses_with_pv:
                   p_mw=(vpp.components[bus+'_PV'].module.Impo*vpp.components[bus+'_PV'].module.Vmpo/1000000), 
                   vm_pu = 1.0, name=(bus+'_PV'))
   
-#%% assign values of generation over time and run powerflow
+for bus in buses_with_bev:
+    
+    pp.create_load(net, bus=net.bus[net.bus.name == bus].index[0], 
+                   p_mw=(vpp.components[bus+'_BEV'].charging_power/1000), name=(bus+'_BEV'), type = 'BEV')
+#%% assign values of generation/demand over time and run powerflow
 
 net_dict = {}
 for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
     for component in vpp.components.keys():
 
-        valueForTimestamp = vpp.components[component].valueForTimestamp(idx)
+        valueForTimestamp = vpp.components[component].valueForTimestamp(str(idx))
         
         if math.isnan(valueForTimestamp):
             valueForTimestamp = 0
-            
-        net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation
         
+        if component in list(net.gen.name):
+            
+            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation
+        
+        if component in list(net.load.name):
+            
+            net.load.p_mw[net.load.name == component] = valueForTimestamp/1000
+        
+    
     for bus in net.load.bus:
         
-        net.load.p_mw[net.load.bus == bus] = baseload[str(bus)][idx]/1000000
+        if net.load.type[net.load.bus == bus].item() == None: #adjust if type of baseload load changes
+            
+            net.load.p_mw[net.load.bus == bus] = baseload[str(bus)][str(idx)]/1000000
+        
         
     pp.runpp(net)
     
@@ -188,3 +213,17 @@ def extract_trafo(net_dict):
     trafo_loading_percent = trafo_loading_percent.T
     
     return trafo_loading_percent
+
+def extract_load(net_dict):
+    
+    load_p_mw = pd.DataFrame()
+    
+    for idx in net_dict.keys():
+        
+        load_p_mw[idx] = net_dict[idx]['res_load'].p_mw
+    
+    load_p_mw = load_p_mw.T
+    
+    return load_p_mw
+
+load_p_mw = extract_load(net_dict)

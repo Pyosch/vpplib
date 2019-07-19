@@ -12,7 +12,7 @@ parameters in an existing function are changed.
 from model.VPPBEV import VPPBEV
 import matplotlib.pyplot as plt
 
-bev = VPPBEV(timebase=15/60, identifier=2, peakPower=3, year=2017, battery_max = 16, charging_power = 11)
+bev = VPPBEV(timebase=15/60, identifier=2, year=2017, battery_max = 16, charging_power = 11)
     
 def test_prepareTimeSeries(bev):
     
