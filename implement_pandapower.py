@@ -16,7 +16,11 @@ from model.VirtualPowerPlant import VirtualPowerPlant
 
 latitude = 50.941357
 longitude = 6.958307
-name = 'pv1'
+#name = 'pv1'
+
+start = '2017-06-01 00:00:00'
+end = '2017-06-01 23:45:00'
+time_freq = "15 min"
 
 weather_data = pd.read_csv("./Input_House/PV/20170601_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
@@ -71,7 +75,8 @@ for bus in buses_with_pv:
 
 for bus in buses_with_bev:
     
-    vpp.addComponent(VPPBEV(timebase=15/60, identifier=(bus+'_BEV'), year=2017, 
+    vpp.addComponent(VPPBEV(timebase=15/60, identifier=(bus+'_BEV'),
+                            start = start, end = end, time_freq = time_freq, 
                             battery_max = 16, battery_min = 0, battery_usage = 1, 
                             charging_power = 11, chargeEfficiency = 0.98, 
                             environment=None, userProfile=None))
@@ -112,7 +117,7 @@ for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
     
     for bus in net.load.bus:
         
-        if net.load.type[net.load.bus == bus].item() == None: #adjust if type of baseload load changes
+        if net.load.type[net.load.bus == bus].item() == None: #adjust if type of baseload load changes; SOMETIMES throws an ERR!!!
             
             net.load.p_mw[net.load.bus == bus] = baseload[str(bus)][str(idx)]/1000000
         
