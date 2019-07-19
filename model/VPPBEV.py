@@ -7,12 +7,12 @@ This file contains the basic functionalities of the VPPBEV class.
 from .VPPComponent import VPPComponent
 
 import pandas as pd
-import calendar
 import random
+import traceback
 
 class VPPBEV(VPPComponent):
 
-    def __init__(self, timebase, identifier, year, battery_max = 16, 
+    def __init__(self, timebase, identifier, start = '2017-01-01 00:00:00', end = '2017-12-31 23:45:00', time_freq = "15 min", battery_max = 16, 
                  battery_min = 0, battery_usage = 1, charging_power = 11, 
                  chargeEfficiency = 0.98, environment=None, userProfile=None):
 
@@ -25,10 +25,7 @@ class VPPBEV(VPPComponent):
         ...
         
         Parameters
-        ----------
-        year: int
-            year in which the simulation takes place
-            
+        ----------  
         battery_max: int
             maximal battery charge in kWh
             
@@ -37,10 +34,6 @@ class VPPBEV(VPPComponent):
         
         Attributes
         ----------
-        date_time_index: pandas.core.indexes.datetimes.DatetimeIndex
-            DatetimeIndex with 15 Minutes frequency for one year set in 
-            Parameters
-            
         date: pandas.core.series.Series
             Series containing only the date from date_time_index
             
@@ -70,12 +63,9 @@ class VPPBEV(VPPComponent):
         
         """
         
-        if calendar.isleap(year):
-            hoy = 8784
-        else:
-            hoy = 8760
-        self.date_time_index = pd.date_range(pd.datetime(year, 1, 1, 0), 
-                                             periods=hoy * 4, freq='15Min')
+        self.start = start
+        self.end = end
+        self.time_freq = time_freq
         self.timebase = timebase #time_base = 15/60 #for loadshapes with steps, smaller than one hour (eg. 15 minutes)
         self.limit = 1
         self.date = []
@@ -87,12 +77,9 @@ class VPPBEV(VPPComponent):
         self.battery_usage = battery_usage
         self.charging_power = charging_power
         self.chargeEfficiency = chargeEfficiency
-        self.set_weekday()
         self.identifier = identifier
       
     def prepareTimeSeries(self):
-        
-        self.timeseries = self.new_scenario(column = 'car_charger')
         
         #TODO: export to VPPUserProfile
         weekend_trip_start = ['08:00:00', '08:15:00', '08:30:00', '08:45:00', 
@@ -122,114 +109,28 @@ class VPPBEV(VPPComponent):
                     '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
                     '22:00:00']
         
-        self.df = self.prepareBEVLoadshape(work_start, work_end, 
-                                         weekend_trip_start, weekend_trip_end, 
-                                         self.battery_min, self.battery_max, self.charging_power, 
-                                         self.chargeEfficiency, self.battery_usage, self.timebase, self.timeseries)
-
-    
-    def prepareBEVLoadshape(self, work_start, work_end, weekend_trip_start, 
-                            weekend_trip_end, battery_min, battery_max, 
-                            charging_power, efficiency, battery_usage, 
-                            time_base, df):
-        
-        """
-        Info
-        ----
-        ...
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
-        """
-    
-        self.split_time(df)    
-        df = self.set_at_home(df, work_start, work_end, weekend_trip_start, weekend_trip_end)
-        df = self.charge(df, battery_min, battery_max, charging_power, efficiency, battery_usage, time_base)
+        self.timeseries = self.new_scenario()
+        self.split_time() 
+        self.set_weekday()
+        self.set_at_home(work_start, work_end, weekend_trip_start, weekend_trip_end)
+        self.charge()
         self.timeseries.set_index('Time', inplace = True, drop = True)
-        
-        return df
 
-
-    def new_scenario(self, start = '2017-01-01 00:00:00', 
-                     end = '2017-12-31 23:45:00', 
-                     periods = None, freq = "15 min", column = 'Demand'):
+    #TODO: move to VPPComponent or VPPOperator
+    def new_scenario(self):
     
-        df_main = pd.DataFrame(pd.date_range(start, end, periods, freq, name ='Time'))
-        df_main[column] = 0
+        df_main = pd.DataFrame(pd.date_range(start=self.start, end=self.end, 
+                                             freq=self.time_freq, name ='Time'))
+        df_main['car_charger'] = 0
+        df_main.set_index(df_main.Time, inplace = True)
         
         return df_main
     
-    def loadshape(self, work_start, work_end, weekend_trip_start, 
-                  weekend_trip_end, battery_min, battery_max, charging_power, 
-                  efficiency, battery_usage, time_base = (15/60)):
-        
-        """
-        Info
-        ----
-        ...
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
-        """
-        
-        df = self.new_scenario()
-        df = self.split_time(df)
-        df = self.at_home(df, work_start, work_end, weekend_trip_start, weekend_trip_end)
-        df = self.charge(df, battery_min, battery_max, charging_power, efficiency, battery_usage, time_base )
-        
-        return df
     
     # ===================================================================================
     # Controlling functions
     # ===================================================================================
-    def charge(self, df, battery_min, battery_max, charging_power, efficiency, 
-               battery_usage, time_base ):
+    def charge(self):
         
         """
         Info
@@ -266,43 +167,43 @@ class VPPBEV(VPPComponent):
         """
         
         load_degradiation_begin = 0.8
-        battery_charge = battery_max #initial state of charge at the first timestep
+        battery_charge = self.battery_max #initial state of charge at the first timestep
         lst_battery = []
         lst_charger = []
     
-        for i, d in df.iterrows():
-            if (d.at_home == 0) & (battery_charge > battery_min):
+        for i, at_home in self.at_home.iterrows():
+            if (at_home.item() == 0) & (battery_charge > self.battery_min):
                 #if car is not at home discharge battery with X kW/h
-                battery_charge = battery_charge - battery_usage * time_base 
+                battery_charge = battery_charge - self.battery_usage * self.timebase 
     
-                if battery_charge < battery_min:
-                    battery_charge = battery_min
+                if battery_charge < self.battery_min:
+                    battery_charge = self.battery_min
     
                 lst_battery.append(battery_charge)
                 lst_charger.append(0) #if car is not at home, chargers energy consumption is 0
             
             #Function to apply the load_degradation to the load profile
-            elif (d.at_home == 1) & (battery_charge > battery_max * load_degradiation_begin): 
-                degraded_charging_power = charging_power * (1 - (battery_charge / battery_max - load_degradiation_begin)/(1 - load_degradiation_begin))
-                battery_charge = battery_charge + (degraded_charging_power * efficiency * time_base)
+            elif (at_home.item() == 1) & (battery_charge > self.battery_max * load_degradiation_begin): 
+                degraded_charging_power = self.charging_power * (1 - (battery_charge / self.battery_max - load_degradiation_begin)/(1 - load_degradiation_begin))
+                battery_charge = battery_charge + (degraded_charging_power * self.chargeEfficiency * self.timebase)
                 charger = degraded_charging_power
                 
-                if battery_charge > battery_max:
-                    charger = charging_power - (battery_charge - battery_max)
-                    battery_charge = battery_max
+                if battery_charge > self.battery_max:
+                    charger = self.charging_power - (battery_charge - self.battery_max)
+                    battery_charge = self.battery_max
     
                 lst_battery.append(battery_charge)
                 lst_charger.append(charger)
     
             #If car is at home, charge with charging power. If timescale is hours charging power results in kWh    
-            elif (d.at_home == 1) & (battery_charge < battery_max): 
-                battery_charge = battery_charge + (charging_power * efficiency * time_base)
-                charger = charging_power
+            elif (at_home.item() == 1) & (battery_charge < self.battery_max): 
+                battery_charge = battery_charge + (self.charging_power * self.chargeEfficiency * self.timebase)
+                charger = self.charging_power
     
                 #If battery would be overcharged, charge only with kWh left
-                if battery_charge > battery_max:
-                    charger = charging_power - (battery_charge - battery_max)
-                    battery_charge = battery_max
+                if battery_charge > self.battery_max:
+                    charger = self.charging_power - (battery_charge - self.battery_max)
+                    battery_charge = self.battery_max
     
                 lst_battery.append(battery_charge)
                 lst_charger.append(charger)
@@ -313,14 +214,13 @@ class VPPBEV(VPPComponent):
                 lst_battery.append(battery_charge)
                 lst_charger.append(0)
     
-        df['car_capacity'] = lst_battery
-        df['car_charger'] = lst_charger
+        self.timeseries['car_capacity'] = lst_battery
+        self.timeseries.car_charger = lst_charger
     
-        return df
 
-# In[Separate date and hours]:
+    # In[Separate date and hours]:
 
-    def split_time(self, df):
+    def split_time(self):
         
         """
         Info
@@ -354,13 +254,15 @@ class VPPBEV(VPPComponent):
         
         """
         
-        df = pd.DataFrame(self.date_time_index.astype(
+        df = pd.DataFrame(self.timeseries.index.astype(
                 'str').str.split().tolist(), columns="date hour".split())
         self.date = df.date
+        self.date.index = self.timeseries.index
         self.hour = df.hour
+        self.hour.index = self.timeseries.index
         
 
-# In[Determine weekdays according to date time index]:
+    # In[Determine weekdays according to date time index]:
         
     def set_weekday(self):
         
@@ -399,12 +301,12 @@ class VPPBEV(VPPComponent):
         ...
         
         """
-        self.weekday = self.date_time_index.weekday
+        self.weekday = self.timeseries.index.weekday
    
 
-# In[Determine times when car is at home]:
+    # In[Determine times when car is at home]:
     
-    def set_at_home(self, df, work_start, work_end, weekend_trip_start, weekend_trip_end):
+    def set_at_home(self, work_start, work_end, weekend_trip_start, weekend_trip_end):
         
         """
         Info
@@ -457,9 +359,9 @@ class VPPBEV(VPPComponent):
             else:
                 lst.append(0) 
     
-        df["at_home"] = pd.DataFrame({ "at home" : lst})
+        self.at_home = pd.DataFrame({ "at home" : lst})
+        self.at_home.index = self.timeseries.index
         
-        return df
 
     # ===================================================================================
     # Balancing Functions
@@ -467,19 +369,15 @@ class VPPBEV(VPPComponent):
 
     # Override balancing function from super class.
     def valueForTimestamp(self, timestamp):
-        # -> Function stub <-
         
         if type(timestamp) == int:
             
             return self.timeseries['car_charger'][self.timeseries.index[timestamp]] * self.limit
         
-        if type(timestamp) == str:
+        elif type(timestamp) == str:
             
             return self.timeseries['car_charger'][timestamp] * self.limit
         
         else:
-            return -9999
+            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
         
-       # return self.timeseries.iloc[timestamp][3]
-    
-    

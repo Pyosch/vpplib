@@ -12,7 +12,11 @@ parameters in an existing function are changed.
 from model.VPPBEV import VPPBEV
 import matplotlib.pyplot as plt
 
-bev = VPPBEV(timebase=15/60, identifier=2, year=2017, battery_max = 16, charging_power = 11)
+bev = VPPBEV(timebase=15/60, identifier='bev_1', 
+             start = '2017-06-01 00:00:00', end = '2017-06-01 23:45:00', time_freq = "15 min", 
+             battery_max = 16, battery_min = 0, battery_usage = 1, 
+             charging_power = 11, chargeEfficiency = 0.98, 
+             environment=None, userProfile=None)
     
 def test_prepareTimeSeries(bev):
     
@@ -24,7 +28,7 @@ def test_prepareTimeSeries(bev):
     
 def test_valueForTimestamp(bev):
     
-    timestepvalue = bev.valueForTimestamp(300)
+    timestepvalue = bev.valueForTimestamp(48)
     print("\nvalueForTimestamp:\n", timestepvalue)
     
 test_prepareTimeSeries(bev)
