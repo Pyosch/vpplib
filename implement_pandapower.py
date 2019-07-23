@@ -38,9 +38,9 @@ net = pn.create_kerber_landnetz_kabel_2()
 
 #%% define the amount of components in the grid
 
-pv_percentage = 0
+pv_percentage = 30
 storage_percentage = 0
-bev_percentage = 10
+bev_percentage = 30
 hp_percentage = 0
 
 #%% assign components to the bus names
@@ -58,6 +58,13 @@ buses_with_bev = random.sample(list(net.bus.name[net.bus.type == 'b']), bev_amou
 #Distribution of el storage is only done for houses with pv
 storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
 buses_with_storage = random.sample(buses_with_pv, storage_amount)
+
+#%% assign names and types to baseloads für later p and q assignment
+
+for bus in net.bus.index:
+    
+    net.load.name[net.load.bus == bus] = net.bus.name[bus]+'_baseload'
+    net.load.type[net.load.bus == bus] = 'baseload'
 
 #%% create components and assign components to the Virtual Powerplant
 
@@ -108,18 +115,18 @@ for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
         
         if component in list(net.gen.name):
             
-            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation
+            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-100 #W to MW; negative due to generation #TODO: Adjust inverter and moules
         
         if component in list(net.load.name):
             
             net.load.p_mw[net.load.name == component] = valueForTimestamp/1000
         
     
-    for bus in net.load.bus:
+    for name in net.load.name:
+    
+        if net.load.type[net.load.name == name].item() == 'baseload': #adjust if type of baseload load changes; throws an ERR!!!
         
-        if net.load.type[net.load.bus == bus].item() == None: #adjust if type of baseload load changes; SOMETIMES throws an ERR!!!
-            
-            net.load.p_mw[net.load.bus == bus] = baseload[str(bus)][str(idx)]/1000000
+            net.load.p_mw[net.load.name == name] = baseload[str(net.load.bus[net.load.name == name].item())][str(idx)]/1000000
         
         
     pp.runpp(net)
@@ -143,6 +150,7 @@ def extractResults(net_dict):
     bus_vm_pu = pd.DataFrame()
     trafo_loading_percent = pd.DataFrame()
     gen_p_mw = pd.DataFrame()
+    load_p_mw = pd.DataFrame()
     
     for idx in net_dict.keys():
         
@@ -151,21 +159,23 @@ def extractResults(net_dict):
         bus_vm_pu[idx] = net_dict[idx]['res_bus'].vm_pu
         trafo_loading_percent[idx] = net_dict[idx]['res_trafo'].loading_percent
         gen_p_mw[idx] = net_dict[idx]['res_gen'].p_mw
-    
+        load_p_mw[idx] = net_dict[idx]['res_load'].p_mw
 
     line_loading_percent = line_loading_percent.T
     bus_vm_pu = bus_vm_pu.T
     trafo_loading_percent = trafo_loading_percent.T
     gen_p_mw = gen_p_mw.T
+    load_p_mw = load_p_mw.T
         
-    return ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw
+    return ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw, load_p_mw
 
 
-ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw = extractResults(net_dict)
+ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw, load_p_mw = extractResults(net_dict)
 
 trafo_loading_percent.plot()
 line_loading_percent.plot()
 bus_vm_pu.plot()
+load_p_mw.plot()
 
 #%% extract results of single component categories
 
@@ -230,5 +240,3 @@ def extract_load(net_dict):
     load_p_mw = load_p_mw.T
     
     return load_p_mw
-
-load_p_mw = extract_load(net_dict)
