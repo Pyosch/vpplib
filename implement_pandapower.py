@@ -12,17 +12,21 @@ import pandapower as pp
 import pandapower.networks as pn
 from model.VPPPhotovoltaic import VPPPhotovoltaic
 from model.VPPBEV import VPPBEV
+from model.VPPHeatPump import VPPHeatPump
 from model.VirtualPowerPlant import VirtualPowerPlant
 
 latitude = 50.941357
 longitude = 6.958307
 #name = 'pv1'
 
-start = '2017-06-01 00:00:00'
-end = '2017-06-01 23:45:00'
+start = '2017-01-01 00:00:00'
+end = '2017-12-31 23:45:00'
 time_freq = "15 min"
+timebase=15/60
 
-weather_data = pd.read_csv("./Input_House/PV/20170601_irradiation_15min.csv")
+#weather_data = pd.read_csv("./Input_House/PV/20170601_irradiation_15min.csv")
+
+weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
 
 baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
@@ -38,10 +42,10 @@ net = pn.create_kerber_landnetz_kabel_2()
 
 #%% define the amount of components in the grid
 
-pv_percentage = 30
+pv_percentage = 50
 storage_percentage = 0
 bev_percentage = 30
-hp_percentage = 0
+hp_percentage = 20
 
 #%% assign components to the bus names
 
@@ -70,7 +74,7 @@ for bus in net.bus.index:
 
 for bus in buses_with_pv:
     
-    vpp.addComponent(VPPPhotovoltaic(timebase=1, identifier=(bus+'_PV'), 
+    vpp.addComponent(VPPPhotovoltaic(timebase=timebase, identifier=(bus+'_PV'), 
                                      latitude=latitude, longitude=longitude, 
                                      modules_per_string=1, strings_per_inverter=1))
     
@@ -82,11 +86,22 @@ for bus in buses_with_pv:
 
 for bus in buses_with_bev:
     
-    vpp.addComponent(VPPBEV(timebase=15/60, identifier=(bus+'_BEV'),
+    vpp.addComponent(VPPBEV(timebase=timebase, identifier=(bus+'_BEV'),
                             start = start, end = end, time_freq = time_freq, 
                             battery_max = 16, battery_min = 0, battery_usage = 1, 
                             charging_power = 11, chargeEfficiency = 0.98, 
                             environment=None, userProfile=None))
+    
+    vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries()
+    
+    
+for bus in buses_with_hp:
+    
+    vpp.addComponent(VPPHeatPump(identifier=(bus+'_HP'), timebase=timebase, heatpump_type="Air", 
+                 heat_sys_temp=60, environment=None, userProfile=None, 
+                 heatpump_power=10.6, full_load_hours=2100, 
+                 building_type = 'DE_HEF33', start=start,
+                 end=end))
     
     vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries()
 
@@ -96,12 +111,17 @@ for bus in buses_with_pv:
     
     pp.create_gen(net, bus=net.bus[net.bus.name == bus].index[0], 
                   p_mw=(vpp.components[bus+'_PV'].module.Impo*vpp.components[bus+'_PV'].module.Vmpo/1000000), 
-                  vm_pu = 1.0, name=(bus+'_PV'))
+                  vm_pu = 1.0, name=(bus+'_PV'), type = 'PV')
   
 for bus in buses_with_bev:
     
     pp.create_load(net, bus=net.bus[net.bus.name == bus].index[0], 
                    p_mw=(vpp.components[bus+'_BEV'].charging_power/1000), name=(bus+'_BEV'), type = 'BEV')
+    
+for bus in buses_with_hp:
+    
+    pp.create_load(net, bus=net.bus[net.bus.name == bus].index[0], 
+                   p_mw=(vpp.components[bus+'_HP'].heatpump_power/1000), name=(bus+'_HP'), type = 'HP')
 #%% assign values of generation/demand over time and run powerflow
 
 net_dict = {}
@@ -172,10 +192,10 @@ def extractResults(net_dict):
 
 ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw, load_p_mw = extractResults(net_dict)
 
-trafo_loading_percent.plot()
-line_loading_percent.plot()
-bus_vm_pu.plot()
-load_p_mw.plot()
+trafo_loading_percent.plot(figsize=(16,9), title='trafo_loading_percent')
+line_loading_percent.plot(figsize=(16,9), title='line_loading_percent')
+bus_vm_pu.plot(figsize=(16,9), title='bus_vm_pu')
+load_p_mw.plot(figsize=(16,9), title='load_p_mw')
 
 #%% extract results of single component categories
 
