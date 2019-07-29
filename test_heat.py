@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 start = '2017-01-01 00:00:00'
-end = '2017-01-01 23:45:00'
+end = '2017-01-14 23:45:00'
 freq = "15 min"
 timestamp_int = 48
 timestamp_str = '2017-01-01 12:00:00'
@@ -23,20 +23,20 @@ hp = VPPHeatPump(identifier = "House 1", timebase = 1, heatpump_type = "Air",
                  heat_sys_temp = 60, environment = None, userProfile = None, 
                  heatpump_power = 10.6, full_load_hours = 2100, heat_demand_year = None,
                  building_type = 'DE_HEF33', start = start,
-                 end = end)
+                 end = end, year = '2017')
 
 def test_get_heat_demand(hp):
     
     print('get_heat_demand:')
     hp.get_heat_demand()
-    hp.heat_demand.plot()
+    hp.heat_demand.plot(figsize=(16,9))
     plt.show()
 
 def test_get_cop(hp):
     
     print('get_cop:')
     hp.get_cop()
-    hp.cop.plot()
+    hp.cop.plot(figsize=(16,9))
     plt.show()
     
     
@@ -44,7 +44,7 @@ def test_prepareTimeseries(hp):
     
     print('prepareTimeseries:')
     hp.prepareTimeSeries()
-    hp.timeseries.plot()
+    hp.timeseries.plot(figsize=(16,9))
     plt.show()
     
 def test_valueForTimestamp(hp, timestamp):
@@ -67,4 +67,3 @@ test_observationsForTimestamp(hp, timestamp_int)
 
 test_valueForTimestamp(hp, timestamp_str)
 test_observationsForTimestamp(hp, timestamp_str)
-

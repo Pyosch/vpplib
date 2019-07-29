@@ -12,11 +12,11 @@ from .VPPComponent import VPPComponent
 
 class VPPHeatPump(VPPComponent):
     
-    def __init__(self, identifier, timebase = 1, heatpump_type = "Air", 
-                 heat_sys_temp = 60, environment = None, userProfile = None, 
-                 heatpump_power = 10.6, full_load_hours = 2100, heat_demand_year = None,
-                 building_type = 'DE_HEF33', start = '2017-01-01 00:00:00',
-                 end = '2017-12-31 23:45:00'):
+    def __init__(self, identifier, timebase, heatpump_type = "Air", 
+                 heat_sys_temp = 60, t_0 = 40, environment = None, userProfile = None, 
+                 heatpump_power = None, thermal_power = True, 
+                 full_load_hours = None, heat_demand_year = None,
+                 building_type = 'DE_HEF33', start = None, end = None, year = None):
         
         """
         Info
@@ -57,23 +57,24 @@ class VPPHeatPump(VPPComponent):
         self.identifier = identifier
         self.start = start
         self.end = end
+        self.year = year
         
         #heatpump parameters
         self.cop = None
         self.heatpump_type = heatpump_type
         self.heatpump_power = heatpump_power
-        self.index_h = pd.DataFrame(pd.date_range(start, end, periods = None, freq = "H", name ='Time'))
+        self.thermal_power = thermal_power
         self.limit = 1
         
         #building parameters
         #TODO: export in seperate Building class
-        mean_temp_days = pd.DataFrame(
-                pd.date_range(start, end, freq="D", name = 'Time'))
+        mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, freq = "D", name="time"))
         mean_temp_days['Mean_Temp'] = pd.read_csv(
                 "./Input_House/heatpump_model/mean_temp_days_2017.csv", 
                 header = None)
         
         self.heat_demand = None
+        self.timeseries_year = None
         self.building_type = building_type #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv", decimal=",")
         self.mean_temp_days = mean_temp_days
@@ -84,7 +85,14 @@ class VPPHeatPump(VPPComponent):
         self.full_load_hours = full_load_hours #According to BDEW multi family homes: 2000, single family homes: 2100
         self.heat_demand_year = heat_demand_year
         self.heat_sys_temp = heat_sys_temp
-        self.t_0 = 40 #°C
+        self.t_0 = t_0 #°C
+        
+        #for SigLinDe calculations
+        self.building_parameters = None
+        self.h_del = None
+        self.heat_demand_daily = None
+        self.demandfactor = None
+        self.consumerfactor = None
               
         
     def get_heat_demand(self):
@@ -120,32 +128,28 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-        #calculate the building parameters
-        b_params = [] #[A, B, C, D, m_H, b_H, m_W, b_W]
-        b_params = self.building_parameters(self.building_type, self.SigLinDe)
         
-        h_de = self.h_del(self.mean_temp_days, b_params, self.t_0)
+        self.get_building_parameters()
         
-        heat_demand_daily = self.daily_demand(h_de, self.mean_temp_days.Mean_Temp, self.demand_daily)
+        self.get_h_del()
+        
+        self.get_heat_demand_daily()
         
         if self.heat_demand_year == None:
-            Q_N = self.demandfactor(self.full_load_hours, self.heatpump_power)
+            self.get_demandfactor()
             
         else:
-            Q_N = self.heat_demand_year
+            self.demandfactor = self.heat_demand_year
             
-        K_w = self.consumerfactor(Q_N, h_de)
+        self.get_consumerfactor()
         
-        heat_demand_h = self.new_scenario(freq = "H")
-        heat_demand_h.heat_demand = self.hourly_heat_demand(heat_demand_daily, K_w)
+        self.get_hourly_heat_demand()
         
-        heat_loadshape = self.hour_to_qarter(heat_demand_h, column = "heat_demand")
-        
-        self.heat_demand = heat_loadshape
+        self.heat_demand = self.hour_to_qarter()
         
         return self.heat_demand
             
-
+    
     def get_cop(self):
         
         """
@@ -183,13 +187,13 @@ class VPPHeatPump(VPPComponent):
         cop_lst = []
         
         if self.heatpump_type == "Air":
-            for i, tmp in self.mean_temp_hours.loc[self.start:self.end].iterrows():
+            for i, tmp in self.mean_temp_hours.iterrows():
                 cop = (6.81 - 0.121 * (self.heat_sys_temp - tmp)
                        + 0.00063 * (self.heat_sys_temp - tmp)**2)
                 cop_lst.append(cop)
         
         elif self.heatpump_type == "Ground":
-            for i, tmp in self.mean_temp_hours.loc[self.start:self.end].iterrows():
+            for i, tmp in self.mean_temp_hours.iterrows():
                 cop = (8.77 - 0.15 * (self.heat_sys_temp - tmp)
                        + 0.000734 * (self.heat_sys_temp - tmp)**2)
                 cop_lst.append(cop)
@@ -197,7 +201,7 @@ class VPPHeatPump(VPPComponent):
         else:
             traceback.print_exc("Heatpump type is not defined!")
         
-        self.cop = pd.DataFrame(data = cop_lst, index = self.index_h.Time)
+        self.cop = pd.DataFrame(data = cop_lst, index = pd.date_range(self.year, periods=8760, freq = "H", name="time"))
         self.cop.columns = ['cop']
         
         return self.cop  
@@ -212,10 +216,21 @@ class VPPHeatPump(VPPComponent):
         if self.heat_demand == None:
             self.get_heat_demand()
             
-        self.timeseries = self.heat_demand
-        self.timeseries["cop"] = self.cop.cop
-        self.timeseries.cop.interpolate(inplace = True)
-        self.timeseries['el_demand'] = self.timeseries.heat_demand / self.timeseries.cop
+        if self.timeseries_year == None:
+            self.get_timeseries_year()
+        
+        self.timeseries = self.timeseries_year.loc[self.start:self.end]
+        
+        return self.timeseries
+    
+    def get_timeseries_year(self):
+        
+        self.timeseries_year = self.heat_demand
+        self.timeseries_year["cop"] = self.cop#.cop
+        self.timeseries_year.cop.interpolate(inplace = True)
+        self.timeseries_year['el_demand'] = self.timeseries_year.heat_demand / self.timeseries_year.cop
+        
+        return self.timeseries_year
 
     # ===================================================================================
     # Controlling functions
@@ -345,18 +360,12 @@ class VPPHeatPump(VPPComponent):
         return observations
 
 
+    #%%:
     # ===================================================================================
     # Basic Functions for Heatpump
     # ===================================================================================
-    def new_scenario(self, periods = None, freq = "15 min", column = 'heat_demand'):
     
-        df_main = pd.DataFrame(pd.date_range(self.start, self.end, periods, freq, name ='Time'))
-        df_main[column] = 0
-        
-        return df_main
-    
-    #%%:
-    def building_parameters(self, building_type, SigLinDe):
+    def get_building_parameters(self):
         
         """
         Info
@@ -390,14 +399,16 @@ class VPPHeatPump(VPPComponent):
         
         """
         
-        for i, Sig in SigLinDe.iterrows():
-            if Sig.Type == building_type:
+        for i, Sig in self.SigLinDe.iterrows():
+            if Sig.Type == self.building_type:
+                
+                self.building_parameters=(Sig.A, Sig.B, Sig.C, Sig.D, Sig.m_H, Sig.b_H, Sig.m_W, Sig.b_W)
     
                 return(Sig.A, Sig.B, Sig.C, Sig.D, Sig.m_H, Sig.b_H, Sig.m_W, Sig.b_W)
          
     #%%:
                 
-    def h_del(self, mean_temp_days, b_params, t_0):
+    def get_h_del(self):
         
         """
         Info
@@ -431,31 +442,33 @@ class VPPHeatPump(VPPComponent):
         
         """
         
-        A, B, C, D, m_H, b_H, m_W, b_W = b_params
+        A, B, C, D, m_H, b_H, m_W, b_W = self.building_parameters
         
         #Calculating the daily heat demand h_del for each day of the year
         h_lst = []
         
     
-        for i, temp in mean_temp_days.iterrows():
+        for i, temp in self.mean_temp_days.iterrows():
             
             #H and W are for linearisation in SigLinDe function below 8°C
             H = m_H * temp.Mean_Temp + b_H
             W = m_W * temp.Mean_Temp + b_W
             if H > W:
-                h_del = ((A/(1+((B/(temp.Mean_Temp - t_0))**C))) + D) + H
+                h_del = ((A/(1+((B/(temp.Mean_Temp - self.t_0))**C))) + D) + H
                 h_lst.append(h_del)
     
             else:
-                h_del = ((A/(1+((B/(temp.Mean_Temp - t_0))**C))) + D) + W
+                h_del = ((A/(1+((B/(temp.Mean_Temp - self.t_0))**C))) + D) + W
                 h_lst.append(h_del)
     
         df_h_del = pd.DataFrame(h_lst)
+        self.h_del = df_h_del[0]
+        
         return df_h_del[0]
     
     #%%: 
         
-    def daily_demand(self, h_del, Mean_Temp, demand_daily):
+    def get_heat_demand_daily(self):
         
         """
         Info
@@ -491,70 +504,72 @@ class VPPHeatPump(VPPComponent):
         
         demand_daily_lst = []
         df = pd.DataFrame()
-        df["h_del"] = h_del
-        df["Mean_Temp"] = Mean_Temp
+        df["h_del"] = self.h_del
+        df["Mean_Temp"] = self.mean_temp_days.Mean_Temp
         
         for i, d in df.iterrows():
         
             if (d.Mean_Temp <= -15):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['Temp. <= -15 °C']
                     demand_daily_lst.append(demand)
         
             elif ((d.Mean_Temp > -15) & (d.Mean_Temp <= -10)):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['-15 °C < Temp. <= -10 °C']
                     demand_daily_lst.append(demand)
         
             elif ((d.Mean_Temp > -10) & (d.Mean_Temp <= -5)):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['-10 °C < Temp. <= -5 °C']
                     demand_daily_lst.append(demand)
         
             elif ((d.Mean_Temp > -5) & (d.Mean_Temp <= 0)):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['-5 °C < Temp. <= 0 °C']
                     demand_daily_lst.append(demand)
         
             elif ((d.Mean_Temp > 0) & (d.Mean_Temp <= 5)):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['0 °C < Temp. <= 5 °C']
                     demand_daily_lst.append(demand)
         
             elif ((d.Mean_Temp > 5) & (d.Mean_Temp <= 10)):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['5 °C < Temp. <= 10 °C']
                     demand_daily_lst.append(demand)
         
             elif ((d.Mean_Temp > 10) & (d.Mean_Temp <= 15)):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['10 °C < Temp. <= 15 °C']
                     demand_daily_lst.append(demand)
         
             elif ((d.Mean_Temp > 15) & (d.Mean_Temp <= 20)):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['15 °C < Temp. <= 20 °C']
                     demand_daily_lst.append(demand)
         
             elif ((d.Mean_Temp > 20) & (d.Mean_Temp <= 25)):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['20 °C < Temp. <= 25 °C']
                     demand_daily_lst.append(demand)
         
             elif (d.Mean_Temp > 25):
-                for i, x in demand_daily.iterrows():
+                for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['Temp > 25 °C']
                     demand_daily_lst.append(demand)
         
             else:
                 demand_daily_lst.append(-9999) #to see if something is wrong
             
-        return pd.DataFrame(demand_daily_lst)
+        self.heat_demand_daily = pd.DataFrame(demand_daily_lst, index = pd.date_range(self.year, periods=8760, freq = "H", name="time"))
+        
+        return self.heat_demand_daily
     
 
     #%%:
       
-    def demandfactor(self, hours_year, heatpump_power,  thermal_power = 1, df_cop = 0):
+    def get_demandfactor(self):
         
         """
         Info
@@ -588,24 +603,24 @@ class VPPHeatPump(VPPComponent):
         
         """
         
-        if thermal_power:
+        if self.thermal_power:
             #Demandfactor (Verbrauchswert) Q_N 
-            Q_N = heatpump_power * hours_year #if heatpump_power is thermal power
+            self.demandfactor = self.heatpump_power * self.full_load_hours #if heatpump_power is thermal power
     
         else:
             
             #seasonal performance factor (Jahresarbeitszahl) spf
             #needed if only el. power of heatpump is known 
-            spf = sum(df_cop[0])/len(df_cop[0])
+            spf = sum(self.cop.cop)/len(self.cop.cop)
     
             #Demandfactor (Verbrauchswert) Q_N 
-            Q_N = heatpump_power * spf * hours_year #if heatpump_power is el. power
+            self.demandfactor = self.heatpump_power * spf * self.full_load_hours #if heatpump_power is el. power
             
-        return Q_N
+        return self.demandfactor
     
     #%%:
     
-    def consumerfactor(self, Q_N, h_del):
+    def get_consumerfactor(self):
         
         """
         Info
@@ -639,13 +654,13 @@ class VPPHeatPump(VPPComponent):
         
         """
         
-        #Consumerfactor (Kundenwert) K_w
-        K_w = Q_N/(sum(h_del)) 
-        return K_w
+        #consumerfactor (Kundenwert) K_w
+        self.consumerfactor = self.demandfactor/(sum(self.h_del)) 
+        return self.consumerfactor
     
     #%%:
     
-    def hourly_heat_demand(self, demand_daily, K_w):
+    def get_hourly_heat_demand(self):
         
         """
         Info
@@ -679,16 +694,14 @@ class VPPHeatPump(VPPComponent):
         
         """
         
-        #demand_daily = float(demand_daily[0])
+        self.hourly_heat_demand = self.heat_demand_daily * self.consumerfactor
         
-        heat_demand = demand_daily.astype(float) * K_w
-        
-        return pd.DataFrame(heat_demand)
+        return self.hourly_heat_demand
     
    
     #%%:
         
-    def hour_to_qarter(self, df_h, column = "heat_demand"):
+    def hour_to_qarter(self):
         
         """
         Info
@@ -722,14 +735,8 @@ class VPPHeatPump(VPPComponent):
         
         """
         
-        df_min = self.new_scenario(freq = "15 min")
-        df_min.set_index(df_min.Time, inplace = True)
+        self.heat_demand = pd.DataFrame(index = pd.date_range(self.year, periods=35040, freq='15min', name="time"))
+        self.heat_demand["heat_demand"] = self.hourly_heat_demand
+        self.heat_demand.interpolate(inplace = True)
         
-        df_h.set_index(df_h.Time, inplace = True)
-        del df_min["Time"]
-        df_min[column] = df_h["heat_demand"]
-        df_min.interpolate(inplace = True)
-    #    df_min.fillna(method='bfill',inplace = True)
-        df_min.dropna(inplace = True)
-        
-        return df_min
+        return self.heat_demand

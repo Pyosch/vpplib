@@ -12,8 +12,8 @@ import traceback
 
 class VPPBEV(VPPComponent):
 
-    def __init__(self, timebase, identifier, start = '2017-01-01 00:00:00', end = '2017-12-31 23:45:00', time_freq = "15 min", battery_max = 16, 
-                 battery_min = 0, battery_usage = 1, charging_power = 11, 
+    def __init__(self, timebase, identifier, start = None, end = None, time_freq = "15 min", battery_max = 16, 
+                 battery_min = 0, battery_usage = 1, charging_power = 11, load_degradiation_begin = 0.8, 
                  chargeEfficiency = 0.98, environment=None, userProfile=None):
 
         # Call to super class
@@ -77,6 +77,7 @@ class VPPBEV(VPPComponent):
         self.battery_usage = battery_usage
         self.charging_power = charging_power
         self.chargeEfficiency = chargeEfficiency
+        self.load_degradiation_begin = load_degradiation_begin
         self.identifier = identifier
       
     def prepareTimeSeries(self):
@@ -115,6 +116,7 @@ class VPPBEV(VPPComponent):
         self.set_at_home(work_start, work_end, weekend_trip_start, weekend_trip_end)
         self.charge()
         self.timeseries.set_index('Time', inplace = True, drop = True)
+        self.timeseries['at_home'] = self.at_home
 
     #TODO: move to VPPComponent or VPPOperator
     def new_scenario(self):
@@ -166,7 +168,7 @@ class VPPBEV(VPPComponent):
         
         """
         
-        load_degradiation_begin = 0.8
+        
         battery_charge = self.battery_max #initial state of charge at the first timestep
         lst_battery = []
         lst_charger = []
@@ -183,8 +185,8 @@ class VPPBEV(VPPComponent):
                 lst_charger.append(0) #if car is not at home, chargers energy consumption is 0
             
             #Function to apply the load_degradation to the load profile
-            elif (at_home.item() == 1) & (battery_charge > self.battery_max * load_degradiation_begin): 
-                degraded_charging_power = self.charging_power * (1 - (battery_charge / self.battery_max - load_degradiation_begin)/(1 - load_degradiation_begin))
+            elif (at_home.item() == 1) & (battery_charge > self.battery_max * self.load_degradiation_begin): 
+                degraded_charging_power = self.charging_power * (1 - (battery_charge / self.battery_max - self.load_degradiation_begin)/(1 - self.load_degradiation_begin))
                 battery_charge = battery_charge + (degraded_charging_power * self.chargeEfficiency * self.timebase)
                 charger = degraded_charging_power
                 
@@ -372,12 +374,70 @@ class VPPBEV(VPPComponent):
         
         if type(timestamp) == int:
             
-            return self.timeseries['car_charger'][self.timeseries.index[timestamp]] * self.limit
+            return self.timeseries['car_charger'].iloc[timestamp] * self.limit
         
         elif type(timestamp) == str:
             
-            return self.timeseries['car_charger'][timestamp] * self.limit
+            return self.timeseries['car_charger'].loc[timestamp] * self.limit
         
         else:
             traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
         
+        
+    def observationsForTimestamp(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function takes a timestamp as the parameter and returns a 
+        dictionary with key (String) value (Any) pairs. 
+        Depending on the type of component, different status parameters of the 
+        respective component can be queried. 
+        
+        For example, a power store can report its "State of Charge".
+        Returns an empty dictionary since this function needs to be 
+        implemented by child classes.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        if type(timestamp) == int:
+            
+            car_charger, car_capacity , at_home= self.timeseries.iloc[timestamp]
+        
+        elif type(timestamp) == str:
+            
+            car_charger, car_capacity , at_home= self.timeseries.loc[timestamp]
+        
+        else:
+            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+        
+        # TODO: cop would change if power of heatpump is limited. 
+        # Dropping limiting factor for heatpumps
+        
+        observations = {'car_charger':car_charger, 'car_capacity':car_capacity, 'at_home':at_home}
+        
+        return observations

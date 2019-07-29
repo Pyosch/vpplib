@@ -17,14 +17,12 @@ from model.VirtualPowerPlant import VirtualPowerPlant
 
 latitude = 50.941357
 longitude = 6.958307
-#name = 'pv1'
 
 start = '2017-01-01 00:00:00'
-end = '2017-12-31 23:45:00'
+end = '2017-01-03 23:45:00'
+year = '2017'
 time_freq = "15 min"
 timebase=15/60
-
-#weather_data = pd.read_csv("./Input_House/PV/20170601_irradiation_15min.csv")
 
 weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
@@ -45,7 +43,7 @@ net = pn.create_kerber_landnetz_kabel_2()
 pv_percentage = 50
 storage_percentage = 0
 bev_percentage = 30
-hp_percentage = 20
+hp_percentage = 5
 
 #%% assign components to the bus names
 
@@ -76,7 +74,12 @@ for bus in buses_with_pv:
     
     vpp.addComponent(VPPPhotovoltaic(timebase=timebase, identifier=(bus+'_PV'), 
                                      latitude=latitude, longitude=longitude, 
-                                     modules_per_string=1, strings_per_inverter=1))
+                                     environment = None, userProfile = None,
+                                     start = start, end = end,
+                                     module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
+                                     inverter_lib = 'cecinverter', inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
+                                     surface_tilt = 20, surface_azimuth = 200,
+                                     modules_per_string = 1, strings_per_inverter = 1))
     
     vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries(weather_data)
     
@@ -98,10 +101,10 @@ for bus in buses_with_bev:
 for bus in buses_with_hp:
     
     vpp.addComponent(VPPHeatPump(identifier=(bus+'_HP'), timebase=timebase, heatpump_type="Air", 
-                 heat_sys_temp=60, environment=None, userProfile=None, 
-                 heatpump_power=10.6, full_load_hours=2100, 
-                 building_type = 'DE_HEF33', start=start,
-                 end=end))
+                                 heat_sys_temp=60, environment=None, userProfile=None, 
+                                 heatpump_power=5, full_load_hours=2100, 
+                                 building_type = 'DE_HEF33', start=start,
+                                 end=end, year = year))
     
     vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries()
 
@@ -135,16 +138,16 @@ for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
         
         if component in list(net.gen.name):
             
-            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-100 #W to MW; negative due to generation #TODO: Adjust inverter and moules
+            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-100 #W to MW; negative due to generation #TODO: Adjust inverter and modules
         
         if component in list(net.load.name):
             
-            net.load.p_mw[net.load.name == component] = valueForTimestamp/1000
+            net.load.p_mw[net.load.name == component] = valueForTimestamp/1000 #kW to MW
         
     
     for name in net.load.name:
     
-        if net.load.type[net.load.name == name].item() == 'baseload': #adjust if type of baseload load changes; throws an ERR!!!
+        if net.load.type[net.load.name == name].item() == 'baseload':
         
             net.load.p_mw[net.load.name == name] = baseload[str(net.load.bus[net.load.name == name].item())][str(idx)]/1000000
         
