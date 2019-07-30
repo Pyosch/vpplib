@@ -7,6 +7,7 @@ This file contains the basic functionalities of the VPPEnergyStorage class.
 
 from .VPPComponent import VPPComponent
 import traceback
+import pandas as pd
 
 class VPPEnergyStorage(VPPComponent):
 
@@ -60,46 +61,47 @@ class VPPEnergyStorage(VPPComponent):
         self.chargeEfficiency = chargeEfficiency
         self.dischargeEfficiency = dischargeEfficiency
         self.maxPower = maxPower
-        self.maxC = maxC
+        self.maxC = maxC #factor between 0.5 and 1.2
 
         self.stateOfCharge = 0
+        self.residual_load = None
 
 
 
 
 
     def prepareTimeSeries(self):
+        
+        soc_lst = []
+        res_load_lst = []
+        for residual_load in self.residual_load:
+            
+            soc, res_load = self.operate_storage(residual_load=residual_load)
+            soc_lst.append(soc)
+            res_load_lst.append(res_load)
+        
+        #save state of charge and residual load
+        self.timeseries = pd.DataFrame(data=soc_lst, columns=["state_of_charge"])
+        self.timeseries['residual_load'] = pd.DataFrame(data=res_load_lst)
     
-        self.timeseries = []
+        self.timeseries.index = self.residual_load.index
+        
+        return self.timeseries
 
     
     def operate_storage(self, residual_load):
-        """
-        #TODO: Find better name for this function
         
-        residual_load > 0 = Energy demand
-        residual_load < 0 = Energy surplus
-        
-        needed from device:                 implemented:
-            device.p_nom                        ()
-            device.efficiency_store             ()
-            device.efficiency_dispatch          ()
-            device.capacity                     (x)
-            device.state_of_charge_initial      (needed?)
-            device.state_of_charge_t            (x)
-            device.time_base                    (x)
-        """
         if residual_load > 0:
             #Energy demand --> discharge storage if stateOfCharge > 0
             
             if self.stateOfCharge > 0:
                 #storage is not empty
 
-                self.stateOfCharge -= residual_load * self.timebase
+                self.stateOfCharge -= residual_load * self.dischargeEfficiency * self.timebase
                 
                 #do not discharge below 0 kWh
                 if self.stateOfCharge < 0:
-                    residual_load = self.stateOfCharge / self.timebase * -1
+                    residual_load = self.stateOfCharge / self.chargeEfficiency / self.timebase * -1
                     self.stateOfCharge = 0
                     
                 else:
@@ -110,18 +112,18 @@ class VPPEnergyStorage(VPPComponent):
                 
         elif residual_load < 0:
             
-            #Energy surplus --> charge storage if stateOfCharge < maxC 
+            #Energy surplus --> charge storage if stateOfCharge < capacity 
             
-            if self.stateOfCharge < self.maxC:
+            if self.stateOfCharge < self.capacity:
                 #storage has not reached its max capacity
                 
-                self.stateOfCharge += residual_load *self.timebase * -1
+                self.stateOfCharge += residual_load * self.dischargeEfficiency * self.timebase * -1
                 
                 #do not overcharge the storage
-                if self.stateOfCharge > self.maxC:
-                    residual_load = (self.maxC - 
-                                     self.stateOfCharge) /self.timebase
-                    self.stateOfCharge = self.maxC
+                if self.stateOfCharge > self.capacity:
+                    residual_load = (self.capacity - 
+                                     self.stateOfCharge) / self.dischargeEfficiency / self.timebase
+                    self.stateOfCharge = self.capacity
                     
                 else:
                     residual_load = 0
@@ -179,19 +181,16 @@ class VPPEnergyStorage(VPPComponent):
         """
         if type(timestamp) == int:
             
-            stateOfCharge = self.timeseries.iloc[timestamp]
+            stateOfCharge, residual_load = self.timeseries.iloc[timestamp]
         
         elif type(timestamp) == str:
             
-            stateOfCharge = self.timeseries.loc[timestamp]
+            stateOfCharge, residual_load = self.timeseries.loc[timestamp]
         
         else:
             traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
         
-        # TODO: cop would change if power of heatpump is limited. 
-        # Dropping limiting factor for heatpumps
-        
-        observations = {'stateOfCharge':stateOfCharge, 'max_power':self.maxPower, 'maxC':self.maxC}
+        observations = {'stateOfCharge':stateOfCharge, 'residual_load':residual_load, 'max_power':self.maxPower, 'maxC':self.maxC}
         
         return observations
 
@@ -326,7 +325,17 @@ class VPPEnergyStorage(VPPComponent):
 
     # Override balancing function from super class.
     def valueForTimestamp(self, timestamp):
-
-        return self.timeseries[timestamp]
+        
+        if type(timestamp) == int:
+            
+            return self.timeseries['residual_load'].iloc[timestamp]
+        
+        elif type(timestamp) == str:
+            
+            return self.timeseries['residual_load'].loc[timestamp]
+        
+        else:
+            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+        
     
     

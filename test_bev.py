@@ -28,7 +28,7 @@ def test_prepareTimeSeries(bev):
     bev.prepareTimeSeries()
     print("prepareTimeSeries:")
     print(bev.timeseries.head()) 
-    bev.timeseries.plot()
+    bev.timeseries.plot(figsize=(16,9))
     plt.show()
     
 def test_valueForTimestamp(bev, timestamp):

@@ -21,16 +21,17 @@ year = '2017'
 
 #storage
 timebase = 15/60
-capacity = 0
 chargeEfficiency = 0.98
 dischargeEfficiency = 0.98
 maxPower = 4 #kW
-maxC = 4
+capacity = 4 #kWh
+maxC = 1 #factor between 0.5 and 1.2
 
 #test
 timestamp_int = 48
 timestamp_str = '2017-06-01 12:00:00'
 
+#input data
 baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
 baseload.set_index(baseload.Time, inplace = True)
 baseload.drop(labels="Time", axis=1, inplace = True)
@@ -38,6 +39,7 @@ baseload.drop(labels="Time", axis=1, inplace = True)
 weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
 
+#create pv object and timeseries
 pv = VPPPhotovoltaic(timebase=1, identifier=name, latitude=latitude, longitude=longitude, environment = None, userProfile = None,
                      start = start, end = end,
                      module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
@@ -47,27 +49,43 @@ pv = VPPPhotovoltaic(timebase=1, identifier=name, latitude=latitude, longitude=l
 
 pv.prepareTimeSeries(weather_data)
 
+#create storage object
 storage = VPPEnergyStorage(timebase = timebase, capacity=capacity, 
                            chargeEfficiency=chargeEfficiency, 
                            dischargeEfficiency=dischargeEfficiency, 
                            maxPower=maxPower, maxC=maxC, 
                            environment = None, userProfile = None)
 
+#combine baseload and pv timeseries to get residual load
 house_loadshape = pd.DataFrame(baseload['0'].loc[start:end]/1000)
 house_loadshape['pv_gen'] = pv.timeseries.loc[start:end]
-house_loadshape['loadshape'] = baseload['0'].loc[start:end]/1000 - pv.timeseries.Cologne
+house_loadshape['residual_load'] = baseload['0'].loc[start:end]/1000 - pv.timeseries.Cologne
 
+#assign residual load to storage
+storage.residual_load = house_loadshape.residual_load
 
-soc_lst = []
-res_load_lst = []
-for residual_load in house_loadshape.loadshape:
+def test_prepareTimeSeries(storage):
     
-    soc, res_load = storage.operate_storage(residual_load=residual_load)
-    soc_lst.append(soc)
-    res_load_lst.append(res_load)
+    storage.prepareTimeSeries()
+    print("prepareTimeSeries:")
+    print(storage.timeseries.head()) 
+    storage.timeseries.plot(figsize=(16,9))
+    plt.show()
+    
+def test_valueForTimestamp(storage, timestamp):
+    
+    timestepvalue = storage.valueForTimestamp(timestamp)
+    print("\nvalueForTimestamp:\n", timestepvalue)
+    
+def test_observationsForTimestamp(storage, timestamp):
+    
+    print('observationsForTimestamp:')
+    observation = storage.observationsForTimestamp(timestamp)
+    print(observation, '\n')
+    
+test_prepareTimeSeries(storage)
+test_valueForTimestamp(storage, timestamp_int)
+test_valueForTimestamp(storage, timestamp_str)
 
-house_loadshape['stateOfCharge'] = soc_lst
-house_loadshape['res_load'] = res_load_lst
-
-house_loadshape.plot(figsize=(16,9))
-plt.show()
+test_observationsForTimestamp(storage, timestamp_int)
+test_observationsForTimestamp(storage, timestamp_str)

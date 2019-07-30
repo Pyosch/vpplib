@@ -138,7 +138,7 @@ for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
         
         if component in list(net.gen.name):
             
-            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-100 #W to MW; negative due to generation #TODO: Adjust inverter and modules
+            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation #TODO: Adjust inverter and modules
         
         if component in list(net.load.name):
             

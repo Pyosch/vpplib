@@ -38,7 +38,7 @@ def test_prepareTimeSeries(pv, weather_data):
     pv.prepareTimeSeries(weather_data)
     print("prepareTimeSeries:")
     print(pv.timeseries.head())
-    pv.timeseries.plot()
+    pv.timeseries.plot(figsize=(16,9))
     plt.show()
 
 def test_valueForTimestamp(pv, timestamp):
