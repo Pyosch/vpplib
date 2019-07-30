@@ -13,7 +13,9 @@ import pandapower.networks as pn
 from model.VPPPhotovoltaic import VPPPhotovoltaic
 from model.VPPBEV import VPPBEV
 from model.VPPHeatPump import VPPHeatPump
+from model.VPPEnergyStorage import VPPEnergyStorage
 from model.VirtualPowerPlant import VirtualPowerPlant
+
 
 latitude = 50.941357
 longitude = 6.958307
@@ -30,6 +32,14 @@ weather_data.set_index("index", inplace = True)
 baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
 baseload.set_index("Time", inplace=True)
 
+#storage
+timebase = 15/60
+chargeEfficiency = 0.98
+dischargeEfficiency = 0.98
+maxPower = 4 #kW
+capacity = 4 #kWh
+maxC = 1 #factor between 0.5 and 1.2
+
 """
 Create virtual Powerplant:
 """
@@ -41,9 +51,9 @@ net = pn.create_kerber_landnetz_kabel_2()
 #%% define the amount of components in the grid
 
 pv_percentage = 50
-storage_percentage = 0
-bev_percentage = 30
-hp_percentage = 5
+storage_percentage = 50
+bev_percentage = 0
+hp_percentage = 0
 
 #%% assign components to the bus names
 
@@ -69,6 +79,14 @@ for bus in net.bus.index:
     net.load.type[net.load.bus == bus] = 'baseload'
 
 #%% create components and assign components to the Virtual Powerplant
+for bus in buses_with_storage:
+    
+    vpp.addComponent(VPPEnergyStorage(timebase = timebase, 
+                                      identifier=(bus+'_storage'), capacity=capacity, 
+                                      chargeEfficiency=chargeEfficiency, 
+                                      dischargeEfficiency=dischargeEfficiency, 
+                                      maxPower=maxPower, maxC=maxC, 
+                                      environment = None, userProfile = None))
 
 for bus in buses_with_pv:
     
@@ -79,7 +97,7 @@ for bus in buses_with_pv:
                                      module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
                                      inverter_lib = 'cecinverter', inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
                                      surface_tilt = 20, surface_azimuth = 200,
-                                     modules_per_string = 1, strings_per_inverter = 1))
+                                     modules_per_string = 4, strings_per_inverter = 2))
     
     vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries(weather_data)
     
@@ -108,61 +126,67 @@ for bus in buses_with_hp:
     
     vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries()
 
-#%% create generators in the pandapower.net
+#%% create elements in the pandapower.net
 
 for bus in buses_with_pv:
     
     pp.create_gen(net, bus=net.bus[net.bus.name == bus].index[0], 
                   p_mw=(vpp.components[bus+'_PV'].module.Impo*vpp.components[bus+'_PV'].module.Vmpo/1000000), 
-                  vm_pu = 1.0, name=(bus+'_PV'), type = 'PV')
+                  vm_pu=1.0, name=(bus+'_PV'), type = 'PV')
+    
+for bus in buses_with_storage:
+    
+    pp.create_storage(net, bus=net.bus[net.bus.name == bus].index[0],
+                      p_mw=0, max_e_mwh=capacity, name=(bus+'_storage'), type='LiIon')
   
 for bus in buses_with_bev:
     
     pp.create_load(net, bus=net.bus[net.bus.name == bus].index[0], 
-                   p_mw=(vpp.components[bus+'_BEV'].charging_power/1000), name=(bus+'_BEV'), type = 'BEV')
+                   p_mw=(vpp.components[bus+'_BEV'].charging_power/1000), name=(bus+'_BEV'), type='BEV')
     
 for bus in buses_with_hp:
     
     pp.create_load(net, bus=net.bus[net.bus.name == bus].index[0], 
-                   p_mw=(vpp.components[bus+'_HP'].heatpump_power/1000), name=(bus+'_HP'), type = 'HP')
+                   p_mw=(vpp.components[bus+'_HP'].heatpump_power/1000), name=(bus+'_HP'), type='HP')
 #%% assign values of generation/demand over time and run powerflow
 
-net_dict = {}
-for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
-    for component in vpp.components.keys():
-
-        valueForTimestamp = vpp.components[component].valueForTimestamp(str(idx))
-        
-        if math.isnan(valueForTimestamp):
-            valueForTimestamp = 0
-        
-        if component in list(net.gen.name):
+if storage_percentage == 0:
+    net_dict = {}
+    for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
+        for component in vpp.components.keys():
+    
+            valueForTimestamp = vpp.components[component].valueForTimestamp(str(idx))
             
-            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation #TODO: Adjust inverter and modules
-        
-        if component in list(net.load.name):
+            if math.isnan(valueForTimestamp):
+                valueForTimestamp = 0
             
-            net.load.p_mw[net.load.name == component] = valueForTimestamp/1000 #kW to MW
+            if component in list(net.gen.name):
+                
+                net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation #TODO: Adjust inverter and modules
+            
+            if component in list(net.load.name):
+                
+                net.load.p_mw[net.load.name == component] = valueForTimestamp/1000 #kW to MW
+            
         
-    
-    for name in net.load.name:
-    
-        if net.load.type[net.load.name == name].item() == 'baseload':
+        for name in net.load.name:
         
-            net.load.p_mw[net.load.name == name] = baseload[str(net.load.bus[net.load.name == name].item())][str(idx)]/1000000
+            if net.load.type[net.load.name == name].item() == 'baseload':
+            
+                net.load.p_mw[net.load.name == name] = baseload[str(net.load.bus[net.load.name == name].item())][str(idx)]/1000000
+            
+            
+        pp.runpp(net)
         
+        net_dict[idx] = {}
+        net_dict[idx]['res_bus'] = net.res_bus
+        net_dict[idx]['res_line'] = net.res_line
+        net_dict[idx]['res_trafo'] = net.res_trafo
+        net_dict[idx]['res_load'] = net.res_load
+        net_dict[idx]['res_gen'] = net.res_gen
+        net_dict[idx]['res_ext_grid'] = net.res_ext_grid
         
-    pp.runpp(net)
-    
-    net_dict[idx] = {}
-    net_dict[idx]['res_bus'] = net.res_bus
-    net_dict[idx]['res_line'] = net.res_line
-    net_dict[idx]['res_trafo'] = net.res_trafo
-    net_dict[idx]['res_load'] = net.res_load
-    net_dict[idx]['res_gen'] = net.res_gen
-    net_dict[idx]['res_ext_grid'] = net.res_ext_grid
-    
-    #access single elements: net_dict[vpp.components[next(iter(vpp.components))].timeseries.index[48]]['res_gen']['p_mw'][0]
+        #access single elements: net_dict[vpp.components[next(iter(vpp.components))].timeseries.index[48]]['res_gen']['p_mw'][0]
     
 
 #%% extract results from powerflow

@@ -11,7 +11,7 @@ import pandas as pd
 
 class VPPEnergyStorage(VPPComponent):
 
-    def __init__(self, timebase, capacity, chargeEfficiency, dischargeEfficiency, maxPower, maxC, environment = None, userProfile = None):
+    def __init__(self, timebase, identifier, capacity, chargeEfficiency, dischargeEfficiency, maxPower, maxC, environment = None, userProfile = None):
         
         """
         Info
@@ -57,6 +57,7 @@ class VPPEnergyStorage(VPPComponent):
 
         # Setup attributes
         self.timebase = timebase
+        self.identifier = identifier
         self.capacity = capacity
         self.chargeEfficiency = chargeEfficiency
         self.dischargeEfficiency = dischargeEfficiency
