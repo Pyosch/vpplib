@@ -138,7 +138,7 @@ for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
         
         if component in list(net.gen.name):
             
-            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation #TODO: Adjust inverter and modules
+            net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000 #kW to MW; negative due to generation #TODO: Adjust inverter and modules
         
         if component in list(net.load.name):
             
@@ -199,6 +199,7 @@ trafo_loading_percent.plot(figsize=(16,9), title='trafo_loading_percent')
 line_loading_percent.plot(figsize=(16,9), title='line_loading_percent')
 bus_vm_pu.plot(figsize=(16,9), title='bus_vm_pu')
 load_p_mw.plot(figsize=(16,9), title='load_p_mw')
+gen_p_mw.plot(figsize=(16,9), title='gen_p_mw')
 
 #%% extract results of single component categories
 
