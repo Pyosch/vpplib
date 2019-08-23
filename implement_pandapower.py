@@ -316,6 +316,7 @@ trafo_loading_percent.plot(figsize=(16,9), title='trafo_loading_percent')
 line_loading_percent.plot(figsize=(16,9), title='line_loading_percent')
 bus_vm_pu.plot(figsize=(16,9), title='bus_vm_pu')
 load_p_mw.plot(figsize=(16,9), title='load_p_mw')
+gen_p_mw.plot(figsize=(16,9), title='gen_p_mw')
 
 if len(buses_with_pv) > 0:
     gen_p_mw.plot(figsize=(16,9), title='gen_p_mw')
