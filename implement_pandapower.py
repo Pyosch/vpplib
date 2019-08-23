@@ -50,29 +50,14 @@ vpp = VirtualPowerPlant("Master")
 
 net = pn.panda_four_load_branch()
 
-#%%
-##create empty net
-#net = pp.create_empty_network() 
-#
-##create buses
-#b1 = pp.create_bus(net, vn_kv=20., name="Bus_1_mv")
-#b2 = pp.create_bus(net, vn_kv=0.4, name="Bus_2_loadbus")
-#
-##create bus elements
-#pp.create_ext_grid(net, bus=b1, vm_pu=1.02, name="Grid Connection")
-#pp.create_load(net, bus=b2, p_mw=0.1, q_mvar=0.05, name="Bus_2")
-#
-##create branch elements
-#tid = pp.create_transformer(net, hv_bus=b1, lv_bus=b2, std_type="0.4 MVA 20/0.4 kV", name="Trafo")
-
-##%% define the amount of components in the grid
+#%% define the amount of components in the grid
 #
 #pv_percentage = 50
 #storage_percentage = 0
 #bev_percentage = 50
 #hp_percentage = 20
 #
-##%% assign components to the bus names
+#%% assign components to the bus names
 #
 ##TODO: put in function:
 #pv_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (pv_percentage/100)), 0))
@@ -235,11 +220,19 @@ for idx in index:
         for bus in net.bus.index[net.bus.type == 'b']:
         
             storage_at_bus = pp.get_connected_elements(net, "storage", bus)
-            gen_at_bus = pp.get_connected_elements(net, "sgen", bus)
+            sgen_at_bus = pp.get_connected_elements(net, "sgen", bus)
             load_at_bus = pp.get_connected_elements(net, "load", bus)
             
             if len(storage_at_bus) > 0:
-                res_loads.loc[idx][bus] = sum(net.load.loc[load_at_bus].p_mw) +  sum(net.sgen.loc[gen_at_bus].p_mw)
+                res_loads.loc[idx][bus] = sum(net.load.loc[load_at_bus].p_mw) +  sum(net.sgen.loc[sgen_at_bus].p_mw)
+                #set loads and sgen to 0 since they are in res_loads now
+                #reassign values after operate_storage has been executed
+                for l in list(load_at_bus):
+                    net.load.p_mw[net.load.index == l]=0
+                    
+                for l in list(sgen_at_bus):
+                    net.sgen.p_mw[net.sgen.index == l]=0
+                
                 
                 #run storage operation with residual load
                 state_of_charge, res_load = vpp.components[net.storage.loc[storage_at_bus].name.item()].operate_storage(res_loads.loc[idx][bus].item())
@@ -248,10 +241,11 @@ for idx in index:
                 vpp.components[net.storage.loc[storage_at_bus].name.item()].timeseries['state_of_charge'][idx] = state_of_charge # state_of_charge_df[idx][bus] = state_of_charge
                 vpp.components[net.storage.loc[storage_at_bus].name.item()].timeseries['residual_load'][idx] = res_load
                 
-                #assign new residual load to loads and sgen depending on 
+                #assign new residual load to loads and sgen depending on positive/negative values
                 if res_load >0:
 
                     if len(load_at_bus) >0:
+                        #TODO: load according to origin of demand (baseload, hp or bev)
                         load_bus = load_at_bus.pop()
                         net.load.p_mw[net.load.index == load_bus] = res_load
                         
@@ -262,8 +256,9 @@ for idx in index:
                 
                 else:
 
-                    if len(gen_at_bus) >0:
-                        gen_bus = gen_at_bus.pop()
+                    if len(sgen_at_bus) >0:
+                        #TODO: assign generation according to origin of energy (PV oder CHP)
+                        gen_bus = sgen_at_bus.pop()
                         net.sgen.p_mw[net.sgen.index == gen_bus] = res_load
                         
                     else:
