@@ -17,8 +17,8 @@ import logging
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-start = '2010-06-01 00:00:00'
-end = '2010-06-01 23:45:00'
+start = '2010-01-01 00:00:00'
+end = '2010-12-31 23:45:00'
 timezone = 'Europe/Berlin'
 timestamp_int = 12
 timestamp_str = '2010-06-01 12:00:00'
