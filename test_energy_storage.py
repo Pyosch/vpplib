@@ -40,7 +40,7 @@ weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
 
 #create pv object and timeseries
-pv = VPPPhotovoltaic(timebase=1, identifier=name, latitude=latitude, longitude=longitude, environment = None, userProfile = None,
+pv = VPPPhotovoltaic(timebase=1, identifier=(name+'_PV'), latitude=latitude, longitude=longitude, environment = None, userProfile = None,
                      start = start, end = end,
                      module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
                      inverter_lib = 'cecinverter', inverter = 'ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_',
@@ -50,7 +50,7 @@ pv = VPPPhotovoltaic(timebase=1, identifier=name, latitude=latitude, longitude=l
 pv.prepareTimeSeries(weather_data)
 
 #create storage object
-storage = VPPEnergyStorage(timebase = timebase, capacity=capacity, 
+storage = VPPEnergyStorage(timebase = timebase, identifier=(name+'_storage'), capacity=capacity, 
                            chargeEfficiency=chargeEfficiency, 
                            dischargeEfficiency=dischargeEfficiency, 
                            maxPower=maxPower, maxC=maxC, 
@@ -59,7 +59,7 @@ storage = VPPEnergyStorage(timebase = timebase, capacity=capacity,
 #combine baseload and pv timeseries to get residual load
 house_loadshape = pd.DataFrame(baseload['0'].loc[start:end]/1000)
 house_loadshape['pv_gen'] = pv.timeseries.loc[start:end]
-house_loadshape['residual_load'] = baseload['0'].loc[start:end]/1000 - pv.timeseries.Cologne
+house_loadshape['residual_load'] = baseload['0'].loc[start:end]/1000 - pv.timeseries.Cologne_PV
 
 #assign residual load to storage
 storage.residual_load = house_loadshape.residual_load
@@ -83,9 +83,19 @@ def test_observationsForTimestamp(storage, timestamp):
     observation = storage.observationsForTimestamp(timestamp)
     print(observation, '\n')
     
-test_prepareTimeSeries(storage)
-test_valueForTimestamp(storage, timestamp_int)
-test_valueForTimestamp(storage, timestamp_str)
+def test_operate_storage(storage, timestamp):
+    
+    print('operate_storage:')
+    state_of_charge, res_load = storage.operate_storage(storage.residual_load.loc[timestamp])
+    print('state_of_charge: ', state_of_charge)
+    print('res_load: ', res_load)
+    
+#test_prepareTimeSeries(storage)
+#test_valueForTimestamp(storage, timestamp_int)
+#test_valueForTimestamp(storage, timestamp_str)
+#
+#test_observationsForTimestamp(storage, timestamp_int)
+#test_observationsForTimestamp(storage, timestamp_str)
 
-test_observationsForTimestamp(storage, timestamp_int)
-test_observationsForTimestamp(storage, timestamp_str)
+
+test_operate_storage(storage, timestamp_str)

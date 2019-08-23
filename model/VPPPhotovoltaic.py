@@ -125,9 +125,6 @@ class VPPPhotovoltaic(VPPComponent):
             # Paramter is invalid
             return
         
-    def print_value(self, time):
-        
-        print(time+200)
 
     # ===================================================================================
     # Balancing Functions

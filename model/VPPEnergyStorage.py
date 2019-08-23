@@ -66,9 +66,7 @@ class VPPEnergyStorage(VPPComponent):
 
         self.stateOfCharge = 0
         self.residual_load = None
-
-
-
+        self.timeseries = None
 
 
     def prepareTimeSeries(self):

@@ -8,6 +8,7 @@ Created on Tue Jul  2 10:38:17 2019
 import pandas as pd
 import math
 import random
+import traceback
 import pandapower as pp
 import pandapower.networks as pn
 from model.VPPPhotovoltaic import VPPPhotovoltaic
@@ -20,11 +21,12 @@ from model.VirtualPowerPlant import VirtualPowerPlant
 latitude = 50.941357
 longitude = 6.958307
 
-start = '2017-01-01 00:00:00'
-end = '2017-01-03 23:45:00'
+start = '2017-06-01 00:00:00'
+end = '2017-06-01 23:45:00'
 year = '2017'
 time_freq = "15 min"
 timebase=15/60
+index=pd.date_range(start=start, end=end, freq=time_freq)
 
 weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
@@ -46,31 +48,78 @@ Create virtual Powerplant:
 #%% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
 
-net = pn.create_kerber_landnetz_kabel_2()
+net = pn.panda_four_load_branch()
 
-#%% define the amount of components in the grid
+#%%
+##create empty net
+#net = pp.create_empty_network() 
+#
+##create buses
+#b1 = pp.create_bus(net, vn_kv=20., name="Bus_1_mv")
+#b2 = pp.create_bus(net, vn_kv=0.4, name="Bus_2_loadbus")
+#
+##create bus elements
+#pp.create_ext_grid(net, bus=b1, vm_pu=1.02, name="Grid Connection")
+#pp.create_load(net, bus=b2, p_mw=0.1, q_mvar=0.05, name="Bus_2")
+#
+##create branch elements
+#tid = pp.create_transformer(net, hv_bus=b1, lv_bus=b2, std_type="0.4 MVA 20/0.4 kV", name="Trafo")
 
-pv_percentage = 50
-storage_percentage = 50
-bev_percentage = 0
-hp_percentage = 0
+##%% define the amount of components in the grid
+#
+#pv_percentage = 50
+#storage_percentage = 0
+#bev_percentage = 50
+#hp_percentage = 20
+#
+##%% assign components to the bus names
+#
+##TODO: put in function:
+#pv_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (pv_percentage/100)), 0))
+#buses_with_pv = random.sample(list(net.bus.name[net.bus.type == 'b']), pv_amount)
+#
+#hp_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (hp_percentage/100)), 0))
+#buses_with_hp = random.sample(list(net.bus.name[net.bus.type == 'b']), hp_amount)
+#
+#bev_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (bev_percentage/100)), 0))
+#buses_with_bev = random.sample(list(net.bus.name[net.bus.type == 'b']), bev_amount)
+#
+##Distribution of el storage is only done for houses with pv
+#storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
+#buses_with_storage = random.sample(buses_with_pv, storage_amount)
 
 #%% assign components to the bus names
 
 #TODO: put in function:
-pv_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (pv_percentage/100)), 0))
-buses_with_pv = random.sample(list(net.bus.name[net.bus.type == 'b']), pv_amount)
+buses_with_pv = ['bus3', 'bus4', 'bus5', 'bus6']
 
-hp_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (hp_percentage/100)), 0))
-buses_with_hp = random.sample(list(net.bus.name[net.bus.type == 'b']), hp_amount)
+buses_with_hp = ['bus4']
 
-bev_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (bev_percentage/100)), 0))
-buses_with_bev = random.sample(list(net.bus.name[net.bus.type == 'b']), bev_amount)
+buses_with_bev = ['bus5']#, 'bus4', 'bus5', 'bus6']
 
 #Distribution of el storage is only done for houses with pv
-storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
-buses_with_storage = random.sample(buses_with_pv, storage_amount)
+buses_with_storage = ['bus5']
 
+#%% assign components to the loadbuses
+#
+#bus_lst = []
+#for b in net.bus.name:
+#    if 'loadbus' in b:
+#        bus_lst.append(b)
+#        
+##TODO: put in function:
+#pv_amount = int(round((len(bus_lst) * (pv_percentage/100)), 0))
+#buses_with_pv = random.sample(bus_lst, pv_amount)
+#
+#hp_amount = int(round((len(bus_lst) * (hp_percentage/100)), 0))
+#buses_with_hp = random.sample(bus_lst, hp_amount)
+#
+#bev_amount = int(round((len(bus_lst) * (bev_percentage/100)), 0))
+#buses_with_bev = random.sample(bus_lst, bev_amount)
+#
+##Distribution of el storage is only done for houses with pv
+#storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
+#buses_with_storage = random.sample(buses_with_pv, storage_amount)
 #%% assign names and types to baseloads für later p and q assignment
 
 for bus in net.bus.index:
@@ -79,14 +128,6 @@ for bus in net.bus.index:
     net.load.type[net.load.bus == bus] = 'baseload'
 
 #%% create components and assign components to the Virtual Powerplant
-for bus in buses_with_storage:
-    
-    vpp.addComponent(VPPEnergyStorage(timebase = timebase, 
-                                      identifier=(bus+'_storage'), capacity=capacity, 
-                                      chargeEfficiency=chargeEfficiency, 
-                                      dischargeEfficiency=dischargeEfficiency, 
-                                      maxPower=maxPower, maxC=maxC, 
-                                      environment = None, userProfile = None))
 
 for bus in buses_with_pv:
     
@@ -95,16 +136,25 @@ for bus in buses_with_pv:
                                      environment = None, userProfile = None,
                                      start = start, end = end,
                                      module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
-                                     inverter_lib = 'cecinverter', inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
+                                     inverter_lib = 'cecinverter', inverter = 'ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_',
                                      surface_tilt = 20, surface_azimuth = 200,
                                      modules_per_string = 4, strings_per_inverter = 2))
     
     vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries(weather_data)
     
-    #access dictionary keys via: vpp.components.keys()
-    #access elements: vpp.components['KV_1_2_PV'].prepareTimeSeries(weather_data)
     
-
+for bus in buses_with_storage:
+    
+    vpp.addComponent(VPPEnergyStorage(timebase = timebase, 
+                                      identifier=(bus+'_storage'), capacity=capacity, 
+                                      chargeEfficiency=chargeEfficiency, 
+                                      dischargeEfficiency=dischargeEfficiency, 
+                                      maxPower=maxPower, maxC=maxC, 
+                                      environment = None, userProfile = None))
+    
+    vpp.components[list(vpp.components.keys())[-1]].timeseries = pd.DataFrame(columns=['state_of_charge','residual_load'], index=pd.date_range(start=start, end=end, freq=time_freq))
+    
+    
 for bus in buses_with_bev:
     
     vpp.addComponent(VPPBEV(timebase=timebase, identifier=(bus+'_BEV'),
@@ -130,10 +180,10 @@ for bus in buses_with_hp:
 
 for bus in buses_with_pv:
     
-    pp.create_gen(net, bus=net.bus[net.bus.name == bus].index[0], 
-                  p_mw=(vpp.components[bus+'_PV'].module.Impo*vpp.components[bus+'_PV'].module.Vmpo/1000000), 
-                  vm_pu=1.0, name=(bus+'_PV'), type = 'PV')
-    
+    pp.create_sgen(net, bus=net.bus[net.bus.name == bus].index[0], 
+                  p_mw=(vpp.components[bus+'_PV'].module.Impo*vpp.components[bus+'_PV'].module.Vmpo/1000000),
+                  name=(bus+'_PV'), type = 'PV')    
+
 for bus in buses_with_storage:
     
     pp.create_storage(net, bus=net.bus[net.bus.name == bus].index[0],
@@ -148,45 +198,90 @@ for bus in buses_with_hp:
     
     pp.create_load(net, bus=net.bus[net.bus.name == bus].index[0], 
                    p_mw=(vpp.components[bus+'_HP'].heatpump_power/1000), name=(bus+'_HP'), type='HP')
+    
 #%% assign values of generation/demand over time and run powerflow
 
-if storage_percentage == 0:
-    net_dict = {}
-    for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
-        for component in vpp.components.keys():
-    
+net_dict = {}
+res_loads = pd.DataFrame(columns=[net.bus.index[net.bus.type == 'b']], index=pd.date_range(start=start, end=end, freq=time_freq)) #maybe only take buses with storage
+state_of_charge_df = pd.DataFrame(columns=[net.bus.index[net.bus.type == 'b']], index=pd.date_range(start=start, end=end, freq=time_freq))
+
+#for idx in vpp.components[next(iter(vpp.components))].timeseries.index:
+for idx in index:
+    for component in vpp.components.keys():
+
+        if 'storage' not in component:
+            
             valueForTimestamp = vpp.components[component].valueForTimestamp(str(idx))
             
             if math.isnan(valueForTimestamp):
-                valueForTimestamp = 0
+                traceback.print_exc("The value of ", component, "at timestep ", idx, "is NaN!")
+        
+        if component in list(net.sgen.name):
             
-            if component in list(net.gen.name):
+            net.sgen.p_mw[net.sgen.name == component] = valueForTimestamp/-1000 #kW to MW; negative due to generation
+        
+        if component in list(net.load.name):
+            
+            net.load.p_mw[net.load.name == component] = valueForTimestamp/1000 #kW to MW
+        
+    
+    for name in net.load.name:
+    
+        if net.load.type[net.load.name == name].item() == 'baseload':
+        
+            net.load.p_mw[net.load.name == name] = baseload[str(net.load.bus[net.load.name == name].item())][str(idx)]/1000000
+        
+    if len(buses_with_storage) > 0: 
+        for bus in net.bus.index[net.bus.type == 'b']:
+        
+            storage_at_bus = pp.get_connected_elements(net, "storage", bus)
+            gen_at_bus = pp.get_connected_elements(net, "sgen", bus)
+            load_at_bus = pp.get_connected_elements(net, "load", bus)
+            
+            if len(storage_at_bus) > 0:
+                res_loads.loc[idx][bus] = sum(net.load.loc[load_at_bus].p_mw) +  sum(net.sgen.loc[gen_at_bus].p_mw)
                 
-                net.gen.p_mw[net.gen.name == component] = valueForTimestamp/-1000000 #W to MW; negative due to generation #TODO: Adjust inverter and modules
-            
-            if component in list(net.load.name):
+                #run storage operation with residual load
+                state_of_charge, res_load = vpp.components[net.storage.loc[storage_at_bus].name.item()].operate_storage(res_loads.loc[idx][bus].item())
                 
-                net.load.p_mw[net.load.name == component] = valueForTimestamp/1000 #kW to MW
-            
-        
-        for name in net.load.name:
-        
-            if net.load.type[net.load.name == name].item() == 'baseload':
-            
-                net.load.p_mw[net.load.name == name] = baseload[str(net.load.bus[net.load.name == name].item())][str(idx)]/1000000
-            
-            
-        pp.runpp(net)
-        
-        net_dict[idx] = {}
-        net_dict[idx]['res_bus'] = net.res_bus
-        net_dict[idx]['res_line'] = net.res_line
-        net_dict[idx]['res_trafo'] = net.res_trafo
-        net_dict[idx]['res_load'] = net.res_load
-        net_dict[idx]['res_gen'] = net.res_gen
-        net_dict[idx]['res_ext_grid'] = net.res_ext_grid
-        
-        #access single elements: net_dict[vpp.components[next(iter(vpp.components))].timeseries.index[48]]['res_gen']['p_mw'][0]
+                #save state of charge and residual load in timeseries
+                vpp.components[net.storage.loc[storage_at_bus].name.item()].timeseries['state_of_charge'][idx] = state_of_charge # state_of_charge_df[idx][bus] = state_of_charge
+                vpp.components[net.storage.loc[storage_at_bus].name.item()].timeseries['residual_load'][idx] = res_load
+                
+                #assign new residual load to loads and sgen depending on 
+                if res_load >0:
+
+                    if len(load_at_bus) >0:
+                        load_bus = load_at_bus.pop()
+                        net.load.p_mw[net.load.index == load_bus] = res_load
+                        
+                    else:
+                        #assign new residual load to storage
+                        storage_bus = storage_at_bus.pop()
+                        net.storage.p_mw[net.storage.index == storage_bus] = res_load
+                
+                else:
+
+                    if len(gen_at_bus) >0:
+                        gen_bus = gen_at_bus.pop()
+                        net.sgen.p_mw[net.sgen.index == gen_bus] = res_load
+                        
+                    else:
+                        #assign new residual load to storage
+                        storage_bus = storage_at_bus.pop()
+                        net.storage.p_mw[net.storage.index == storage_bus] = res_load
+                
+    
+    pp.runpp(net)
+    
+    net_dict[idx] = {}
+    net_dict[idx]['res_bus'] = net.res_bus
+    net_dict[idx]['res_line'] = net.res_line
+    net_dict[idx]['res_trafo'] = net.res_trafo
+    net_dict[idx]['res_load'] = net.res_load
+    net_dict[idx]['res_sgen'] = net.res_sgen
+    net_dict[idx]['res_ext_grid'] = net.res_ext_grid
+    net_dict[idx]['res_storage'] = net.res_storage
     
 
 #%% extract results from powerflow
@@ -196,8 +291,9 @@ def extractResults(net_dict):
     line_loading_percent = pd.DataFrame()
     bus_vm_pu = pd.DataFrame()
     trafo_loading_percent = pd.DataFrame()
-    gen_p_mw = pd.DataFrame()
+    sgen_p_mw = pd.DataFrame()
     load_p_mw = pd.DataFrame()
+    storage_p_mw = pd.DataFrame()
     
     for idx in net_dict.keys():
         
@@ -205,24 +301,42 @@ def extractResults(net_dict):
         line_loading_percent[idx] = net_dict[idx]['res_line'].loading_percent
         bus_vm_pu[idx] = net_dict[idx]['res_bus'].vm_pu
         trafo_loading_percent[idx] = net_dict[idx]['res_trafo'].loading_percent
-        gen_p_mw[idx] = net_dict[idx]['res_gen'].p_mw
+        sgen_p_mw[idx] = net_dict[idx]['res_sgen'].p_mw
         load_p_mw[idx] = net_dict[idx]['res_load'].p_mw
+        storage_p_mw[idx] = net_dict[idx]['res_storage'].p_mw
 
     line_loading_percent = line_loading_percent.T
     bus_vm_pu = bus_vm_pu.T
     trafo_loading_percent = trafo_loading_percent.T
-    gen_p_mw = gen_p_mw.T
+    sgen_p_mw = sgen_p_mw.T
     load_p_mw = load_p_mw.T
+    storage_p_mw = storage_p_mw.T
         
-    return ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw, load_p_mw
+    return ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, sgen_p_mw, load_p_mw, storage_p_mw
 
 
-ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw, load_p_mw = extractResults(net_dict)
+ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, gen_p_mw, load_p_mw, storage_p_mw = extractResults(net_dict)
 
 trafo_loading_percent.plot(figsize=(16,9), title='trafo_loading_percent')
 line_loading_percent.plot(figsize=(16,9), title='line_loading_percent')
 bus_vm_pu.plot(figsize=(16,9), title='bus_vm_pu')
 load_p_mw.plot(figsize=(16,9), title='load_p_mw')
+
+if len(buses_with_pv) > 0:
+    gen_p_mw.plot(figsize=(16,9), title='gen_p_mw')
+    
+if len(buses_with_storage) > 0:
+    storage_p_mw.plot(figsize=(16,9), title='storage_p_mw')
+    res_loads.plot(figsize=(16,9), title='res_loads')
+
+#%%
+
+def plot_storages(vpp):
+    for comp in vpp.components.keys():
+        if 'storage' in comp:
+            vpp.components[comp].timeseries.plot(figsize=(16,9), title=comp)
+            
+plot_storages(vpp)
 
 #%% extract results of single component categories
 
