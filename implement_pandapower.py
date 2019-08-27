@@ -300,12 +300,28 @@ def extractResults(net_dict):
         load_p_mw[idx] = net_dict[idx]['res_load'].p_mw
         storage_p_mw[idx] = net_dict[idx]['res_storage'].p_mw
 
-    line_loading_percent = line_loading_percent.T
-    bus_vm_pu = bus_vm_pu.T
+    if len(line_loading_percent.columns) >0:
+        line_loading_percent = line_loading_percent.T
+        line_loading_percent.rename(net['line'].name, axis='columns', inplace=True)
+    
+    if len(bus_vm_pu.columns) >0:
+        bus_vm_pu = bus_vm_pu.T
+        bus_vm_pu.rename(net.bus.name, axis='columns', inplace=True)
+        
     trafo_loading_percent = trafo_loading_percent.T
-    sgen_p_mw = sgen_p_mw.T
-    load_p_mw = load_p_mw.T
-    storage_p_mw = storage_p_mw.T
+    
+    if len(sgen_p_mw.columns) >0:
+        sgen_p_mw = sgen_p_mw.T
+        sgen_p_mw.rename(net.sgen.name, axis='columns', inplace=True)
+    
+    if len(load_p_mw.columns) >0:
+        load_p_mw = load_p_mw.T
+        load_p_mw.rename(net.load.name, axis='columns', inplace=True)
+    
+    if len(storage_p_mw.columns) >0:
+        storage_p_mw = storage_p_mw.T
+        storage_p_mw.rename(net.storage.name, axis='columns', inplace=True)
+        
         
     return ext_grid, line_loading_percent, bus_vm_pu, trafo_loading_percent, sgen_p_mw, load_p_mw, storage_p_mw
 
@@ -316,7 +332,6 @@ trafo_loading_percent.plot(figsize=(16,9), title='trafo_loading_percent')
 line_loading_percent.plot(figsize=(16,9), title='line_loading_percent')
 bus_vm_pu.plot(figsize=(16,9), title='bus_vm_pu')
 load_p_mw.plot(figsize=(16,9), title='load_p_mw')
-gen_p_mw.plot(figsize=(16,9), title='gen_p_mw')
 
 if len(buses_with_pv) > 0:
     gen_p_mw.plot(figsize=(16,9), title='gen_p_mw')
