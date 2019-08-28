@@ -90,6 +90,39 @@ class VPPEnergyStorage(VPPComponent):
     
     def operate_storage(self, residual_load):
         
+        """
+        Info
+        ----
+        
+        ...
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        
         if residual_load > 0:
             #Energy demand --> discharge storage if stateOfCharge > 0
             
