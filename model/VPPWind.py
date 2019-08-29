@@ -225,7 +225,7 @@ class VPPWind(VPPComponent):
             self.ModelChain = ModelChain(self.wind_turbine, **modelchain_data).run_model(weather[self.start:self.end])
             
         # write power output time series to VPPWind object
-        self.timeseries = self.ModelChain.power_output
+        self.timeseries = self.ModelChain.power_output /1000 #convert to kW
     
         return
 
@@ -270,11 +270,11 @@ class VPPWind(VPPComponent):
         
         if type(timestamp) == int:
             
-            return self.timeseries.iloc[timestamp] * self.limit
+            return self.timeseries.iloc[timestamp].item() * self.limit
         
         elif type(timestamp) == str:
             
-            return self.timeseries.loc[timestamp] * self.limit
+            return self.timeseries.loc[timestamp].item() * self.limit
         
         else:
             traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")

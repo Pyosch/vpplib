@@ -66,11 +66,6 @@ class VPPOperator(object):
         self.virtualPowerPlant = virtualPowerPlant
         self.targetData = targetData
         self.net = net #pandapower net object
-           
-        self.buses_with_pv = []
-        self.buses_with_hp = []
-        self.buses_with_bev = []
-        self.buses_with_storage = []
 
 
     def operateVirtualPowerPlant(self):
@@ -233,11 +228,14 @@ class VPPOperator(object):
                     valueForTimestamp = self.virtualPowerPlant.components[component].valueForTimestamp(str(idx))
                     
                     if math.isnan(valueForTimestamp):
-                        traceback.print_exc("The value of ", component, "at timestep ", idx, "is NaN!")
+                        traceback.print_exc(("The value of ", component, "at timestep ", idx, "is NaN!"))
                 
                 if component in list(self.net.sgen.name):
                     
                     self.net.sgen.p_mw[self.net.sgen.name == component] = valueForTimestamp/-1000 #kW to MW; negative due to generation
+                    
+                    if math.isnan(self.net.sgen.p_mw[self.net.sgen.name == component]):
+                        traceback.print_exc(("The value of ", component, "at timestep ", idx, "is NaN!"))
                 
                 if component in list(self.net.load.name):
                     
@@ -302,7 +300,7 @@ class VPPOperator(object):
                                 storage_bus = storage_at_bus.pop()
                                 self.net.storage.p_mw[self.net.storage.index == storage_bus] = res_load
                         
-            
+                        
             pp.runpp(self.net)
             
             net_dict[idx] = {}

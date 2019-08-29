@@ -12,15 +12,19 @@ from model.VPPPhotovoltaic import VPPPhotovoltaic
 from model.VPPBEV import VPPBEV
 from model.VPPHeatPump import VPPHeatPump
 from model.VPPEnergyStorage import VPPEnergyStorage
+from model.VPPWind import VPPWind
 from model.VirtualPowerPlant import VirtualPowerPlant
 from model.VPPOperator import VPPOperator
 
+import logging
+logging.getLogger().setLevel(logging.DEBUG)
 
 latitude = 50.941357
 longitude = 6.958307
 
-start = '2017-06-01 00:00:00'
-end = '2017-06-01 23:45:00'
+start = '2017-03-01 00:00:00'
+end = '2017-03-01 23:45:00'
+timezone = 'Europe/Berlin'
 year = '2017'
 time_freq = "15 min"
 timebase=15/60
@@ -33,6 +37,24 @@ baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
 baseload.set_index("Time", inplace=True)
 baseload.index = pd.to_datetime(baseload.index)
 
+wind_filename = "./Input_House/Wind/weather.csv"
+
+#WindTurbine data
+turbine_type = 'E-126/4200'
+hub_height = 135
+rotor_diameter = 127
+fetch_curve = 'power_curve'
+data_source = 'oedb'
+
+#ModelChain data
+wind_speed_model = 'logarithmic'
+density_model = 'ideal_gas'
+temperature_model = 'linear_gradient'
+power_output_model = 'power_curve'
+density_correction = True
+obstacle_height = 0
+hellman_exp = None
+
 #storage
 timebase = 15/60
 chargeEfficiency = 0.98
@@ -42,11 +64,13 @@ capacity = 4 #kWh
 maxC = 1 #factor between 0.5 and 1.2
 
 #%% define the amount of components in the grid
+# NOT valide for all component distribution methods (see line 131-143)
 
 pv_percentage = 50
 storage_percentage = 50
 bev_percentage = 50
-hp_percentage = 0
+hp_percentage = 50
+wind_percentage = 50
 
 #%% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
@@ -66,6 +90,7 @@ def test_get_buses_with_components(vpp):
                                           pv_percentage=pv_percentage,
                                           hp_percentage=hp_percentage,
                                           bev_percentage=bev_percentage,
+                                          wind_percentage=wind_percentage,
                                           storage_percentage=storage_percentage)
 
 
@@ -75,13 +100,16 @@ def test_get_assigned_buses_with_components(vpp,
                                             buses_with_pv,
                                             buses_with_hp,
                                             buses_with_bev,
-                                            buses_with_storage):
+                                            buses_with_storage,
+                                            buses_with_wind):
     
     vpp.buses_with_pv = buses_with_pv
     
     vpp.buses_with_hp = buses_with_hp
     
     vpp.buses_with_bev = buses_with_bev
+    
+    vpp.buses_with_wind = buses_with_wind
     
     # storages should only be assigned to buses with pv
     vpp.buses_with_storage = buses_with_storage
@@ -91,10 +119,12 @@ def test_get_assigned_buses_with_components(vpp,
 #%% assign components to the loadbuses
 
 def test_get_loadbuses_with_components(vpp):
+    
     vpp.get_buses_with_components(net, method='random_loadbus',
                                        pv_percentage=pv_percentage,
                                        hp_percentage=hp_percentage,
                                        bev_percentage=bev_percentage,
+                                       wind_percentage=wind_percentage,
                                        storage_percentage=storage_percentage)
 
 
@@ -102,13 +132,14 @@ def test_get_loadbuses_with_components(vpp):
     
 #test_get_buses_with_components(vpp)
     
-#test_get_assigned_buses_with_components(vpp, 
-#                                        buses_with_pv = ['bus3', 'bus4', 'bus5', 'bus6'],
-#                                        buses_with_hp = ['bus4'],
-#                                        buses_with_bev = ['bus5'],
-#                                        buses_with_storage = ['bus5'])
+test_get_assigned_buses_with_components(vpp, 
+                                        buses_with_pv = ['bus3', 'bus4', 'bus5', 'bus6'],
+                                        buses_with_hp = ['bus4'],
+                                        buses_with_bev = ['bus5'],
+                                        buses_with_storage = ['bus5'],
+                                        buses_with_wind = ['bus1'])
     
-test_get_loadbuses_with_components(vpp)
+#test_get_loadbuses_with_components(vpp)
 
 #%% create components and assign components to the Virtual Powerplant
 
@@ -158,6 +189,29 @@ for bus in vpp.buses_with_hp:
                                  end=end, year = year))
     
     vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries()
+    
+for bus in vpp.buses_with_wind:
+    
+    vpp.addComponent(VPPWind(timebase = 1, identifier = (bus+'_Wind'), 
+                 environment = None, userProfile = None,
+                 start = None, end = None, timezone = timezone,
+                 weather_filename = wind_filename,
+                 turbine_type = turbine_type, hub_height = hub_height,
+                 rotor_diameter = rotor_diameter, fetch_curve = fetch_curve,
+                 data_source = data_source,
+                 wind_speed_model = wind_speed_model, density_model = density_model,
+                 temperature_model = temperature_model, 
+                 power_output_model = power_output_model, 
+                 density_correction = density_correction,
+                 obstacle_height = obstacle_height, hellman_exp = hellman_exp))
+    
+    vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries(wind_filename)
+    #TODO: fix with weather data from 2017
+    vpp.components[list(vpp.components.keys())[-1]].timeseries.index = pd.date_range(start='2017-01-01 00:00:00', end='2017-12-31 23:45:00', freq='H')
+    tmp = pd.DataFrame(index = pd.date_range(start='2017-01-01 00:00:00', end='2017-12-31 23:45:00', freq='15 min'))
+    tmp['Wind'] = vpp.components[list(vpp.components.keys())[-1]].timeseries
+    tmp.interpolate(inplace=True)
+    vpp.components[list(vpp.components.keys())[-1]].timeseries = tmp.loc[start:end] #TODO: Adjust start:end in __init__ data when using other weather data
 
 #%% create elements in the pandapower.net
 
@@ -181,6 +235,12 @@ for bus in vpp.buses_with_hp:
     
     pp.create_load(net, bus=net.bus[net.bus.name == bus].index[0], 
                    p_mw=(vpp.components[bus+'_HP'].heatpump_power/1000), name=(bus+'_HP'), type='HP')
+    
+for bus in vpp.buses_with_wind:
+    
+    pp.create_sgen(net, bus=net.bus[net.bus.name == bus].index[0], 
+                  p_mw=(vpp.components[bus+'_Wind'].wind_turbine.nominal_power/1000000),
+                  name=(bus+'_Wind'), type = 'Wind')
     
 #%% initialize operator
 

@@ -49,6 +49,12 @@ class VirtualPowerPlant(object):
         self.name = name
     
         self.components = {}
+        
+        self.buses_with_pv = []
+        self.buses_with_hp = []
+        self.buses_with_bev = []
+        self.buses_with_wind = []
+        self.buses_with_storage = []
 
 
     def addComponent(self, component):
@@ -133,7 +139,7 @@ class VirtualPowerPlant(object):
         
     def get_buses_with_components(self, net, method='random', pv_percentage=0, 
                                   hp_percentage=0, bev_percentage=0,
-                                  storage_percentage=0):
+                                  wind_percentage = 0, storage_percentage=0):
         """
         Info
         ----
@@ -177,12 +183,15 @@ class VirtualPowerPlant(object):
 
             bev_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (bev_percentage/100)), 0))
             self.buses_with_bev = random.sample(list(net.bus.name[net.bus.type == 'b']), bev_amount)
+            
+            wind_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (wind_percentage/100)), 0))
+            self.buses_with_wind = random.sample(list(net.bus.name[net.bus.type == 'b']), wind_amount)
 
             #Distribution of el storage is only done for houses with pv
             storage_amount = int(round((len(self.buses_with_pv) * (storage_percentage/100)), 0))
             self.buses_with_storage = random.sample(self.buses_with_pv, storage_amount)
             
-            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev, self.buses_with_storage
+            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev, self.buses_with_wind, self.buses_with_storage
         
         elif method == 'random_loadbus':
             
@@ -201,11 +210,14 @@ class VirtualPowerPlant(object):
             bev_amount = int(round((len(bus_lst) * (bev_percentage/100)), 0))
             self.buses_with_bev = random.sample(bus_lst, bev_amount)
             
+            wind_amount = int(round((len(bus_lst) * (wind_percentage/100)), 0))
+            self.buses_with_wind = random.sample(bus_lst, wind_amount)
+            
             #Distribution of el storage is only done for houses with pv
             storage_amount = int(round((len(self.buses_with_pv) * (storage_percentage/100)), 0))
             self.buses_with_storage = random.sample(self.buses_with_pv, storage_amount)
             
-            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev, self.buses_with_storage
+            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev, self.buses_with_wind, self.buses_with_storage
         
         else:
             traceback.print_exc("method ", method, " is invalid")
