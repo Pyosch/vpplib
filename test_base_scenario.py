@@ -64,13 +64,13 @@ capacity = 4 #kWh
 maxC = 1 #factor between 0.5 and 1.2
 
 #%% define the amount of components in the grid
-# NOT valide for all component distribution methods (see line 131-143)
+# NOT VALIDE for all component distribution methods (see line 131-143)
 
 pv_percentage = 50
 storage_percentage = 50
-bev_percentage = 50
-hp_percentage = 50
-wind_percentage = 50
+bev_percentage = 0
+hp_percentage = 0
+wind_percentage = 0
 
 #%% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
@@ -257,6 +257,6 @@ single_result = operator.extract_single_result(net_dict, res='ext_grid', value='
 
 #%% plot results of powerflow and storage values
 
-single_result.plot(figsize=(16,9), title='ext_grid')
+single_result.plot(figsize=(16,9), title='ext_grid from single_result function')
 operator.plot_results(results)
 operator.plot_storages()

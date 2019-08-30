@@ -247,6 +247,7 @@ class VPPOperator(object):
                 if self.net.load.type[self.net.load.name == name].item() == 'baseload':
                 
                     self.net.load.p_mw[self.net.load.name == name] = baseload[str(self.net.load.bus[self.net.load.name == name].item())][str(idx)]/1000000
+                    self.net.load.q_mvar[self.net.load.name == name] = 0
                 
             if len(self.virtualPowerPlant.buses_with_storage) > 0: 
                 for bus in self.net.bus.index[self.net.bus.type == 'b']:
