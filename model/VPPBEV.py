@@ -429,9 +429,6 @@ class VPPBEV(VPPComponent):
         else:
             traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
         
-        # TODO: cop would change if power of heatpump is limited. 
-        # Dropping limiting factor for heatpumps
-        
         observations = {'car_charger':car_charger, 'car_capacity':car_capacity, 'at_home':at_home}
         
         return observations
