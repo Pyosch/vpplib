@@ -110,23 +110,17 @@ class VPPBEV(VPPComponent):
                     '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
                     '22:00:00']
         
-        self.timeseries = self.new_scenario()
+        self.timeseries = pd.DataFrame(pd.date_range(start=self.start, end=self.end, 
+                                             freq=self.time_freq, name ='Time'))
+        self.timeseries['car_charger'] = 0
+        self.timeseries.set_index(self.timeseries.Time, inplace = True)
+        
         self.split_time() 
         self.set_weekday()
         self.set_at_home(work_start, work_end, weekend_trip_start, weekend_trip_end)
         self.charge()
         self.timeseries.set_index('Time', inplace = True, drop = True)
         self.timeseries['at_home'] = self.at_home
-
-    #TODO: move to VPPComponent or VPPOperator
-    def new_scenario(self):
-    
-        df_main = pd.DataFrame(pd.date_range(start=self.start, end=self.end, 
-                                             freq=self.time_freq, name ='Time'))
-        df_main['car_charger'] = 0
-        df_main.set_index(df_main.Time, inplace = True)
-        
-        return df_main
     
     
     # ===================================================================================
