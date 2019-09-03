@@ -16,6 +16,7 @@ class VPPHeatPump(VPPComponent):
                  heat_sys_temp = 60, t_0 = 40, environment = None, userProfile = None, 
                  heatpump_power = None, thermal_power = True, 
                  full_load_hours = None, heat_demand_year = None,
+                 rampUpTime = 1, rampDownTime = 1, minimumRunningTime = 45, minimumStopTime = 45,
                  building_type = 'DE_HEF33', start = None, end = None, year = None):
         
         """
@@ -55,6 +56,7 @@ class VPPHeatPump(VPPComponent):
         
         # Configure attributes
         self.identifier = identifier
+        self.timebase = timebase
         self.start = start
         self.end = end
         self.year = year
@@ -66,9 +68,17 @@ class VPPHeatPump(VPPComponent):
         self.thermal_power = thermal_power
         self.limit = 1
         
+        #Ramp parameters
+        self.rampUpTime = rampUpTime
+        self.rampDownTime = rampDownTime
+        self.minimumRunningTime = minimumRunningTime
+        self.minimumStopTime = minimumStopTime
+        self.lastRampUp = None
+        self.lastRampDown = None
+        
         #building parameters
         #TODO: export in seperate Building class
-        mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, freq = "D", name="time"))
+        mean_temp_days = pd.DataFrame(pd.date_range(start=self.year, periods=365, freq = "D", name="time"))
         mean_temp_days['Mean_Temp'] = pd.read_csv(
                 "./Input_House/heatpump_model/mean_temp_days_2017.csv", 
                 header = None)
@@ -205,6 +215,55 @@ class VPPHeatPump(VPPComponent):
         self.cop.columns = ['cop']
         
         return self.cop  
+    
+    def get_current_el_demand(self, tmp, heat_demand):
+        
+        """
+        Info
+        ----
+        Calculate COP of heatpump according to heatpump type
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        
+        
+        if self.heatpump_type == "Air":
+            cop = (6.81 - 0.121 * (self.heat_sys_temp - tmp)
+                       + 0.00063 * (self.heat_sys_temp - tmp)**2)
+        
+        elif self.heatpump_type == "Ground":
+            cop = (8.77 - 0.15 * (self.heat_sys_temp - tmp)
+                       + 0.000734 * (self.heat_sys_temp - tmp)**2)
+        
+        else:
+            print("Heatpump type is not defined")
+            return -9999
+
+        return heat_demand/cop, cop  
      
     #from VPPComponents
     def prepareTimeSeries(self):
@@ -740,3 +799,158 @@ class VPPHeatPump(VPPComponent):
         self.heat_demand.interpolate(inplace = True)
         
         return self.heat_demand
+    
+    #%% ramping functions
+    
+    def isRunning(self, timestamp):
+    
+        # Calculate if the power plant is running
+        if self.lastRampUp == None:
+            return False
+        else:
+            if self.lastRampDown == None:
+                if self.lastRampUp * self.timebase + self.rampUpTime <= timestamp * self.timebase:
+                    return True
+                else:
+                    return False
+            else:
+                if self.lastRampDown >= self.lastRampUp:
+                    return False
+                else:
+                    if self.lastRampUp * self.timebase + self.rampUpTime <= timestamp * self.timebase:
+                        return True
+                    else:
+                        return False
+    
+    def rampUp(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function ramps up the combined heat and power plant. The timestamp is neccessary to calculate
+        if the combined heat and power plant is running in later iterations of balancing. The possible
+        return values are:
+            - None:       Ramp up has no effect since the combined heat and power plant is already running
+            - True:       Ramp up was successful
+            - False:      Ramp up was not successful (due to constraints for minimum running and stop times)
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+
+        # Check if already running
+        if self.isRunning(timestamp):
+            return None
+        else:
+        
+            # Check if ramp up is allowed
+            if self.lastRampDown == None:
+                
+                # Ramp up is allowed
+                self.lastRampUp = timestamp
+
+                return True
+                
+            else:
+                
+                if self.lastRampDown * self.timebase + self.minimumStopTime <= timestamp:
+                    
+                    # Ramp up is allowed
+                    self.lastRampUp = timestamp
+
+                    return True
+                    
+                else:
+                
+                    # Ramp up is not allowed
+                    return False
+    
+
+    def rampDown(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function ramps down the combined heat and power plant. The timestamp is neccessary to calculate
+        if the combined heat and power plant is running in later iterations of balancing. The possible
+        return values are:
+            - None:       Ramp down has no effect since the combined heat and power plant is not running
+            - True:       Ramp down was successful
+            - False:      Ramp down was not successful (due to constraints for minimum running and stop times)
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+    
+        # Check if running
+        if not self.isRunning(timestamp):
+            return None
+        else:
+
+            # Check if ramp down is allowed
+            if self.lastRampUp == None:
+                
+                # Ramp down is allowed
+                self.lastRampDown = timestamp
+
+                return True
+            
+            else:
+            
+                if self.lastRampUp * self.timebase + self.minimumRunningTime <= timestamp:
+                    
+                    # Ramp down is allowed
+                    self.lastRampDown = timestamp
+
+                    return True
+                
+                else:
+                
+                    # Ramp down is not allowed
+                    return False
