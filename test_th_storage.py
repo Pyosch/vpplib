@@ -58,6 +58,7 @@ test_get_heat_demand(tes)
 #def create_timeseries(tes, hp):
 loadshape = tes.userProfile.get_heat_demand()[0:]["heat_demand"]
 outside_temp = tes.userProfile.mean_temp_hours.mean_temp
+outside_temp.plot()
 #thermal_energy = hp.heatpump_power * timebase / 60 #thermal_energy?
 #tes.needs_loading = True
 log, log_load, log_cop = [], [],[]
