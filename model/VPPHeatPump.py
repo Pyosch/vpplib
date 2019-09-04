@@ -9,7 +9,6 @@ import pandas as pd
 import traceback
 from .VPPComponent import VPPComponent
 
-
 class VPPHeatPump(VPPComponent):
     
     def __init__(self, identifier, timebase, heatpump_type = "Air", 
@@ -431,7 +430,7 @@ class VPPHeatPump(VPPComponent):
                 else: 
                     el_demand, cop, heat_output = 0, 0, 0
                     
-            elif type(timestamp) == str:
+            elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
                 
                 if self.isRunning: 
                     el_demand = self.heatpump_power
@@ -440,6 +439,7 @@ class VPPHeatPump(VPPComponent):
                     heat_output = el_demand * cop
                 else: 
                     el_demand, cop, heat_output = 0, 0, 0
+            
             else:
                 traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
             observations = {'heat_output':heat_output, 'cop':cop, 'el_demand':el_demand}
@@ -830,15 +830,36 @@ class VPPHeatPump(VPPComponent):
     
     #%% ramping functions
     
+    
     def isLegitRampUp(self, timestamp):
-        if timestamp - self.lastRampDown > self.minimumStopTime:
-            self.isRunning = True
-        else: self.isRunning = False
+        
+        if type(timestamp) == int:
+            if timestamp - self.lastRampDown > self.minimumStopTime:
+                self.isRunning = True
+            else: self.isRunning = False
+        
+        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+            if self.lastRampDown + self.minimumStopTime * timestamp.freq < timestamp:
+                self.isRunning = True
+            else: self.isRunning = False
+            
+        else:
+            traceback.print_exc("timestamp needs to be of type int or pandas._libs.tslibs.timestamps.Timestamp")
         
     def isLegitRampDown(self, timestamp):
-        if timestamp - self.lastRampUp > self.minimumRunningTime:
-            self.isRunning = False
-        else: self.isRunning = True
+        
+        if type(timestamp) == int:
+            if timestamp - self.lastRampUp > self.minimumRunningTime:
+                self.isRunning = False
+            else: self.isRunning = True
+        
+        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+            if self.lastRampUp + self.minimumRunningTime * timestamp.freq < timestamp:
+                self.isRunning = False
+            else: self.isRunning = True
+            
+        else:
+            traceback.print_exc("timestamp needs to be of type int or pandas._libs.tslibs.timestamps.Timestamp")
         
     def rampUp(self, timestamp):
         

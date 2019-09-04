@@ -60,7 +60,10 @@ loadshape = tes.userProfile.get_heat_demand()[0:]["heat_demand"]
 outside_temp = tes.userProfile.mean_temp_hours.mean_temp
 outside_temp.plot()
 log, log_load, log_cop = [], [],[]
-for i, heat_demand in tqdm(enumerate(loadshape)): 
+hp.lastRampUp = hp.userProfile.heat_demand.index[0]
+hp.lastRampDown = hp.userProfile.heat_demand.index[0]
+for i in hp.userProfile.heat_demand.index:
+    heat_demand = hp.userProfile.heat_demand.heat_demand.loc[i]
     if tes.get_needs_loading(): 
         hp.rampUp(i)              
     else: 

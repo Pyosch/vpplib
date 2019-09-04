@@ -6,6 +6,8 @@ This file contains the basic functionalities of the VPPCombinedHeatAndPower clas
 """
 
 from .VPPComponent import VPPComponent
+import traceback
+import pandas as pd
 
 class VPPCombinedHeatAndPower(VPPComponent):
 
@@ -128,14 +130,34 @@ class VPPCombinedHeatAndPower(VPPComponent):
     #%% ramping functions
     
     def isLegitRampUp(self, timestamp):
-        if timestamp - self.lastRampDown > self.minimumStopTime:
-            self.isRunning = True
-        else: self.isRunning = False
+        
+        if type(timestamp) == int:
+            if timestamp - self.lastRampDown > self.minimumStopTime:
+                self.isRunning = True
+            else: self.isRunning = False
+        
+        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+            if self.lastRampDown + self.minimumStopTime * timestamp.freq < timestamp:
+                self.isRunning = True
+            else: self.isRunning = False
+            
+        else:
+            traceback.print_exc("timestamp needs to be of type int or pandas._libs.tslibs.timestamps.Timestamp")
         
     def isLegitRampDown(self, timestamp):
-        if timestamp - self.lastRampUp > self.minimumRunningTime:
-            self.isRunning = False
-        else: self.isRunning = True
+        
+        if type(timestamp) == int:
+            if timestamp - self.lastRampUp > self.minimumRunningTime:
+                self.isRunning = False
+            else: self.isRunning = True
+        
+        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+            if self.lastRampUp + self.minimumRunningTime * timestamp.freq < timestamp:
+                self.isRunning = False
+            else: self.isRunning = True
+            
+        else:
+            traceback.print_exc("timestamp needs to be of type int or pandas._libs.tslibs.timestamps.Timestamp")
         
     def rampUp(self, timestamp):
         
