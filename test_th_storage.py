@@ -25,7 +25,7 @@ mass_of_storage = 500 # kg
 yearly_heat_demand = 2500 # kWh
 
 #Values for Heatpump
-heatpump_power = 1 #kW
+heatpump_power = 2 #kW electric
 rampUpTime = 1/15 #timesteps
 rampDownTime = 1/15 #timesteps
 minimumRunningTime = 2 #timesteps
@@ -58,29 +58,31 @@ test_get_heat_demand(tes)
 #def create_timeseries(tes, hp):
 loadshape = tes.userProfile.get_heat_demand()[0:]["heat_demand"]
 outside_temp = tes.userProfile.mean_temp_hours.mean_temp
-thermal_power = hp.heatpump_power * timebase / 60 #thermal_energy?
-tes.needs_loading = True
+#thermal_energy = hp.heatpump_power * timebase / 60 #thermal_energy?
+#tes.needs_loading = True
 last_action = None
 log, log_load, log_cop = [], [],[]
 for i, heat_demand in tqdm(enumerate(loadshape)): 
-    if tes.needs_loading: 
-        if not last_action == "Ramp Up":
-            if hp.rampUp(i): 
-                last_action == "Ramp Up"                   
-    else: 
-        if not last_action == "Ramp Down":
-            if hp.rampDown(i): 
-                last_action == "Ramp Down"              
-   
-    
+#    if tes.get_needs_loading(): 
+#        if not last_action == "Ramp Up":
+#            if hp.rampUp(i): 
+#                last_action = "Ramp Up"                   
+#    else: 
+#        if not last_action == "Ramp Down":
+#            if hp.rampDown(i): 
+#                last_action = "Ramp Down"          
+
+    temp = tes.charge(heat_demand)
     if hp.isRunning(i): 
-        el_demand, cop = hp.get_current_el_demand(outside_temp[int(i/(60/timebase))], heat_demand) 
-        heat_demand -= thermal_power #warum?
-    else: el_demand, cop = 0, 0
+        cop = hp.get_current_cop(outside_temp[int(i/(60/timebase))]) 
+        temp = tes.charge(-heatpump_power * cop )
+        el_power = hp.heatpump_power
+    else: el_power, cop = 0, 0
     
-    temp, needs_loading = tes.charge(heat_demand)
+    
+    
     log.append(temp)
-    log_load.append(el_demand)
+    log_load.append(el_power)
     log_cop.append(cop)
 pd.DataFrame(log).plot(title = "Yearly Temperature of Storage")
 pd.DataFrame(log)[10000:10960].plot(title = "10-Day View")
@@ -89,7 +91,7 @@ pd.DataFrame(log_load).plot(title = "Electrical Loadshape")
 pd.DataFrame(log_load)[10000:10960].plot(title = "Electrical Loadshape, 10-Day View")
 pd.DataFrame(log_load)[10000:10096].plot(title = "Electrical Loadshape, Daily")
     
-    #return pd.DataFrame(log_load)
+#return pd.DataFrame(log_load)
     
 #log_load = create_timeseries(tes, hp)
 #test_get_heat_demand(tes)

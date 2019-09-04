@@ -216,7 +216,7 @@ class VPPHeatPump(VPPComponent):
         
         return self.cop  
     
-    def get_current_el_demand(self, tmp, heat_demand):
+    def get_current_cop(self, tmp):
         
         """
         Info
@@ -263,7 +263,7 @@ class VPPHeatPump(VPPComponent):
             print("Heatpump type is not defined")
             return -9999
 
-        return heat_demand/cop, cop  
+        return cop
      
     #from VPPComponents
     def prepareTimeSeries(self):
@@ -890,6 +890,139 @@ class VPPHeatPump(VPPComponent):
     
 
     def rampDown(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function ramps down the combined heat and power plant. The timestamp is neccessary to calculate
+        if the combined heat and power plant is running in later iterations of balancing. The possible
+        return values are:
+            - None:       Ramp down has no effect since the combined heat and power plant is not running
+            - True:       Ramp down was successful
+            - False:      Ramp down was not successful (due to constraints for minimum running and stop times)
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+    
+        # Check if running
+        if not self.isRunning(timestamp):
+            return None
+        else:
+
+            # Check if ramp down is allowed
+            if self.lastRampUp == None:
+                
+                # Ramp down is allowed
+                self.lastRampDown = timestamp
+
+                return True
+            
+            else:
+            
+                if self.lastRampUp * self.timebase + self.minimumRunningTime <= timestamp:
+                    
+                    # Ramp down is allowed
+                    self.lastRampDown = timestamp
+
+                    return True
+                
+                else:
+                
+                    # Ramp down is not allowed
+                    return False   
+
+    def rampUp2(self, timestamp):
+        
+        """
+        Info
+        ----
+        This function ramps up the combined heat and power plant. The timestamp is neccessary to calculate
+        if the combined heat and power plant is running in later iterations of balancing. The possible
+        return values are:
+            - None:       Ramp up has no effect since the combined heat and power plant is already running
+            - True:       Ramp up was successful
+            - False:      Ramp up was not successful (due to constraints for minimum running and stop times)
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+
+        # Check if already running
+        if self.isRunning(timestamp):
+            return None
+        else:
+        
+            # Check if ramp up is allowed
+            if self.lastRampDown == None:
+                
+                # Ramp up is allowed
+                self.lastRampUp = timestamp
+
+                return True
+                
+            else:
+                
+                if self.lastRampDown * self.timebase + self.minimumStopTime <= timestamp:
+                    
+                    # Ramp up is allowed
+                    self.lastRampUp = timestamp
+
+                    return True
+                    
+                else:
+                
+                    # Ramp up is not allowed
+                    return False
+    
+
+    def rampDown2(self, timestamp):
         
         """
         Info

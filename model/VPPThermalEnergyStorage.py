@@ -60,21 +60,25 @@ class VPPThermalEnergyStorage(object):
         self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
         #Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10% Bereitschaftsverluste hat (ohne Rohrleitungen!!)
         self.heatloss_per_timestep = 1 - (heatloss_per_day / (24 * (60 / timebase)))
-        self.needs_loading = False
+        self.needs_loading = None
     
     def charge(self, size_of_charge):
         #Formula: E = m * cp * T
         #     <=> T = E / (m * cp)
-        self.state_of_charge -= size_of_charge * 1000 * self.heatloss_per_timestep
+        self.state_of_charge -= size_of_charge * 1000 
+        self.state_of_charge *= self.heatloss_per_timestep
         self.current_temperature = (self.state_of_charge / (self.mass * self.cp)) - 273.15
-        
+        return self.current_temperature
+    
+    def get_needs_loading(self):     
         if self.current_temperature <= (self.target_temperature - self.hysteresis): 
             self.needs_loading = True
             
         if self.current_temperature >= (self.target_temperature + self.hysteresis): 
             self.needs_loading = False
             
-        return self.current_temperature, self.needs_loading       
+        #if self.current_temperature < 40: raise ValueError("Thermal energy production to low to maintain heat storage temperature!")
+        return self.needs_loading       
         
     def valueForTimestamp(self, timestamp):
         
