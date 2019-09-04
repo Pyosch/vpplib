@@ -49,7 +49,7 @@ class VPPThermalEnergyStorage(object):
     
         # Configure attributes
         self.unit = "kW"
-        self.dataResolution = timebase
+        self.timebase = timebase
         self.environment = environment
         self.userProfile = userProfile
         self.target_temperature = target_temperature
@@ -62,13 +62,15 @@ class VPPThermalEnergyStorage(object):
         self.heatloss_per_timestep = 1 - (heatloss_per_day / (24 * (60 / timebase)))
         self.needs_loading = None
     
-    def charge(self, size_of_charge):
+    def operate_storage(self, thermal_demand, timestamp, heat_generator_class):
         #Formula: E = m * cp * T
         #     <=> T = E / (m * cp)
-        self.state_of_charge -= size_of_charge * 1000 
+        thermal_production = heat_generator_class.observationsForTimestamp(timestamp)["heat_output"]
+        self.state_of_charge -= (thermal_demand - thermal_production) * 1000 / (60/self.timebase)
         self.state_of_charge *= self.heatloss_per_timestep
         self.current_temperature = (self.state_of_charge / (self.mass * self.cp)) - 273.15
         return self.current_temperature
+
     
     def get_needs_loading(self):     
         if self.current_temperature <= (self.target_temperature - self.hysteresis): 
@@ -77,7 +79,7 @@ class VPPThermalEnergyStorage(object):
         if self.current_temperature >= (self.target_temperature + self.hysteresis): 
             self.needs_loading = False
             
-        #if self.current_temperature < 40: raise ValueError("Thermal energy production to low to maintain heat storage temperature!")
+        if self.current_temperature < 40: raise ValueError("Thermal energy production to low to maintain heat storage temperature!")
         return self.needs_loading       
         
     def valueForTimestamp(self, timestamp):

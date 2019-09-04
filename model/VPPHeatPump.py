@@ -73,8 +73,8 @@ class VPPHeatPump(VPPComponent):
         self.rampDownTime = rampDownTime
         self.minimumRunningTime = minimumRunningTime
         self.minimumStopTime = minimumStopTime
-        self.lastRampUp = None
-        self.lastRampDown = None
+        self.lastRampUp = 0
+        self.lastRampDown = 0
         
         #building parameters
         #TODO: export in seperate Building class
@@ -85,6 +85,7 @@ class VPPHeatPump(VPPComponent):
         
         self.heat_demand = None
         self.timeseries_year = None
+        self.timeseries = None
         self.building_type = building_type #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv", decimal=",")
         self.mean_temp_days = mean_temp_days
@@ -103,6 +104,8 @@ class VPPHeatPump(VPPComponent):
         self.heat_demand_daily = None
         self.demandfactor = None
         self.consumerfactor = None
+        
+        self.isRunning = False
               
         
     def get_heat_demand(self):
@@ -400,22 +403,46 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-        if type(timestamp) == int:
+        if self.timeseries != None:
+            if type(timestamp) == int:
+                
+                heat_demand, cop , el_demand = self.timeseries.iloc[timestamp]
             
-            heat_demand, cop , el_demand= self.timeseries.iloc[timestamp]
-        
-        elif type(timestamp) == str:
+            elif type(timestamp) == str:
+                
+                heat_demand, cop , el_demand = self.timeseries.loc[timestamp]
             
-            heat_demand, cop , el_demand= self.timeseries.loc[timestamp]
-        
+            else:
+                traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            
+            # TODO: cop would change if power of heatpump is limited. 
+            # Dropping limiting factor for heatpumps
+            
+            observations = {'heat_demand':heat_demand, 'cop':cop, 'el_demand':el_demand}
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
-        
-        # TODO: cop would change if power of heatpump is limited. 
-        # Dropping limiting factor for heatpumps
-        
-        observations = {'heat_demand':heat_demand, 'cop':cop, 'el_demand':el_demand}
-        
+            if type(timestamp) == int:
+                
+
+                if self.isRunning: 
+                    el_demand = self.heatpump_power
+                    temp = self.userProfile.mean_temp_quarter_hours.quart_temp.iloc[timestamp]
+                    cop = self.get_current_cop(temp)                   
+                    heat_output = el_demand * cop
+                else: 
+                    el_demand, cop, heat_output = 0, 0, 0
+                    
+            elif type(timestamp) == str:
+                
+                if self.isRunning: 
+                    el_demand = self.heatpump_power
+                    temp = self.userProfile.mean_temp_quarter_hours.quart_temp.loc[timestamp]
+                    cop = self.get_current_cop(temp)                   
+                    heat_output = el_demand * cop
+                else: 
+                    el_demand, cop, heat_output = 0, 0, 0
+            else:
+                traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            observations = {'heat_output':heat_output, 'cop':cop, 'el_demand':el_demand}
         return observations
 
 
@@ -799,29 +826,20 @@ class VPPHeatPump(VPPComponent):
         self.heat_demand.interpolate(inplace = True)
         
         return self.heat_demand
+
     
     #%% ramping functions
     
-    def isRunning(self, timestamp):
-    
-        # Calculate if the power plant is running
-        if self.lastRampUp == None:
-            return False
-        else:
-            if self.lastRampDown == None:
-                if self.lastRampUp * self.timebase + self.rampUpTime <= timestamp * self.timebase:
-                    return True
-                else:
-                    return False
-            else:
-                if self.lastRampDown >= self.lastRampUp:
-                    return False
-                else:
-                    if self.lastRampUp * self.timebase + self.rampUpTime <= timestamp * self.timebase:
-                        return True
-                    else:
-                        return False
-    
+    def isLegitRampUp(self, timestamp):
+        if timestamp - self.lastRampDown > self.minimumStopTime:
+            self.isRunning = True
+        else: self.isRunning = False
+        
+    def isLegitRampDown(self, timestamp):
+        if timestamp - self.lastRampUp > self.minimumRunningTime:
+            self.isRunning = False
+        else: self.isRunning = True
+        
     def rampUp(self, timestamp):
         
         """
@@ -860,34 +878,15 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-
-        # Check if already running
-        if self.isRunning(timestamp):
+        if self.isRunning:
             return None
         else:
-        
-            # Check if ramp up is allowed
-            if self.lastRampDown == None:
-                
-                # Ramp up is allowed
-                self.lastRampUp = timestamp
-
+            if self.isLegitRampUp(timestamp):
+                self.isRunning = True
                 return True
-                
-            else:
-                
-                if self.lastRampDown * self.timebase + self.minimumStopTime <= timestamp:
-                    
-                    # Ramp up is allowed
-                    self.lastRampUp = timestamp
+            else: 
+                return False
 
-                    return True
-                    
-                else:
-                
-                    # Ramp up is not allowed
-                    return False
-    
 
     def rampDown(self, timestamp):
         
@@ -928,162 +927,12 @@ class VPPHeatPump(VPPComponent):
         
         """
     
-        # Check if running
-        if not self.isRunning(timestamp):
+
+        if not self.isRunning:
             return None
         else:
-
-            # Check if ramp down is allowed
-            if self.lastRampUp == None:
-                
-                # Ramp down is allowed
-                self.lastRampDown = timestamp
-
+            if self.isLegitRampDown(timestamp):
+                self.isRunning = False
                 return True
-            
-            else:
-            
-                if self.lastRampUp * self.timebase + self.minimumRunningTime <= timestamp:
-                    
-                    # Ramp down is allowed
-                    self.lastRampDown = timestamp
-
-                    return True
-                
-                else:
-                
-                    # Ramp down is not allowed
-                    return False   
-
-    def rampUp2(self, timestamp):
-        
-        """
-        Info
-        ----
-        This function ramps up the combined heat and power plant. The timestamp is neccessary to calculate
-        if the combined heat and power plant is running in later iterations of balancing. The possible
-        return values are:
-            - None:       Ramp up has no effect since the combined heat and power plant is already running
-            - True:       Ramp up was successful
-            - False:      Ramp up was not successful (due to constraints for minimum running and stop times)
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
-        """
-
-        # Check if already running
-        if self.isRunning(timestamp):
-            return None
-        else:
-        
-            # Check if ramp up is allowed
-            if self.lastRampDown == None:
-                
-                # Ramp up is allowed
-                self.lastRampUp = timestamp
-
-                return True
-                
-            else:
-                
-                if self.lastRampDown * self.timebase + self.minimumStopTime <= timestamp:
-                    
-                    # Ramp up is allowed
-                    self.lastRampUp = timestamp
-
-                    return True
-                    
-                else:
-                
-                    # Ramp up is not allowed
-                    return False
-    
-
-    def rampDown2(self, timestamp):
-        
-        """
-        Info
-        ----
-        This function ramps down the combined heat and power plant. The timestamp is neccessary to calculate
-        if the combined heat and power plant is running in later iterations of balancing. The possible
-        return values are:
-            - None:       Ramp down has no effect since the combined heat and power plant is not running
-            - True:       Ramp down was successful
-            - False:      Ramp down was not successful (due to constraints for minimum running and stop times)
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
-        """
-    
-        # Check if running
-        if not self.isRunning(timestamp):
-            return None
-        else:
-
-            # Check if ramp down is allowed
-            if self.lastRampUp == None:
-                
-                # Ramp down is allowed
-                self.lastRampDown = timestamp
-
-                return True
-            
-            else:
-            
-                if self.lastRampUp * self.timebase + self.minimumRunningTime <= timestamp:
-                    
-                    # Ramp down is allowed
-                    self.lastRampDown = timestamp
-
-                    return True
-                
-                else:
-                
-                    # Ramp down is not allowed
-                    return False
+            else: 
+                return False

@@ -75,8 +75,7 @@ class VPPUserProfile(object):
         self.mean_temp_days = mean_temp_days
         self.mean_temp_hours = pd.read_csv(
                 './Input_House/heatpump_model/mean_temp_hours_2017_indexed.csv', index_col="time") #for cop
-#        self.mean_temp_hours = pd.read_csv(
-#                './Input_House/heatpump_model/mean_temp_hours_2017.csv', header = None) #for cop Patrick
+        self.mean_temp_quarter_hours = self.temp_hour_to_qarter()
         self.demand_daily = pd.read_csv(
                 './Input_House/heatpump_model/demand_daily.csv')
         self.full_load_hours = full_load_hours #According to BDEW multi family homes: 2000, single family homes: 2100
@@ -526,3 +525,45 @@ class VPPUserProfile(object):
         self.heat_demand.interpolate(inplace = True)
         
         return self.heat_demand
+    #%%:
+        
+    def temp_hour_to_qarter(self):
+        
+        """
+        Info
+        ----
+        ...
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        
+        df = pd.DataFrame(index = pd.date_range(self.year, periods=35040, freq='15min', name="time"))
+        self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
+        df["quart_temp"] = self.mean_temp_hours
+        df.interpolate(inplace = True)
+        
+        return df

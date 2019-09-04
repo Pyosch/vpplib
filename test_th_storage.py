@@ -25,10 +25,10 @@ mass_of_storage = 500 # kg
 yearly_heat_demand = 2500 # kWh
 
 #Values for Heatpump
-heatpump_power = 2 #kW electric
+heatpump_power = 5 #kW electric
 rampUpTime = 1/15 #timesteps
 rampDownTime = 1/15 #timesteps
-minimumRunningTime = 2 #timesteps
+minimumRunningTime = 1 #timesteps
 minimumStopTime = 2 #timesteps
 timebase = 15
 
@@ -41,7 +41,7 @@ tes = VPPThermalEnergyStorage(timebase, mass = mass_of_storage,
                               target_temperature = target_temperature, 
                               userProfile = up)
 
-hp = VPPHeatPump(identifier='hp1', timebase=timebase, 
+hp = VPPHeatPump(identifier='hp1', timebase=timebase, userProfile = up,
                  heatpump_power = heatpump_power, rampUpTime = rampUpTime, 
                  rampDownTime = rampDownTime, 
                  minimumRunningTime = minimumRunningTime, 
@@ -55,39 +55,27 @@ def test_get_heat_demand(tes):
     
 test_get_heat_demand(tes)
 
-#def create_timeseries(tes, hp):
+
 loadshape = tes.userProfile.get_heat_demand()[0:]["heat_demand"]
 outside_temp = tes.userProfile.mean_temp_hours.mean_temp
 outside_temp.plot()
-#thermal_energy = hp.heatpump_power * timebase / 60 #thermal_energy?
-#tes.needs_loading = True
 log, log_load, log_cop = [], [],[]
 for i, heat_demand in tqdm(enumerate(loadshape)): 
     if tes.get_needs_loading(): 
         hp.rampUp(i)              
     else: 
-        hp.rampDown(i)       
-    temp = tes.charge(heat_demand)
-    #print(temp,tes.get_needs_loading(), hp.rampUp(i), hp.rampDown(i), hp.isRunning(i))
-    if hp.isRunning(i): 
-        cop = hp.get_current_cop(outside_temp[int(i/(60/timebase))]) 
-        temp = tes.charge(-heatpump_power * cop )
-        el_power = hp.heatpump_power
-    else: el_power, cop = 0, 0
-    
-    
-    
+        hp.rampDown(i)
+    temp = tes.operate_storage(heat_demand, i, hp)
+    if hp.isRunning: 
+        log_load.append(heatpump_power)
+    else: 
+        log_load.append(0)
     log.append(temp)
-    log_load.append(el_power)
-    log_cop.append(cop)
-pd.DataFrame(log).plot(title = "Yearly Temperature of Storage")
-pd.DataFrame(log)[10000:10960].plot(title = "10-Day View")
-pd.DataFrame(log)[10000:10096].plot(title = "Daily View")
-pd.DataFrame(log_load).plot(title = "Electrical Loadshape")
-pd.DataFrame(log_load)[10000:10960].plot(title = "Electrical Loadshape, 10-Day View")
-pd.DataFrame(log_load)[10000:10096].plot(title = "Electrical Loadshape, Daily")
-    
-#return pd.DataFrame(log_load)
-    
-#log_load = create_timeseries(tes, hp)
-#test_get_heat_demand(tes)
+
+pd.DataFrame(log).plot(figsize = (16,9), title = "Yearly Temperature of Storage")
+pd.DataFrame(log)[10000:10960].plot(figsize = (16,9),title = "10-Day View")
+pd.DataFrame(log)[10000:10096].plot(figsize = (16,9),title = "Daily View")
+pd.DataFrame(log_load).plot(figsize = (16,9), title = "Yearly Electrical Loadshape")
+pd.DataFrame(log_load)[20000:20960].plot(figsize = (16,9),title = "10-Day View")
+pd.DataFrame(log_load)[20000:20096].plot(figsize = (16,9),title = "Daily View")
+
