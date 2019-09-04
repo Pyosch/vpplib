@@ -60,19 +60,14 @@ loadshape = tes.userProfile.get_heat_demand()[0:]["heat_demand"]
 outside_temp = tes.userProfile.mean_temp_hours.mean_temp
 #thermal_energy = hp.heatpump_power * timebase / 60 #thermal_energy?
 #tes.needs_loading = True
-last_action = None
 log, log_load, log_cop = [], [],[]
 for i, heat_demand in tqdm(enumerate(loadshape)): 
-#    if tes.get_needs_loading(): 
-#        if not last_action == "Ramp Up":
-#            if hp.rampUp(i): 
-#                last_action = "Ramp Up"                   
-#    else: 
-#        if not last_action == "Ramp Down":
-#            if hp.rampDown(i): 
-#                last_action = "Ramp Down"          
-
+    if tes.get_needs_loading(): 
+        hp.rampUp(i)              
+    else: 
+        hp.rampDown(i)       
     temp = tes.charge(heat_demand)
+    #print(temp,tes.get_needs_loading(), hp.rampUp(i), hp.rampDown(i), hp.isRunning(i))
     if hp.isRunning(i): 
         cop = hp.get_current_cop(outside_temp[int(i/(60/timebase))]) 
         temp = tes.charge(-heatpump_power * cop )

@@ -82,7 +82,6 @@ class VPPUserProfile(object):
         self.full_load_hours = full_load_hours #According to BDEW multi family homes: 2000, single family homes: 2100
         self.yearly_heat_demand = yearly_heat_demand
         self.heater_power = heater_power 
-        self.heat_sys_temp = heat_sys_temp
         self.t_0 = t_0 #°C
         
         #for SigLinDe calculations
