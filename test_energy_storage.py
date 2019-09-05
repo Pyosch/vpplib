@@ -90,12 +90,11 @@ def test_operate_storage(storage, timestamp):
     print('state_of_charge: ', state_of_charge)
     print('res_load: ', res_load)
     
-#test_prepareTimeSeries(storage)
-#test_valueForTimestamp(storage, timestamp_int)
-#test_valueForTimestamp(storage, timestamp_str)
-#
-#test_observationsForTimestamp(storage, timestamp_int)
-#test_observationsForTimestamp(storage, timestamp_str)
+test_prepareTimeSeries(storage)
+test_valueForTimestamp(storage, timestamp_int)
+test_valueForTimestamp(storage, timestamp_str)
 
+test_observationsForTimestamp(storage, timestamp_int)
+test_observationsForTimestamp(storage, timestamp_str)
 
 test_operate_storage(storage, timestamp_str)
