@@ -84,7 +84,7 @@ class VPPHeatPump(VPPComponent):
         
         self.heat_demand = None
         self.timeseries_year = None
-        self.timeseries = None
+        self.timeseries = pd.DataFrame()
         self.building_type = building_type #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv", decimal=",")
         self.mean_temp_days = mean_temp_days
@@ -402,7 +402,7 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-        if self.timeseries != None:
+        if self.timeseries.empty == False:
             if type(timestamp) == int:
                 
                 heat_demand, cop , el_demand = self.timeseries.iloc[timestamp]
