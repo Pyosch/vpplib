@@ -31,8 +31,9 @@ hysteresis = 5 # °K
 mass_of_storage = 500 # kg
 yearly_heat_demand = 2500 # kWh
 
-#Values for Heatpump
+#Values for chp
 nominalPowerEl, nominalPowerTh = 4, 6 #kW
+overall_efficiency = 0.8
 rampUpTime = 1/15 #timesteps
 rampDownTime = 1/15 #timesteps
 minimumRunningTime = 1 #timesteps
@@ -49,7 +50,8 @@ tes = VPPThermalEnergyStorage(timebase, mass = mass_of_storage,
                               userProfile = up)
 
 chp = VPPCombinedHeatAndPower(environment = None, identifier='chp1', timebase=timebase, userProfile = up,
-                 nominalPowerEl = nominalPowerEl, nominalPowerTh = nominalPowerTh, rampUpTime = rampUpTime, 
+                 nominalPowerEl = nominalPowerEl, nominalPowerTh = nominalPowerTh, 
+                 overall_efficiency = overall_efficiency, rampUpTime = rampUpTime, 
                  rampDownTime = rampDownTime, 
                  minimumRunningTime = minimumRunningTime, 
                  minimumStopTime = minimumStopTime)

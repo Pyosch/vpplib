@@ -59,6 +59,7 @@ class VPPThermalEnergyStorage(object):
         self.cp = cp
         self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
         #Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10% Bereitschaftsverluste hat (ohne Rohrleitungen!!)
+        self.heatloss_per_day = heatloss_per_day
         self.heatloss_per_timestep = 1 - (heatloss_per_day / (24 * (60 / timebase)))
         self.needs_loading = None
     
