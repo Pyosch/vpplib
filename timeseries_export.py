@@ -19,8 +19,9 @@ from model.VPPCombinedHeatAndPower import VPPCombinedHeatAndPower
 start = '2017-06-01 00:00:00'
 end = '2017-06-07 23:45:00'
 time_freq = "15 min"
+index_year = pd.date_range(start='2017', periods = 35040, freq=time_freq, name ='Time')
 timebase = 15/60 #for calculations from kW to kWh
-scenario = 1
+scenario = 2
 identifier = "house_1"
 
 #plot
@@ -31,17 +32,22 @@ df_timeseries = pd.DataFrame(index = pd.date_range(start=start, end=end,
 
 df_component_values = pd.DataFrame(index = [0])
 
+#Values for user profile
+target_temperature = 60 # °C
+yearly_heat_demand = 8700 # kWh
+full_load_hours = 2100
+
 #Values for pv
 latitude = 50.941357
 longitude = 6.958307
 module_lib = 'SandiaMod'
 module = 'Canadian_Solar_CS5P_220M___2009_'
 inverter_lib = 'cecinverter'
-inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_'
+inverter = 'ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_' #'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_'
 surface_tilt = 20
 surface_azimuth = 200
-modules_per_string = 1
-strings_per_inverter = 1
+modules_per_string = 10
+strings_per_inverter = 2
 
 #Values for el storage
 chargeEfficiency = 0.98
@@ -64,27 +70,34 @@ bev_chargeEfficiency = 0.98
 timebase = 1
 heatpump_type = "Air"
 heat_sys_temp = 60
-heatpump_power = 10.6
-full_load_hours = 2100
+heatpump_power = 5
+#heatpump_power_el = 5 #TODO: Implement different el power/therm power
 heat_demand_year = None
 building_type = 'DE_HEF33'
 year = '2017'
     
 #Values for Thermal Storage
-target_temperature = 60 # °C
 hysteresis = 5 # °K
 mass_of_storage = 500 # kg
 cp = 4.2
 heatloss_per_day = 0.13 
-yearly_heat_demand = 2500 # kWh
 
 #Values for chp
-nominalPowerEl, nominalPowerTh = 4, 6 #kW
+nominalPowerEl =  6#kW
+nominalPowerTh = 10 #kW
 overall_efficiency = 0.8
 rampUpTime = 1/15 #timesteps
 rampDownTime = 1/15 #timesteps
 minimumRunningTime = 1 #timesteps
 minimumStopTime = 2 #timesteps
+
+#%% user profile
+
+up = UP(heat_sys_temp = target_temperature, #Das könnte problematisch werden
+        yearly_heat_demand = yearly_heat_demand, 
+        full_load_hours = full_load_hours)
+
+up.get_heat_demand()
 
 #%% baseload
 
@@ -112,8 +125,9 @@ pv = VPPPhotovoltaic(timebase=1, identifier=(identifier+'_pv'),
                      modules_per_string = modules_per_string, 
                      strings_per_inverter = strings_per_inverter)
 
-df_timeseries["pv"] = pv.prepareTimeSeries(weather_data=weather_data)
+df_timeseries["pv"] = pv.prepareTimeSeries(weather_data=weather_data) *-1
 
+df_component_values["pv_kWp"] = pv.module.Impo * pv.module.Vmpo / 1000 *pv.system.modules_per_string * pv.system.strings_per_inverter
 df_timeseries.pv.plot(figsize=figsize, label="pv [kW]")
 
 #%% el storage
@@ -141,7 +155,7 @@ bev = VPPBEV(timebase=timebase, identifier=(identifier+'_bev'),
              environment=None, userProfile=None)
 
 df_component_values["bev_power"] = bev.charging_power
-df_component_values["bev_efficiency"] = bev.bev_chargeEfficiency
+df_component_values["bev_efficiency"] = bev.chargeEfficiency
 df_component_values["bev_arrival_soc"] = bev.battery_min/bev.battery_max*100
 
 def get_at_home(bev):
@@ -200,7 +214,42 @@ df_component_values["heat_pump_power_therm"] = hp.heatpump_power
 
 if scenario == 1:
     
-    df_timeseries["heat_pump"] = hp.prepareTimeSeries().el_demand
+    #For heat pump without thermal storage
+#    df_timeseries["heat_pump"] = hp.prepareTimeSeries().el_demand
+#    df_timeseries.heat_pump.plot(figsize=figsize, label="heat pump [kW-el]")
+    
+    tes_hp = VPPThermalEnergyStorage(timebase, mass = mass_of_storage, 
+                              hysteresis = hysteresis, 
+                              target_temperature = target_temperature, 
+                              userProfile = up)
+
+    hp = VPPHeatPump(identifier='hp1', timebase=timebase, userProfile = up,
+                     heatpump_power = heatpump_power, rampUpTime = rampUpTime, 
+                     rampDownTime = rampDownTime, 
+                     minimumRunningTime = minimumRunningTime, 
+                     minimumStopTime = minimumStopTime, year=year)
+
+    
+    
+    loadshape = tes_hp.userProfile.heat_demand[0:]["heat_demand"]
+    outside_temp = tes_hp.userProfile.mean_temp_hours.mean_temp
+    log, log_load, log_cop = [], [],[]
+    hp.lastRampUp = hp.userProfile.heat_demand.index[0]
+    hp.lastRampDown = hp.userProfile.heat_demand.index[0]
+    for i in hp.userProfile.heat_demand.index:
+        heat_demand = hp.userProfile.heat_demand.heat_demand.loc[i]
+        if tes_hp.get_needs_loading(): 
+            hp.rampUp(i)              
+        else: 
+            hp.rampDown(i)
+        temp = tes_hp.operate_storage(heat_demand, i, hp)
+        if hp.isRunning: 
+            log_load.append(heatpump_power)
+        else: 
+            log_load.append(0)
+        log.append(temp)
+        
+    df_timeseries["heat_pump"] = pd.DataFrame(log_load, index = index_year).loc[start:end]
     df_timeseries.heat_pump.plot(figsize=figsize, label="heat pump [kW-el]")
     
 elif scenario == 2:
@@ -218,10 +267,7 @@ else:
     
 #%% chp
 
-up = UP(heat_sys_temp = target_temperature, #Das könnte problematisch werden
-        yearly_heat_demand = yearly_heat_demand, full_load_hours = 2100)
-
-tes = VPPThermalEnergyStorage(timebase, mass = mass_of_storage, 
+tes_chp = VPPThermalEnergyStorage(timebase, mass = mass_of_storage, 
                               hysteresis = hysteresis, 
                               target_temperature = target_temperature,
                               cp = cp, heatloss_per_day=heatloss_per_day,
@@ -235,25 +281,23 @@ chp = VPPCombinedHeatAndPower(environment = None, identifier='chp1', timebase=ti
                  minimumStopTime = minimumStopTime)
 
 #Formula: E = m * cp * T
-df_component_values["therm_storage_capacity"] = tes.mass * tes.cp * (tes.target_temperature + tes.hysteresis + 273.15) #°K
-df_component_values["thermal_storage_efficiency"] = 100 * (1 - tes.heatloss_per_day)
+df_component_values["therm_storage_capacity"] = tes_chp.mass * tes_chp.cp * (tes_chp.target_temperature + tes_chp.hysteresis + 273.15) #°K
+df_component_values["thermal_storage_efficiency"] = 100 * (1 - tes_chp.heatloss_per_day)
 
 if scenario == 1:
     
-    tes.userProfile.get_heat_demand()
-    
-    loadshape = tes.userProfile.get_heat_demand()[0:]["heat_demand"]
-    outside_temp = tes.userProfile.mean_temp_hours.mean_temp
+    loadshape = tes_chp.userProfile.heat_demand[0:]["heat_demand"]
+    outside_temp = tes_chp.userProfile.mean_temp_hours.mean_temp
     log, log_load, log_el = [], [],[]
     chp.lastRampUp = chp.userProfile.heat_demand.index[0]
     chp.lastRampDown = chp.userProfile.heat_demand.index[0]
     for i in chp.userProfile.heat_demand.index:
         heat_demand = chp.userProfile.heat_demand.heat_demand.loc[i]
-        if tes.get_needs_loading(): 
+        if tes_chp.get_needs_loading(): 
             chp.rampUp(i)              
         else: 
             chp.rampDown(i)
-        temp = tes.operate_storage(heat_demand, i, chp)
+        temp = tes_chp.operate_storage(heat_demand, i, chp)
         if chp.isRunning: 
             log_load.append(nominalPowerTh)
             log_el.append(nominalPowerEl)
@@ -262,8 +306,8 @@ if scenario == 1:
             log_el.append(0)
         log.append(temp)
     
-    df_timeseries["chp_heat"] = pd.DataFrame(log_load, index = pd.date_range(start='2017', periods = 35040, freq=time_freq, name ='Time')).loc[start:end]
-    df_timeseries["chp_el"] = pd.DataFrame(log_el, index = pd.date_range(start='2017', periods = 35040, freq=time_freq, name ='Time')).loc[start:end]
+    df_timeseries["chp_heat"] = pd.DataFrame(log_load, index = index_year).loc[start:end] *-1
+    df_timeseries["chp_el"] = pd.DataFrame(log_el, index = index_year).loc[start:end] *-1
     
     df_timeseries.chp_heat.plot(figsize=figsize, label="chp gen[kW-therm]")
     df_timeseries.chp_el.plot(figsize=figsize, label="chp gen[kW-el]")
@@ -281,5 +325,5 @@ else:
 plt.legend()
 print(df_component_values)
 
-df_timeseries.to_csv("C:/Users/sbirk/Desktop/simulation/df_timeseries.csv")
-df_component_values.to_csv("C:/Users/sbirk/Desktop/simulation/df_component_values.csv")
+df_timeseries.to_csv("./Results/df_timeseries.csv")
+df_component_values.to_csv("./Results/df_component_values.csv")

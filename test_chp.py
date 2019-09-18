@@ -90,7 +90,7 @@ for i in chp.userProfile.heat_demand.index:
 pd.DataFrame(log).plot(figsize = (16,9), title = "Yearly Temperature of Storage")
 pd.DataFrame(log)[10000:10960].plot(figsize = (16,9),title = "10-Day View")
 pd.DataFrame(log)[10000:10096].plot(figsize = (16,9),title = "Daily View")
-pd.DataFrame(log_load).plot(figsize = (16,9), title = "Yearly Electrical Loadshape")
+pd.DataFrame(log_load).plot(figsize = (16,9), title = "Yearly Thermal Loadshape")
 pd.DataFrame(log_load)[20000:20960].plot(figsize = (16,9),title = "10-Day View")
 pd.DataFrame(log_load)[20000:20096].plot(figsize = (16,9),title = "Daily View")
 pd.DataFrame(log_el).plot(figsize = (16,9), title = "Yearly Electrical Loadshape")
