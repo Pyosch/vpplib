@@ -11,19 +11,25 @@ parameters in an existing function are changed.
 
 import matplotlib.pyplot as plt
 
+from model.VPPEnvironment import VPPEnvironment
 from model.VPPWind import VPPWind
 
-import logging
-logging.getLogger().setLevel(logging.DEBUG)
+#For Debugging uncomment:
+#import logging
+#logging.getLogger().setLevel(logging.DEBUG)
 
 
 start = '2010-01-01 00:00:00'
 end = '2010-12-31 23:45:00'
 timezone = 'Europe/Berlin'
 timestamp_int = 12
-timestamp_str = '2010-06-01 12:00:00'
+timestamp_str = '2010-01-01 12:00:00'
 
-weather_filename = "./Input_House/Wind/weather.csv"
+wind_filename = "./Input_House/Wind/weather.csv"
+
+#create environment and load wind data
+environment = VPPEnvironment(start=start, end=end, timezone=timezone)
+environment.get_wind_data()
 
 #WindTurbine data
 turbine_type = 'E-126/4200'
@@ -41,10 +47,8 @@ density_correction = True
 obstacle_height = 0
 hellman_exp = None
 
-wind = VPPWind(timebase = 1, identifier = None, 
-                 environment = None, userProfile = None,
-                 start = start, end = end, timezone = timezone,
-                 weather_filename = weather_filename,
+wind = VPPWind(unit = "kW", identifier = None, 
+                 environment = environment, user_profile = None,
                  turbine_type = turbine_type, hub_height = hub_height,
                  rotor_diameter = rotor_diameter, fetch_curve = fetch_curve,
                  data_source = data_source,
@@ -55,9 +59,9 @@ wind = VPPWind(timebase = 1, identifier = None,
                  obstacle_height = obstacle_height, hellman_exp = hellman_exp
                  )
 
-def test_prepareTimeSeries(wind, weather_filename):
+def test_prepareTimeSeries(wind):
     
-    wind.prepareTimeSeries(weather_filename)
+    wind.prepareTimeSeries()
     print("prepareTimeSeries:")
     print(wind.timeseries.head())
     wind.timeseries.plot(figsize=(16,9))
@@ -75,7 +79,7 @@ def observationsForTimestamp(wind, timestamp):
     print(observation, '\n')
     
     
-test_prepareTimeSeries(wind, weather_filename)
+test_prepareTimeSeries(wind)
 test_valueForTimestamp(wind, timestamp_int)
 test_valueForTimestamp(wind, timestamp_str)
 

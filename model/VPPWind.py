@@ -7,7 +7,6 @@ This file contains the basic functionalities of the VPPWind class.
 
 from .VPPComponent import VPPComponent
 
-import pandas as pd
 import traceback
 
 # windpowerlib imports
@@ -16,19 +15,15 @@ from windpowerlib import WindTurbine
 
 class VPPWind(VPPComponent):
 
-    # The constructor takes an identifier (String) for referencing the current
-    # photovoltaic power plant. The parameter peak power (Float) determines the maximum
-    # power that the photovoltaic power plant can generate.
-    def __init__(self, timebase = 1, identifier = None, 
-                 environment = None, userProfile = None,
-                 start = None, end = None, timezone = 'Europe/Berlin',
-                 weather_filename = None,
+    def __init__(self, unit = "kW", identifier = None, 
+                 environment = None, user_profile = None,
                  turbine_type = 'E-126/4200', hub_height = 135,
                  rotor_diameter = 127, fetch_curve = 'power_curve',
-                 data_source = 'oedb',
-                 wind_speed_model = 'logarithmic', density_model = 'barometric',
+                 data_source = 'oedb', wind_speed_model = 'logarithmic', 
+                 density_model = 'barometric',
                  temperature_model = 'linear_gradient', 
-                 power_output_model = 'power_curve', density_correction = False,
+                 power_output_model = 'power_curve', 
+                 density_correction = False,
                  obstacle_height = 0, hellman_exp = None
                  ):
         """
@@ -64,19 +59,15 @@ class VPPWind(VPPComponent):
         """
 
         # Call to super class
-        super(VPPWind, self).__init__(timebase, environment, userProfile)
+        super(VPPWind, self).__init__(unit, environment, user_profile)
     
     
         # Configure attributes
         self.identifier = identifier
-        self.start = start
-        self.end = end
-        self.timezone = timezone
-    
         self.limit = 1.0
         
         #WindTurbine data
-        self.turbine_type = turbine_type  # turbine type as in register #
+        self.turbine_type = turbine_type  # turbine type as in register
         self.hub_height = hub_height  # in m
         self.rotor_diameter = rotor_diameter  # in m
         self.fetch_curve = fetch_curve  # fetch power curve #
@@ -99,56 +90,6 @@ class VPPWind(VPPComponent):
         self.ModelChain = None
         
         self.timeseries = None
-        
-    
-
-    def get_weather_data(self, weather_filename, **kwargs):
-        r"""
-        Imports weather data from a file.
-    
-        The data include wind speed at two different heights in m/s, air
-        temperature in two different heights in K, surface roughness length in m
-        and air pressure in Pa. The file is located in the example folder of the
-        windpowerlib. The height in m for which the data applies is specified in
-        the second row.
-    
-        Parameters
-        ----------
-        filename : string
-            Filename of the weather data file. Default: 'weather.csv'.
-    
-        Other Parameters
-        ----------------
-        datapath : string, optional
-            Path where the weather data file is stored.
-            Default: 'windpowerlib/example'.
-    
-        Returns
-        -------
-        weather_df : pandas.DataFrame
-                DataFrame with time series for wind speed `wind_speed` in m/s,
-                temperature `temperature` in K, roughness length `roughness_length`
-                in m, and pressure `pressure` in Pa.
-                The columns of the DataFrame are a MultiIndex where the first level
-                contains the variable name as string (e.g. 'wind_speed') and the
-                second level contains the height as integer at which it applies
-                (e.g. 10, if it was measured at a height of 10 m).
-    
-        """
-        
-        # read csv file
-        weather_df = pd.read_csv(
-            weather_filename, index_col=0, header=[0, 1],
-            date_parser=lambda idx: pd.to_datetime(idx, utc=True))
-        # change type of index to datetime and set time zone
-        weather_df.index = pd.to_datetime(weather_df.index).tz_convert(
-                self.timezone)
-        # change type of height from str to int by resetting columns
-        l0 = [_[0] for _ in weather_df.columns]
-        l1 = [int(_[1]) for _ in weather_df.columns]
-        weather_df.columns = [l0, l1]
-        
-        return weather_df
     
     
     def get_wind_turbine(self):
@@ -169,10 +110,10 @@ class VPPWind(VPPComponent):
         # if you want to use the power coefficient curve change the value of
         # 'fetch_curve' to 'power_coefficient_curve'
         wind_turbine = {
-            'turbine_type': self.turbine_type, # turbine type as in register #
+            'turbine_type': self.turbine_type, # turbine type as in register
             'hub_height': self.hub_height, # in m
             'rotor_diameter': self.rotor_diameter, # in m
-            'fetch_curve': self.fetch_curve,  # fetch power curve #
+            'fetch_curve': self.fetch_curve,  # fetch power curve
             'data_source': self.data_source  # data source oedb or name of csv file
         }
         # initialize WindTurbine object
@@ -181,7 +122,7 @@ class VPPWind(VPPComponent):
         return self.wind_turbine
     
     
-    def calculate_power_output(self, weather):
+    def calculate_power_output(self):
         r"""
         Calculates power output of wind turbines using the
         :class:`~.modelchain.ModelChain`.
@@ -194,10 +135,7 @@ class VPPWind(VPPComponent):
     
         Parameters
         ----------
-        weather : pd.DataFrame
-            Contains weather data time series.
-        e126 : WindTurbine
-            WindTurbine object with power curve from the OpenEnergy Database.
+
     
         """
         # power output calculation for e126
@@ -218,24 +156,27 @@ class VPPWind(VPPComponent):
         
         # initialize ModelChain with own specifications and use run_model method
         # to calculate power output
-        if self.start ==None or self.end == None:
-            self.ModelChain = ModelChain(self.wind_turbine, **modelchain_data).run_model(weather)
+        if self.environment.start ==None or self.environment.end == None:
+            self.ModelChain = ModelChain(self.wind_turbine, **modelchain_data
+                                         ).run_model(self.environment.wind_data)
             
         else:
-            self.ModelChain = ModelChain(self.wind_turbine, **modelchain_data).run_model(weather[self.start:self.end])
+            self.ModelChain = ModelChain(self.wind_turbine, **modelchain_data
+                                         ).run_model(self.environment.wind_data[
+                                                 self.environment.start:
+                                             self.environment.end])
             
-        # write power output time series to VPPWind object
+        # write power output time series to VPPWind.timeseries
         self.timeseries = self.ModelChain.power_output /1000 #convert to kW
     
         return
 
 
-    def prepareTimeSeries(self, weather_filename):
+    def prepareTimeSeries(self):
     
-        # -> Functions stub <-
-        weather = self.get_weather_data(weather_filename)
+        self.environment.get_wind_data()
         self.get_wind_turbine()
-        self.calculate_power_output(weather)
+        self.calculate_power_output()
         
         return self.timeseries
 
@@ -244,7 +185,7 @@ class VPPWind(VPPComponent):
     # Controlling functions
     # ===================================================================================
 
-    # This function limits the power of the photovoltaic to the given percentage.
+    # This function limits the power to the given percentage.
     # It cuts the current power production down to the peak power multiplied by
     # the limit (Float [0;1]).
     def limitPowerTo(self, limit):

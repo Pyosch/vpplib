@@ -12,8 +12,9 @@ import pandas as pd
 
 class VPPUserProfile(object):
 
-    def __init__(self, identifier=None, timebase = 15, heat_sys_temp = 60, 
-                 t_0 = 40, yearly_heat_demand = 12500,
+    def __init__(self, identifier=None, timebase = 15, 
+                 longitude = None, latitude = None,
+                 heat_sys_temp = 60, t_0 = 40, yearly_heat_demand = 12500,
                  full_load_hours = 2100, heater_power = 4, 
                  building_type = 'DE_HEF33', start = '2017-01-01 00:00:00',
                  end = '2017-12-31 23:45:00', year = '2017'):
@@ -60,6 +61,8 @@ class VPPUserProfile(object):
         self.start = start
         self.end = end
         self.year = year
+        self.longitude = longitude
+        self.latitude = latitude
         
         #building parameters
         mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, freq = "D", name="time"))

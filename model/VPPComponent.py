@@ -9,7 +9,7 @@ This is the mother class of all VPPx classes
 class VPPComponent(object):
     
     # 
-    def __init__(self, unit = "kW", environment, user_profile):
+    def __init__(self, unit, environment, user_profile):
         
         """
         Info
@@ -46,7 +46,7 @@ class VPPComponent(object):
         """
     
         # Configure attributes
-        self.unit = unit
+        self.unit = unit # e.g. "kW"
         self.environment = environment
         self.user_profile = user_profile
     
