@@ -2,7 +2,7 @@
 """
 Created on Thu Aug 22 15:33:53 2019
 
-@author: patri
+@author: patri, pyosch
 """
 from model.VPPUserProfile import VPPUserProfile
 from model.VPPEnvironment import VPPEnvironment
@@ -12,12 +12,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 #from tqdm import tqdm 
 
-
+#Values for environment
 start = '2017-01-01 00:00:00'
 end = '2017-12-31 23:45:00'
 year = '2017'
-periods = None
-freq = "15 min"
+
+#Values for user_profile
+yearly_heat_demand = 12500
+building_type = 'DE_HEF33'
+t_0 = 40
 
 #Values for Thermal Storage
 target_temperature = 60 # °C
@@ -26,17 +29,16 @@ mass_of_storage = 500 # kg
 yearly_heat_demand = 2500 # kWh
 
 #Values for Heatpump
-heatpump_power = 5 #kW electric
+el_power = 5 #kW electric
 rampUpTime = 1/15 #timesteps
 rampDownTime = 1/15 #timesteps
-minimumRunningTime = 1 #timesteps
-minimumStopTime = 2 #timesteps
+min_runtime = 1 #timesteps
+min_stop_time = 2 #timesteps
 timebase = 15
 
 environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year)
 
-up = VPPUserProfile(heat_sys_temp = target_temperature, #Das könnte problematisch werden
-        yearly_heat_demand = yearly_heat_demand, full_load_hours = 2100)
+up = VPPUserProfile(yearly_heat_demand = yearly_heat_demand)
 
 tes = VPPThermalEnergyStorage(environment=environment, user_profile = up,
                               mass = mass_of_storage, 
@@ -44,10 +46,10 @@ tes = VPPThermalEnergyStorage(environment=environment, user_profile = up,
                               target_temperature = target_temperature)
 
 hp = VPPHeatPump(identifier='hp1', environment=environment, user_profile = up,
-                 heatpump_power = heatpump_power, rampUpTime = rampUpTime, 
+                 el_power = el_power, rampUpTime = rampUpTime, 
                  rampDownTime = rampDownTime, 
-                 minimumRunningTime = minimumRunningTime, 
-                 minimumStopTime = minimumStopTime)
+                 min_runtime = min_runtime, 
+                 min_stop_time = min_stop_time)
 
 def test_get_heat_demand(tes):
     
@@ -72,7 +74,7 @@ for i in hp.user_profile.heat_demand.index:
         hp.rampDown(i)
     temp = tes.operate_storage(heat_demand, i, hp)
     if hp.isRunning: 
-        log_load.append(heatpump_power)
+        log_load.append(el_power)
     else: 
         log_load.append(0)
     log.append(temp)

@@ -12,12 +12,12 @@ import pandas as pd
 
 class VPPUserProfile(object):
 
-    def __init__(self, identifier=None, timebase = 15, 
-                 longitude = None, latitude = None,
-                 heat_sys_temp = 60, t_0 = 40, yearly_heat_demand = 12500,
-                 full_load_hours = 2100, heater_power = 4, 
-                 building_type = 'DE_HEF33', start = '2017-01-01 00:00:00',
-                 end = '2017-12-31 23:45:00', year = '2017'):
+    def __init__(self, identifier=None,
+                 yearly_heat_demand = 12500,
+                 building_type = 'DE_HEF33',
+                 daily_vehicle_usage = None,
+                 comfort_factor = None,
+                 t_0 = 40, year = '2017'):
         """
         Info
         ----
@@ -53,16 +53,12 @@ class VPPUserProfile(object):
         """
 
         # Examples
-        self.dailyVehicleUsage = 120    # km
-        self.comfortFactor = 1.3        # For people that likes to have their homes quite warm 
+        self.daily_vehicle_usage = daily_vehicle_usage    # km
+        self.comfort_factor = comfort_factor        # For people that likes to have their homes quite warm 
         
         # Configure attributes
         self.identifier = identifier
-        self.start = start
-        self.end = end
         self.year = year
-        self.longitude = longitude
-        self.latitude = latitude
         
         #building parameters
         mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, freq = "D", name="time"))
@@ -72,7 +68,7 @@ class VPPUserProfile(object):
         
         self.heat_demand = None
         
-        self.timeseries_year = None
+#        self.timeseries_year = None
         self.building_type = building_type #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv", decimal=",")
         self.mean_temp_days = mean_temp_days
@@ -81,16 +77,13 @@ class VPPUserProfile(object):
         self.mean_temp_quarter_hours = self.temp_hour_to_qarter()
         self.demand_daily = pd.read_csv(
                 './Input_House/heatpump_model/demand_daily.csv')
-        self.full_load_hours = full_load_hours #According to BDEW multi family homes: 2000, single family homes: 2100
-        self.yearly_heat_demand = yearly_heat_demand
-        self.heater_power = heater_power 
         self.t_0 = t_0 #°C
         
         #for SigLinDe calculations
         self.building_parameters = None
         self.h_del = None
+        self.yearly_heat_demand = yearly_heat_demand
         self.heat_demand_daily = None
-        self.demandfactor = None
         self.consumerfactor = None
               
         
@@ -133,12 +126,6 @@ class VPPUserProfile(object):
         self.get_h_del()
         
         self.get_heat_demand_daily()
-        
-        if self.yearly_heat_demand == None:
-            self.get_demandfactor()
-            
-        else:
-            self.demandfactor = self.yearly_heat_demand
             
         self.get_consumerfactor()
         
@@ -190,9 +177,10 @@ class VPPUserProfile(object):
         for i, Sig in self.SigLinDe.iterrows():
             if Sig.Type == self.building_type:
                 
-                self.building_parameters=(Sig.A, Sig.B, Sig.C, Sig.D, Sig.m_H, Sig.b_H, Sig.m_W, Sig.b_W)
+                self.building_parameters=(Sig.A, Sig.B, Sig.C, Sig.D, Sig.m_H, 
+                                          Sig.b_H, Sig.m_W, Sig.b_W)
     
-                return(Sig.A, Sig.B, Sig.C, Sig.D, Sig.m_H, Sig.b_H, Sig.m_W, Sig.b_W)
+                return self.building_parameters
          
     #%%:
                 
@@ -348,63 +336,11 @@ class VPPUserProfile(object):
                     demand_daily_lst.append(demand)
         
             else:
-                demand_daily_lst.append(-9999) #to see if something is wrong
+                traceback.print_exc("df.mean_temp is out of bounds")
             
         self.heat_demand_daily = pd.DataFrame(demand_daily_lst, index = pd.date_range(self.year, periods=8760, freq = "H", name="time"))
         
         return self.heat_demand_daily
-    
-
-    #%%:
-      
-    def get_demandfactor(self):
-        
-        """
-        Info
-        ----
-        ...
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
-        """
-        
-        if self.thermal_power:
-            #Demandfactor (Verbrauchswert) Q_N 
-            self.demandfactor = self.heater_power * self.full_load_hours #if heatpump_power is thermal power
-    
-        else:
-            
-            #seasonal performance factor (Jahresarbeitszahl) spf
-            #needed if only el. power of heatpump is known 
-            spf = sum(self.cop.cop)/len(self.cop.cop)
-    
-            #Demandfactor (Verbrauchswert) Q_N 
-            self.demandfactor = self.heater_power * spf * self.full_load_hours #if heatpump_power is el. power
-            
-        return self.demandfactor
     
     #%%:
     
@@ -443,7 +379,7 @@ class VPPUserProfile(object):
         """
         
         #consumerfactor (Kundenwert) K_w
-        self.consumerfactor = self.demandfactor/(sum(self.h_del)) 
+        self.consumerfactor = self.yearly_heat_demand/(sum(self.h_del)) 
         return self.consumerfactor
     
     #%%:
