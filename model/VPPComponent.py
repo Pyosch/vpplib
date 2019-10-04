@@ -9,7 +9,7 @@ This is the mother class of all VPPx classes
 class VPPComponent(object):
     
     # 
-    def __init__(self, timebase, environment, userProfile):
+    def __init__(self, timebase, unit = "kW", environment, user_profile):
         
         """
         Info
@@ -46,10 +46,10 @@ class VPPComponent(object):
         """
     
         # Configure attributes
-        self.unit = "kW"
-        self.dataResolution = timebase
+        self.unit = unit
+        self.timebase = timebase
         self.environment = environment
-        self.userProfile = userProfile
+        self.user_profile = user_profile
     
 
     def valueForTimestamp(self, timestamp):
