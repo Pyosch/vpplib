@@ -4,12 +4,13 @@ Created on Thu Aug 22 15:33:53 2019
 
 @author: patri
 """
-from model.VPPUserProfile import VPPUserProfile as UP
+from model.VPPUserProfile import VPPUserProfile
+from model.VPPEnvironment import VPPEnvironment
 from model.VPPThermalEnergyStorage import VPPThermalEnergyStorage
 from model.VPPHeatPump import VPPHeatPump
 import matplotlib.pyplot as plt
 import pandas as pd
-from tqdm import tqdm 
+#from tqdm import tqdm 
 
 
 start = '2017-01-01 00:00:00'
@@ -32,38 +33,39 @@ minimumRunningTime = 1 #timesteps
 minimumStopTime = 2 #timesteps
 timebase = 15
 
+environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year)
 
-up = UP(heat_sys_temp = target_temperature, #Das könnte problematisch werden
+up = VPPUserProfile(heat_sys_temp = target_temperature, #Das könnte problematisch werden
         yearly_heat_demand = yearly_heat_demand, full_load_hours = 2100)
 
-tes = VPPThermalEnergyStorage(timebase, mass = mass_of_storage, 
+tes = VPPThermalEnergyStorage(environment=environment, user_profile = up,
+                              mass = mass_of_storage, 
                               hysteresis = hysteresis, 
-                              target_temperature = target_temperature, 
-                              userProfile = up)
+                              target_temperature = target_temperature)
 
-hp = VPPHeatPump(identifier='hp1', timebase=timebase, userProfile = up,
+hp = VPPHeatPump(identifier='hp1', environment=environment, user_profile = up,
                  heatpump_power = heatpump_power, rampUpTime = rampUpTime, 
                  rampDownTime = rampDownTime, 
                  minimumRunningTime = minimumRunningTime, 
-                 minimumStopTime = minimumStopTime, year=year)
+                 minimumStopTime = minimumStopTime)
 
 def test_get_heat_demand(tes):
     
-    tes.userProfile.get_heat_demand()
-    tes.userProfile.heat_demand.plot()
+    tes.user_profile.get_heat_demand()
+    tes.user_profile.heat_demand.plot()
     plt.show()
     
 test_get_heat_demand(tes)
 
 
-loadshape = tes.userProfile.get_heat_demand()[0:]["heat_demand"]
-outside_temp = tes.userProfile.mean_temp_hours.mean_temp
+loadshape = tes.user_profile.get_heat_demand()[0:]["heat_demand"]
+outside_temp = tes.user_profile.mean_temp_hours.mean_temp
 outside_temp.plot()
 log, log_load, log_cop = [], [],[]
-hp.lastRampUp = hp.userProfile.heat_demand.index[0]
-hp.lastRampDown = hp.userProfile.heat_demand.index[0]
-for i in hp.userProfile.heat_demand.index:
-    heat_demand = hp.userProfile.heat_demand.heat_demand.loc[i]
+hp.lastRampUp = hp.user_profile.heat_demand.index[0]
+hp.lastRampDown = hp.user_profile.heat_demand.index[0]
+for i in hp.user_profile.heat_demand.index:
+    heat_demand = hp.user_profile.heat_demand.heat_demand.loc[i]
     if tes.get_needs_loading(): 
         hp.rampUp(i)              
     else: 
