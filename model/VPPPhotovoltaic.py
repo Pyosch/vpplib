@@ -19,13 +19,12 @@ from pvlib.modelchain import ModelChain
 
 class VPPPhotovoltaic(VPPComponent):
 
-    # The constructor takes an identifier (String) for referencing the current
-    # photovoltaic power plant. The parameter peak power (Float) determines the maximum
-    # power that the photovoltaic power plant can generate.
-    def __init__(self, timebase, identifier, latitude, longitude, environment = None, userProfile = None,
-                 start = '2017-01-01 00:00:00',end = '2017-12-31 23:45:00',
-                 module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
-                 inverter_lib = 'cecinverter', inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
+    def __init__(self, unit, identifier, environment = None, 
+                 user_profile = None,
+                 module_lib = 'SandiaMod', 
+                 module = 'Canadian_Solar_CS5P_220M___2009_', 
+                 inverter_lib = 'cecinverter', 
+                 inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
                  surface_tilt = 20, surface_azimuth = 200,
                  modules_per_string = 1, strings_per_inverter = 1):
         """
@@ -61,14 +60,12 @@ class VPPPhotovoltaic(VPPComponent):
         """
 
         # Call to super class
-        super(VPPPhotovoltaic, self).__init__(timebase, environment, userProfile)
+        super(VPPPhotovoltaic, self).__init__(unit, environment, user_profile)
     
     
         # Configure attributes
         self.identifier = identifier
-        self.start = start
-        self.end = end
-        #self.peakPower = peakPower #results from module
+        
     
         self.limit = 1.0
         
@@ -79,22 +76,33 @@ class VPPPhotovoltaic(VPPComponent):
         self.module = sandia_modules[module]
         self.inverter = cec_inverters[inverter]
 
-        self.location = Location(latitude=latitude, longitude=longitude)
+        self.location = Location(latitude=self.user_profile.latitude, 
+                                 longitude=self.user_profile.longitude)
         
-        self.system = PVSystem(surface_tilt=surface_tilt, surface_azimuth=surface_azimuth,
+        self.system = PVSystem(surface_tilt=surface_tilt, 
+                               surface_azimuth=surface_azimuth,
                           module_parameters=self.module,
                           inverter_parameters=self.inverter,
                           modules_per_string=modules_per_string,
                           strings_per_inverter=strings_per_inverter)
         
-        self.modelchain = ModelChain(self.system, self.location, name=identifier)
+        self.modelchain = ModelChain(self.system, self.location, 
+                                     name=identifier)
+        
+        self.peak_power = (self.module.Impo * self.module.Vmpo/1000 * 
+                           self.system.modules_per_string * 
+                           self.system.strings_per_inverter)
+        
         self.timeseries = None
 
 
-    def prepareTimeSeries(self, weather_data):
+    def prepareTimeSeries(self):
     
-        # -> Functions stub <-
-        self.modelchain.run_model(times = weather_data.loc[self.start:self.end].index, weather = weather_data.loc[self.start:self.end])
+        self.modelchain.run_model(
+                times = self.environment.irradiation_data.loc[
+                        self.environment.start:self.environment.end].index, 
+                weather = self.environment.irradiation_data.loc[
+                        self.environment.start:self.environment.end])
         
         timeseries = pd.DataFrame(self.modelchain.ac/1000) #convert to kW
         timeseries.rename(columns = {0:self.identifier}, inplace=True)

@@ -9,33 +9,39 @@ parameters in an existing function are changed.
 
 """
 
-import pandas as pd
 import matplotlib.pyplot as plt
 
+from model.VPPEnvironment import VPPEnvironment
+from model.VPPUserProfile import VPPUserProfile
 from model.VPPPhotovoltaic import VPPPhotovoltaic
 
 
 latitude = 50.941357
 longitude = 6.958307
-name = 'Cologne'
+identifier = 'Cologne'
 start = '2017-01-01 00:00:00'
-end = '2017-01-01 23:45:00'
+end = '2017-12-31 23:45:00'
 timestamp_int = 48
 timestamp_str = '2017-01-01 12:00:00'
 
-weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
-weather_data.set_index("index", inplace = True)
+environment = VPPEnvironment(start=start, end=end)
+environment.get_irradiation_data()
 
-pv = VPPPhotovoltaic(timebase=1, identifier=name, latitude=latitude, longitude=longitude, environment = None, userProfile = None,
-                     start = start, end = end,
-                     module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
-                     inverter_lib = 'cecinverter', inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
+user_profile = VPPUserProfile(identifier=identifier, latitude=latitude,
+                              longitude=longitude)
+
+pv = VPPPhotovoltaic(unit="kW", identifier=identifier, environment = environment, 
+                     user_profile = user_profile,
+                     module_lib = 'SandiaMod', 
+                     module = 'Canadian_Solar_CS5P_220M___2009_', 
+                     inverter_lib = 'cecinverter', 
+                     inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
                      surface_tilt = 20, surface_azimuth = 200,
-                     modules_per_string = 1, strings_per_inverter = 1)
+                     modules_per_string = 2, strings_per_inverter = 2)
 
-def test_prepareTimeSeries(pv, weather_data):
+def test_prepareTimeSeries(pv):
     
-    pv.prepareTimeSeries(weather_data)
+    pv.prepareTimeSeries()
     print("prepareTimeSeries:")
     print(pv.timeseries.head())
     pv.timeseries.plot(figsize=(16,9))
@@ -53,7 +59,7 @@ def observationsForTimestamp(pv, timestamp):
     print(observation, '\n')
     
     
-test_prepareTimeSeries(pv, weather_data)
+test_prepareTimeSeries(pv)
 test_valueForTimestamp(pv, timestamp_int)
 test_valueForTimestamp(pv, timestamp_str)
 
