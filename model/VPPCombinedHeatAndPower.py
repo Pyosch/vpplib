@@ -11,9 +11,12 @@ import pandas as pd
 
 class VPPCombinedHeatAndPower(VPPComponent):
 
-    def __init__(self,environment, timebase, identifier, userProfile, 
-                 nominalPowerEl, nominalPowerTh, overall_efficiency,
-                 rampUpTime, rampDownTime, minimumRunningTime, minimumStopTime):
+    def __init__(self, unit="kW", identifier=None, 
+                 environment=None, user_profile=None, 
+                 el_power=None, th_power=None, 
+                 overall_efficiency=None,
+                 rampUpTime=0, rampDownTime=0,
+                 min_runtime=0, min_stop_time=0):
         
         """
         Info
@@ -52,19 +55,18 @@ class VPPCombinedHeatAndPower(VPPComponent):
         """
 
         # Call to super class
-        super(VPPCombinedHeatAndPower, self).__init__(timebase, environment, userProfile)
+        super(VPPCombinedHeatAndPower, self).__init__(unit, environment, user_profile)
     
     
         # Configure attributes
-        self.userProfile = userProfile
         self.identifier = identifier
-        self.nominalPowerEl = nominalPowerEl
-        self.nominalPowerTh = nominalPowerTh
+        self.el_power = el_power
+        self.th_power = th_power
         self.overall_efficiency = overall_efficiency
         self.rampUpTime = rampUpTime
         self.rampDownTime = rampDownTime
-        self.minimumRunningTime = minimumRunningTime
-        self.minimumStopTime = minimumStopTime
+        self.min_runtime = min_runtime
+        self.min_stop_time = min_stop_time
         self.isRunning = False
 
         self.lastRampUp = 0
@@ -135,12 +137,12 @@ class VPPCombinedHeatAndPower(VPPComponent):
     def isLegitRampUp(self, timestamp):
         
         if type(timestamp) == int:
-            if timestamp - self.lastRampDown > self.minimumStopTime:
+            if timestamp - self.lastRampDown > self.min_stop_time:
                 self.isRunning = True
             else: self.isRunning = False
         
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            if self.lastRampDown + self.minimumStopTime * timestamp.freq < timestamp:
+            if self.lastRampDown + self.min_stop_time * timestamp.freq < timestamp:
                 self.isRunning = True
             else: self.isRunning = False
             
@@ -150,12 +152,12 @@ class VPPCombinedHeatAndPower(VPPComponent):
     def isLegitRampDown(self, timestamp):
         
         if type(timestamp) == int:
-            if timestamp - self.lastRampUp > self.minimumRunningTime:
+            if timestamp - self.lastRampUp > self.min_runtime:
                 self.isRunning = False
             else: self.isRunning = True
         
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            if self.lastRampUp + self.minimumRunningTime * timestamp.freq < timestamp:
+            if self.lastRampUp + self.min_runtime * timestamp.freq < timestamp:
                 self.isRunning = False
             else: self.isRunning = True
             
@@ -268,7 +270,7 @@ class VPPCombinedHeatAndPower(VPPComponent):
     def observationsForTimestamp(self, timestamp):
 
         # Return result
-        if self.isRunning: heat_output = self.nominalPowerTh
+        if self.isRunning: heat_output = self.th_power
         else: heat_output = 0
         return {
             "heat_output": heat_output,   
@@ -291,7 +293,7 @@ class VPPCombinedHeatAndPower(VPPComponent):
         if self.isRunning():
         
             # Return current value
-            return self.nominalPowerEl * self.limit
+            return self.el_power * self.limit
         
         else:
         

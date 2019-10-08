@@ -11,19 +11,20 @@ Created on Thu Aug 22 15:33:53 2019
 
 @author: patri
 """
-from model.VPPUserProfile import VPPUserProfile as UP
+from model.VPPUserProfile import VPPUserProfile
+from model.VPPEnvironment import VPPEnvironment
 from model.VPPThermalEnergyStorage import VPPThermalEnergyStorage
 from model.VPPCombinedHeatAndPower import VPPCombinedHeatAndPower
 import matplotlib.pyplot as plt
 import pandas as pd
-from tqdm import tqdm 
+#from tqdm import tqdm 
 
 
 start = '2017-01-01 00:00:00'
 end = '2017-12-31 23:45:00'
 year = '2017'
 periods = None
-freq = "15 min"
+time_freq = "15 min"
 
 #Values for Thermal Storage
 target_temperature = 60 # °C
@@ -32,56 +33,64 @@ mass_of_storage = 500 # kg
 yearly_heat_demand = 2500 # kWh
 
 #Values for chp
-nominalPowerEl, nominalPowerTh = 4, 6 #kW
+el_power = 4 #kw
+th_power = 6 #kW
 overall_efficiency = 0.8
 rampUpTime = 1/15 #timesteps
 rampDownTime = 1/15 #timesteps
-minimumRunningTime = 1 #timesteps
-minimumStopTime = 2 #timesteps
+min_runtime = 1 #timesteps
+min_stop_time = 2 #timesteps
 timebase = 15
 
 
-up = UP(heat_sys_temp = target_temperature, #Das könnte problematisch werden
-        yearly_heat_demand = yearly_heat_demand, full_load_hours = 2100)
+environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year,
+                             time_freq=time_freq)
 
-tes = VPPThermalEnergyStorage(timebase, mass = mass_of_storage, 
+user_profile = VPPUserProfile(yearly_heat_demand = yearly_heat_demand)
+
+tes = VPPThermalEnergyStorage(environment=environment, 
+                              user_profile = user_profile,
+                              mass = mass_of_storage, 
                               hysteresis = hysteresis, 
-                              target_temperature = target_temperature, 
-                              userProfile = up)
+                              target_temperature = target_temperature)
 
-chp = VPPCombinedHeatAndPower(environment = None, identifier='chp1', timebase=timebase, userProfile = up,
-                 nominalPowerEl = nominalPowerEl, nominalPowerTh = nominalPowerTh, 
-                 overall_efficiency = overall_efficiency, rampUpTime = rampUpTime, 
-                 rampDownTime = rampDownTime, 
-                 minimumRunningTime = minimumRunningTime, 
-                 minimumStopTime = minimumStopTime)
+chp = VPPCombinedHeatAndPower(unit = "kW", identifier='chp1',
+                              environment = environment, 
+                              user_profile = user_profile,
+                              el_power = el_power, 
+                              th_power = th_power, 
+                              overall_efficiency = overall_efficiency, 
+                              rampUpTime = rampUpTime,
+                              rampDownTime = rampDownTime, 
+                              min_runtime = min_runtime,
+                              min_stop_time = min_stop_time)
 
 def test_get_heat_demand(tes):
     
-    tes.userProfile.get_heat_demand()
-    tes.userProfile.heat_demand.plot()
+    tes.user_profile.get_heat_demand()
+    tes.user_profile.heat_demand.plot()
     plt.show()
     
 test_get_heat_demand(tes)
 
 
-loadshape = tes.userProfile.get_heat_demand()[0:]["heat_demand"]
-outside_temp = tes.userProfile.mean_temp_hours.mean_temp
+loadshape = tes.user_profile.get_heat_demand()[0:]["heat_demand"]
+outside_temp = tes.user_profile.mean_temp_hours.mean_temp
 outside_temp.plot()
 log, log_load, log_el = [], [],[]
 #for i, heat_demand in tqdm(enumerate(loadshape)): 
-chp.lastRampUp = chp.userProfile.heat_demand.index[0]
-chp.lastRampDown = chp.userProfile.heat_demand.index[0]
-for i in chp.userProfile.heat_demand.index:
-    heat_demand = chp.userProfile.heat_demand.heat_demand.loc[i]
+chp.lastRampUp = chp.user_profile.heat_demand.index[0]
+chp.lastRampDown = chp.user_profile.heat_demand.index[0]
+for i in chp.user_profile.heat_demand.index:
+    heat_demand = chp.user_profile.heat_demand.heat_demand.loc[i]
     if tes.get_needs_loading(): 
         chp.rampUp(i)              
     else: 
         chp.rampDown(i)
     temp = tes.operate_storage(heat_demand, i, chp)
     if chp.isRunning: 
-        log_load.append(nominalPowerTh)
-        log_el.append(nominalPowerEl)
+        log_load.append(th_power)
+        log_el.append(el_power)
     else: 
         log_load.append(0)
         log_el.append(0)
