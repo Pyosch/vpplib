@@ -8,11 +8,14 @@ electric vehicles.
 TODO: Collect information about parameters that must be represented in a use case.
 """
 
+import traceback
 import pandas as pd
 
 class VPPUserProfile(object):
 
     def __init__(self, identifier=None,
+                 latitude = None,
+                 longitude = None,
                  yearly_heat_demand = 12500,
                  building_type = 'DE_HEF33',
                  daily_vehicle_usage = None,
@@ -58,6 +61,8 @@ class VPPUserProfile(object):
         
         # Configure attributes
         self.identifier = identifier
+        self.latitude = latitude
+        self.longitude = longitude
         self.year = year
         
         #building parameters
