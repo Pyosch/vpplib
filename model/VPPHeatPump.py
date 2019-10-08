@@ -11,15 +11,13 @@ from .VPPComponent import VPPComponent
 
 class VPPHeatPump(VPPComponent):
     
-    def __init__(self, identifier = None, unit = "kW", 
-                 environment = None, user_profile = None,
-                 heatpump_type = "Air", 
-                 heat_sys_temp = 60, t_0 = 40,  
-                 el_power = None, th_power = True, 
-                 full_load_hours = None, heat_demand_year = None,
-                 rampUpTime = 1, rampDownTime = 1, 
-                 min_runtime = 45, min_stop_time = 45,
-                 building_type = 'DE_HEF33'):
+    def __init__(self, unit="kW", identifier=None,
+                 environment=None, user_profile=None,
+                 heatpump_type="Air",
+                 heat_sys_temp=60, t_0=40,
+                 el_power=None, th_power=None,
+                 rampUpTime=0, rampDownTime=0,
+                 min_runtime=0, min_stop_time=0):
         
         """
         Info
@@ -118,7 +116,9 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-        
+        if len(self.environment.mean_temp_hours) == 0:
+            self.environment.get_mean_temp_hours()
+            
         cop_lst = []
         
         if self.heatpump_type == "Air":
@@ -201,12 +201,12 @@ class VPPHeatPump(VPPComponent):
             
             
         if self.user_profile.heat_demand == None:
-            self.get_heat_demand()
+            self.user_profile.get_heat_demand()
             
         if self.timeseries_year == None:
             self.get_timeseries_year()
         
-        self.timeseries = self.timeseries_year.loc[self.start:self.end]
+        self.timeseries = self.timeseries_year.loc[self.environment.start:self.environment.end]
         
         return self.timeseries
     

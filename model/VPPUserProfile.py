@@ -55,28 +55,23 @@ class VPPUserProfile(object):
         
         """
 
-        # Examples
-        self.daily_vehicle_usage = daily_vehicle_usage    # km
-        self.comfort_factor = comfort_factor        # For people that likes to have their homes quite warm 
         
-        # Configure attributes
         self.identifier = identifier
         self.latitude = latitude
         self.longitude = longitude
         self.year = year
         
-        #building parameters
+        self.daily_vehicle_usage = daily_vehicle_usage    # km
+        self.comfort_factor = comfort_factor        # For people that likes to have their homes quite warm 
+        
         mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, freq = "D", name="time"))
         mean_temp_days['Mean_Temp'] = pd.read_csv(
                 "./Input_House/heatpump_model/mean_temp_days_2017.csv", 
                 header = None)
-        
+        self.mean_temp_days = mean_temp_days
         self.heat_demand = None
         
-#        self.timeseries_year = None
         self.building_type = building_type #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
-        self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv", decimal=",")
-        self.mean_temp_days = mean_temp_days
         self.mean_temp_hours = pd.read_csv(
                 './Input_House/heatpump_model/mean_temp_hours_2017_indexed.csv', index_col="time") #for cop
         self.mean_temp_quarter_hours = self.temp_hour_to_qarter()
@@ -85,6 +80,7 @@ class VPPUserProfile(object):
         self.t_0 = t_0 #°C
         
         #for SigLinDe calculations
+        self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv", decimal=",")
         self.building_parameters = None
         self.h_del = None
         self.yearly_heat_demand = yearly_heat_demand

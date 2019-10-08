@@ -15,10 +15,10 @@ class VPPEnvironment(object):
 
     def __init__(self, timebase = None, timezone = 'Europe/Berlin' ,
                  start = None, end = None, year = None, 
-                 mean_temp_days = None, 
-                 mean_temp_hours = None, 
-                 irradiation_data = None, 
-                 wind_data = None):
+                 mean_temp_days = [], 
+                 mean_temp_hours = [], 
+                 irradiation_data = [], 
+                 wind_data = []):
         
         """
         Info
@@ -57,7 +57,7 @@ class VPPEnvironment(object):
         self.timezone = timezone
         self.start = start
         self.end = end
-        self.year = year #TODO check if necessary
+        self.year = year
         self.mean_temp_days = mean_temp_days
         self.mean_temp_hours = mean_temp_hours
         self.irradiation_data = irradiation_data
