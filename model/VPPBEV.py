@@ -12,12 +12,14 @@ import traceback
 
 class VPPBEV(VPPComponent):
 
-    def __init__(self, timebase, identifier, start = None, end = None, time_freq = "15 min", battery_max = 16, 
-                 battery_min = 0, battery_usage = 1, charging_power = 11, load_degradiation_begin = 0.8, 
-                 chargeEfficiency = 0.98, environment=None, userProfile=None):
+    def __init__(self, unit="kW", identifier=None,
+                 environment=None, user_profile=None,
+                 battery_max = 16, battery_min = 0, battery_usage = 1, 
+                 charging_power = 11, load_degradiation_begin = 0.8, 
+                 charge_efficiency = 0.98):
 
         # Call to super class
-        super(VPPBEV, self).__init__(timebase=timebase, environment=environment, userProfile=userProfile)
+        super(VPPBEV, self).__init__(unit=unit, environment=environment, user_profile=user_profile)
         
         """
         Info
@@ -62,11 +64,7 @@ class VPPBEV(VPPComponent):
         ...
         
         """
-        
-        self.start = start
-        self.end = end
-        self.time_freq = time_freq
-        self.timebase = timebase #time_base = 15/60 #for loadshapes with steps, smaller than one hour (eg. 15 minutes)
+
         self.limit = 1
         self.date = []
         self.hour = []
@@ -76,48 +74,21 @@ class VPPBEV(VPPComponent):
         self.battery_min = battery_min
         self.battery_usage = battery_usage
         self.charging_power = charging_power
-        self.chargeEfficiency = chargeEfficiency
+        self.charge_efficiency = charge_efficiency
         self.load_degradiation_begin = load_degradiation_begin
         self.identifier = identifier
       
     def prepareTimeSeries(self):
         
-        #TODO: export to VPPUserProfile
-        weekend_trip_start = ['08:00:00', '08:15:00', '08:30:00', '08:45:00', 
-                              '09:00:00', '09:15:00', '09:30:00', '09:45:00',
-                              '10:00:00', '10:15:00', '10:30:00', '10:45:00', 
-                              '11:00:00', '11:15:00', '11:30:00', '11:45:00', 
-                              '12:00:00', '12:15:00', '12:30:00', '12:45:00', 
-                              '13:00:00']
-        
-        weekend_trip_end = ['17:00:00', '17:15:00', '17:30:00', '17:45:00', 
-                            '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
-                            '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
-                            '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
-                            '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
-                            '22:00:00', '22:15:00', '22:30:00', '22:45:00', 
-                            '23:00:00']
-        
-        work_start = ['07:00:00', '07:15:00', '07:30:00', '07:45:00', 
-                      '08:00:00', '08:15:00', '08:30:00', '08:45:00', 
-                      '09:00:00']
-        
-        work_end = ['16:00:00', '16:15:00', '16:30:00', '16:45:00', 
-                    '17:00:00', '17:15:00', '17:30:00', '17:45:00', 
-                    '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
-                    '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
-                    '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
-                    '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
-                    '22:00:00']
-        
-        self.timeseries = pd.DataFrame(pd.date_range(start=self.start, end=self.end, 
-                                             freq=self.time_freq, name ='Time'))
+        self.timeseries = pd.DataFrame(pd.date_range(start=self.environment.start, 
+                                                     end=self.environment.end, 
+                                             freq=self.environment.time_freq, name ='Time'))
         self.timeseries['car_charger'] = 0
         self.timeseries.set_index(self.timeseries.Time, inplace = True)
         
         self.split_time() 
         self.set_weekday()
-        self.set_at_home(work_start, work_end, weekend_trip_start, weekend_trip_end)
+        self.set_at_home()
         self.charge()
         self.timeseries.set_index('Time', inplace = True, drop = True)
         self.timeseries['at_home'] = self.at_home
@@ -170,7 +141,7 @@ class VPPBEV(VPPComponent):
         for i, at_home in self.at_home.iterrows():
             if (at_home.item() == 0) & (battery_charge > self.battery_min):
                 #if car is not at home discharge battery with X kW/h
-                battery_charge = battery_charge - self.battery_usage * self.timebase 
+                battery_charge = battery_charge - self.battery_usage * (self.environment.timebase/60) 
     
                 if battery_charge < self.battery_min:
                     battery_charge = self.battery_min
@@ -180,8 +151,14 @@ class VPPBEV(VPPComponent):
             
             #Function to apply the load_degradation to the load profile
             elif (at_home.item() == 1) & (battery_charge > self.battery_max * self.load_degradiation_begin): 
-                degraded_charging_power = self.charging_power * (1 - (battery_charge / self.battery_max - self.load_degradiation_begin)/(1 - self.load_degradiation_begin))
-                battery_charge = battery_charge + (degraded_charging_power * self.chargeEfficiency * self.timebase)
+                degraded_charging_power = (self.charging_power * 
+                                           (1 - (battery_charge / 
+                                                 self.battery_max - 
+                                                 self.load_degradiation_begin)/(1 - self.load_degradiation_begin)))
+                
+                battery_charge = battery_charge + (degraded_charging_power * 
+                                                   self.charge_efficiency * 
+                                                   (self.environment.timebase/60))
                 charger = degraded_charging_power
                 
                 if battery_charge > self.battery_max:
@@ -193,7 +170,9 @@ class VPPBEV(VPPComponent):
     
             #If car is at home, charge with charging power. If timescale is hours charging power results in kWh    
             elif (at_home.item() == 1) & (battery_charge < self.battery_max): 
-                battery_charge = battery_charge + (self.charging_power * self.chargeEfficiency * self.timebase)
+                battery_charge = battery_charge + (self.charging_power * 
+                                                   self.charge_efficiency * 
+                                                   (self.environment.timebase/60))
                 charger = self.charging_power
     
                 #If battery would be overcharged, charge only with kWh left
@@ -302,7 +281,7 @@ class VPPBEV(VPPComponent):
 
     # In[Determine times when car is at home]:
     
-    def set_at_home(self, work_start, work_end, weekend_trip_start, weekend_trip_end):
+    def set_at_home(self):
         
         """
         Info
@@ -338,17 +317,27 @@ class VPPBEV(VPPComponent):
         ...
         
         """
+        
+        if (len(self.user_profile.week_trip_start) == 0 or
+            len(self.user_profile.week_trip_end) == 0 or
+            len(self.user_profile.weekend_trip_start) == 0 or
+            len(self.user_profile.weekend_trip_end) == 0):
+            self.user_profile.get_trip_times()
 
         lst = []
     
         for hour, weekday in zip(self.hour, self.weekday):
             if (hour == '00:00:00') & (weekday < 5):
-                departure = work_start[random.randrange(0,(len(work_start) - 1),1)]
-                arrival = work_end[random.randrange(0,(len(work_end) - 1),1)]
+                departure = self.user_profile.week_trip_start[
+                        random.randrange(0,(len(self.user_profile.week_trip_start) - 1),1)]
+                arrival = self.user_profile.week_trip_end[
+                        random.randrange(0,(len(self.user_profile.week_trip_end) - 1),1)]
     
             elif (hour == '00:00:00') & (weekday >= 5):
-                departure = weekend_trip_start[random.randrange(0,(len(weekend_trip_start) - 1),1)]
-                arrival = weekend_trip_end[random.randrange(0,(len(weekend_trip_end) - 1),1)]
+                departure = self.user_profile.weekend_trip_start[
+                        random.randrange(0,(len(self.user_profile.weekend_trip_start) - 1),1)]
+                arrival = self.user_profile.weekend_trip_end[
+                        random.randrange(0,(len(self.user_profile.weekend_trip_end) - 1),1)]
     
             if (hour > arrival) | (hour < departure):
                 lst.append(1)

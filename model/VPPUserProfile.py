@@ -18,9 +18,11 @@ class VPPUserProfile(object):
                  longitude = None,
                  yearly_heat_demand = 12500,
                  building_type = 'DE_HEF33',
-                 daily_vehicle_usage = None,
                  comfort_factor = None,
-                 t_0 = 40, year = '2017'):
+                 t_0 = 40, year = '2017',
+                 daily_vehicle_usage = None,
+                 week_trip_start=[], week_trip_end=[],
+                 weekend_trip_start=[], weekend_trip_end=[]):
         """
         Info
         ----
@@ -62,6 +64,11 @@ class VPPUserProfile(object):
         self.year = year
         
         self.daily_vehicle_usage = daily_vehicle_usage    # km
+        self.week_trip_start = week_trip_start
+        self.week_trip_end = week_trip_end
+        self.weekend_trip_start = weekend_trip_start
+        self.weekend_trip_end = weekend_trip_end
+        
         self.comfort_factor = comfort_factor        # For people that likes to have their homes quite warm 
         
         mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, freq = "D", name="time"))
@@ -86,7 +93,72 @@ class VPPUserProfile(object):
         self.yearly_heat_demand = yearly_heat_demand
         self.heat_demand_daily = None
         self.consumerfactor = None
-              
+        
+        
+    def get_trip_times(self):
+        
+        """
+        Info
+        ----
+        ...
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        
+        self.week_trip_start = ['07:00:00', '07:15:00', '07:30:00', '07:45:00', 
+                      '08:00:00', '08:15:00', '08:30:00', '08:45:00', 
+                      '09:00:00']
+        
+        self.week_trip_end = ['16:00:00', '16:15:00', '16:30:00', '16:45:00', 
+                    '17:00:00', '17:15:00', '17:30:00', '17:45:00', 
+                    '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
+                    '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
+                    '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
+                    '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
+                    '22:00:00']
+        
+        self.weekend_trip_start = ['08:00:00', '08:15:00', '08:30:00', '08:45:00', 
+                              '09:00:00', '09:15:00', '09:30:00', '09:45:00',
+                              '10:00:00', '10:15:00', '10:30:00', '10:45:00', 
+                              '11:00:00', '11:15:00', '11:30:00', '11:45:00', 
+                              '12:00:00', '12:15:00', '12:30:00', '12:45:00', 
+                              '13:00:00']
+        
+        self.weekend_trip_end = ['17:00:00', '17:15:00', '17:30:00', '17:45:00', 
+                            '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
+                            '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
+                            '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
+                            '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
+                            '22:00:00', '22:15:00', '22:30:00', '22:45:00', 
+                            '23:00:00']
+        
+        
+        return self.week_trip_start, self.week_trip_end, self.weekend_trip_start, self.weekend_trip_end
+    
         
     def get_heat_demand(self):
         
@@ -138,7 +210,7 @@ class VPPUserProfile(object):
     
     #%%:
     # ===================================================================================
-    # Basic Functions for heat demand
+    # Basic Functions for get_heat_demand
     # ===================================================================================
     
     def get_building_parameters(self):

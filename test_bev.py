@@ -8,20 +8,37 @@ Adjust if a new function is added or
 parameters in an existing function are changed.
 
 """
-
+from model.VPPUserProfile import VPPUserProfile
+from model.VPPEnvironment import VPPEnvironment
 from model.VPPBEV import VPPBEV
 import matplotlib.pyplot as plt
 
+identifier = 'bev_1'
 start = '2017-06-01 00:00:00'
 end = '2017-06-01 23:45:00'
+timebase = 15
 timestamp_int = 48
 timestamp_str = '2017-06-01 12:00:00'
 
-bev = VPPBEV(timebase=15/60, identifier='bev_1', 
-             start = start, end = end, time_freq = "15 min", 
-             battery_max = 16, battery_min = 0, battery_usage = 1, 
-             charging_power = 11, chargeEfficiency = 0.98, 
-             environment=None, userProfile=None)
+charging_power = 11
+battery_max = 16
+battery_min = 0
+battery_usage = 1
+charge_efficiency = 0.98
+load_degradiation_begin = 0.8
+
+environment = VPPEnvironment(start=start, end=end, timebase=timebase)
+
+user_profile = VPPUserProfile(identifier=identifier)
+
+
+bev = VPPBEV(unit="kW", identifier=None,
+             environment=environment, user_profile=user_profile,
+             battery_max=battery_max, battery_min=battery_min, 
+             battery_usage=battery_usage, 
+             charging_power=charging_power, 
+             load_degradiation_begin=load_degradiation_begin, 
+             charge_efficiency=charge_efficiency)
     
 def test_prepareTimeSeries(bev):
     

@@ -13,12 +13,13 @@ import pandas as pd
 
 class VPPEnvironment(object):
 
-    def __init__(self, timebase = None, timezone = 'Europe/Berlin' ,
-                 start = None, end = None, year = None, 
-                 mean_temp_days = [], 
-                 mean_temp_hours = [], 
-                 irradiation_data = [], 
-                 wind_data = []):
+    def __init__(self, timebase=None, timezone='Europe/Berlin' ,
+                 start=None, end=None, year=None,
+                 time_freq="15 min",
+                 mean_temp_days=[], 
+                 mean_temp_hours=[], 
+                 irradiation_data=[], 
+                 wind_data=[]):
         
         """
         Info
@@ -58,6 +59,7 @@ class VPPEnvironment(object):
         self.start = start
         self.end = end
         self.year = year
+        self.time_freq = time_freq
         self.mean_temp_days = mean_temp_days
         self.mean_temp_hours = mean_temp_hours
         self.irradiation_data = irradiation_data
