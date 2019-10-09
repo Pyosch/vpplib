@@ -11,7 +11,10 @@ import pandas as pd
 
 class VPPEnergyStorage(VPPComponent):
 
-    def __init__(self, timebase, identifier, capacity, chargeEfficiency, dischargeEfficiency, maxPower, maxC, environment = None, userProfile = None):
+    def __init__(self, unit=None, identifier=None, capacity=None, 
+                 environment=None, user_profile=None, 
+                 charge_efficiency=0.98, discharge_efficiency=0.98, 
+                 max_power=None, max_c=None):
         
         """
         Info
@@ -24,10 +27,10 @@ class VPPEnergyStorage(VPPComponent):
         ----------
         
         capacity [kWh]
-        chargeEfficiency [-] (between 0 and 1)
-        dischargeEfficiency [-] (between 0 and 1)
-        maxPower [kW]
-        maxC [-]
+        charge_efficiency [-] (between 0 and 1)
+        discharge_efficiency [-] (between 0 and 1)
+        max_power [kW]
+        maxC [-] (between 0.5 and 1.2)
         	
         Attributes
         ----------
@@ -52,19 +55,18 @@ class VPPEnergyStorage(VPPComponent):
         """
 
         # Call to super class
-        super(VPPEnergyStorage, self).__init__(timebase, environment, userProfile)
+        super(VPPEnergyStorage, self).__init__(unit, environment, user_profile)
 
 
         # Setup attributes
-        self.timebase = timebase
         self.identifier = identifier
         self.capacity = capacity
-        self.chargeEfficiency = chargeEfficiency
-        self.dischargeEfficiency = dischargeEfficiency
-        self.maxPower = maxPower
-        self.maxC = maxC #factor between 0.5 and 1.2
+        self.charge_efficiency = charge_efficiency
+        self.discharge_efficiency = discharge_efficiency
+        self.max_power = max_power
+        self.max_c = max_c #factor between 0.5 and 1.2
 
-        self.stateOfCharge = 0
+        self.state_of_charge = 0
         self.residual_load = None
         self.timeseries = None
 
@@ -124,47 +126,47 @@ class VPPEnergyStorage(VPPComponent):
         """
         
         if residual_load > 0:
-            #Energy demand --> discharge storage if stateOfCharge > 0
+            #Energy demand --> discharge storage if state_of_charge > 0
             
-            if self.stateOfCharge > 0:
+            if self.state_of_charge > 0:
                 #storage is not empty
 
-                self.stateOfCharge -= residual_load * self.dischargeEfficiency * self.timebase
+                self.state_of_charge -= residual_load * self.discharge_efficiency * (self.environment.timebase/60)
                 
                 #do not discharge below 0 kWh
-                if self.stateOfCharge < 0:
-                    residual_load = self.stateOfCharge / self.chargeEfficiency / self.timebase * -1
-                    self.stateOfCharge = 0
+                if self.state_of_charge < 0:
+                    residual_load = self.state_of_charge / self.discharge_efficiency / (self.environment.timebase/60) * -1
+                    self.state_of_charge = 0
                     
                 else:
                     residual_load = 0
                     
             else:
-                return self.stateOfCharge, residual_load
+                return self.state_of_charge, residual_load
                 
         elif residual_load < 0:
             
-            #Energy surplus --> charge storage if stateOfCharge < capacity 
+            #Energy surplus --> charge storage if state_of_charge < capacity 
             
-            if self.stateOfCharge < self.capacity:
+            if self.state_of_charge < self.capacity:
                 #storage has not reached its max capacity
                 
-                self.stateOfCharge += residual_load * self.dischargeEfficiency * self.timebase * -1
+                self.state_of_charge += residual_load * self.charge_efficiency * (self.environment.timebase/60) * -1
                 
                 #do not overcharge the storage
-                if self.stateOfCharge > self.capacity:
+                if self.state_of_charge > self.capacity:
                     residual_load = (self.capacity - 
-                                     self.stateOfCharge) / self.dischargeEfficiency / self.timebase
-                    self.stateOfCharge = self.capacity
+                                     self.state_of_charge) / self.charge_efficiency / (self.environment.timebase/60)
+                    self.state_of_charge = self.capacity
                     
                 else:
                     residual_load = 0
                     
             else:
                 #storage has reached its max capacity
-                return self.stateOfCharge, residual_load
+                return self.state_of_charge, residual_load
         
-        return self.stateOfCharge, residual_load
+        return self.state_of_charge, residual_load
 
 
     # ===================================================================================
@@ -213,16 +215,19 @@ class VPPEnergyStorage(VPPComponent):
         """
         if type(timestamp) == int:
             
-            stateOfCharge, residual_load = self.timeseries.iloc[timestamp]
+            state_of_charge, residual_load = self.timeseries.iloc[timestamp]
         
         elif type(timestamp) == str:
             
-            stateOfCharge, residual_load = self.timeseries.loc[timestamp]
+            state_of_charge, residual_load = self.timeseries.loc[timestamp]
         
         else:
             traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
         
-        observations = {'stateOfCharge':stateOfCharge, 'residual_load':residual_load, 'max_power':self.maxPower, 'maxC':self.maxC}
+        observations = {'state_of_charge':state_of_charge, 
+                        'residual_load':residual_load, 
+                        'max_power':self.max_power, 
+                        'max_c':self.max_c}
         
         return observations
 
@@ -230,7 +235,7 @@ class VPPEnergyStorage(VPPComponent):
     # Controlling functions
     # ===================================================================================
 
-    def charge(self, energy, timebase, timestamp):
+    def charge(self, energy, timestamp):
         
         """
         Info
@@ -267,19 +272,19 @@ class VPPEnergyStorage(VPPComponent):
         """
 
         # Check if power exceeds max power
-        power = energy / (timebase / 60)
+        power = energy / (self.environment.timebase/60)
 
-        if power > self.maxPower * self.maxC:
-            energy = (self.maxPower * self.maxC) * (timebase / 60)
+        if power > self.max_power * self.max_c:
+            energy = (self.max_power * self.max_c) * (self.environment.timebase/60)
 
 
         # Check if charge exceeds capacity
-        if self.stateOfCharge + energy * self.chargeEfficiency > self.capacity:
-            energy = (self.capacity - self.stateOfCharge) * (1 / self.chargeEfficiency)
+        if self.state_of_charge + energy * self.chargeEfficiency > self.capacity:
+            energy = (self.capacity - self.state_of_charge) * (1 / self.chargeEfficiency)
 
 
         # Update state of charge
-        self.stateOfCharge += energy * self.chargeEfficiency
+        self.state_of_charge += energy * self.chargeEfficiency
         
         
         # Check if data already exists
@@ -289,7 +294,7 @@ class VPPEnergyStorage(VPPComponent):
             self.timeseries[timestamp] = energy
 
 
-    def discharge(self, energy, timebase, timestamp):
+    def discharge(self, energy, timestamp):
         
         """
         Info
@@ -326,19 +331,19 @@ class VPPEnergyStorage(VPPComponent):
         """
 
         # Check if power exceeds max power
-        power = energy / (timebase / 60)
+        power = energy / ((self.environment.timebase/60))
 
-        if power > self.maxPower * self.maxC:
-            energy = (self.capacity - self.stateOfCharge) * (1 / self.chargeEfficiency)
+        if power > self.max_power * self.max_c:
+            energy = (self.capacity - self.state_of_charge) * (1 / self.charge_efficiency)
 
 
         # Check if discharge exceeds state of charge
-        if self.stateOfCharge - energy * (1 / self.dischargeEfficiency) < 0:
-            energy = self.stateOfCharge * self.dischargeEfficiency
+        if self.state_of_charge - energy * (1 / self.discharge_efficiency) < 0:
+            energy = self.state_of_charge * self.discharge_efficiency
 
 
         # Update state of charge
-        self.stateOfCharge -= energy * (1 / self.dischargeEfficiency)
+        self.state_of_charge -= energy * (1 / self.discharge_efficiency)
         
         
         # Check if data already exists

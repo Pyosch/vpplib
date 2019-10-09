@@ -5,27 +5,42 @@ Created on Mon Jul 29 13:25:23 2019
 @author: Sascha Birk
 """
 
+from model.VPPEnvironment import VPPEnvironment
+from model.VPPUserProfile import VPPUserProfile
 from model.VPPEnergyStorage import VPPEnergyStorage
 from model.VPPPhotovoltaic import VPPPhotovoltaic
 
 import pandas as pd
 import matplotlib.pyplot as plt
 
-#PV
-latitude = 50.941357
-longitude = 6.958307
-name = 'Cologne'
+#environment
 start = '2017-06-01 00:00:00'
 end = '2017-06-07 23:45:00'
 year = '2017'
 
+#user_profile
+latitude = 50.941357
+longitude = 6.958307
+
+#PV
+unit = "kW"
+name = 'bus'
+module_lib = 'SandiaMod'
+module = 'Canadian_Solar_CS5P_220M___2009_'
+inverter_lib = 'cecinverter'
+inverter = 'ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_'
+surface_tilt = 20
+surface_azimuth = 200
+modules_per_string = 4
+strings_per_inverter = 2
+
 #storage
-timebase = 15/60
-chargeEfficiency = 0.98
-dischargeEfficiency = 0.98
-maxPower = 4 #kW
+timebase = 15
+charge_efficiency = 0.98
+discharge_efficiency = 0.98
+max_power = 4 #kW
 capacity = 4 #kWh
-maxC = 1 #factor between 0.5 and 1.2
+max_c = 1 #factor between 0.5 and 1.2
 
 #test
 timestamp_int = 48
@@ -36,30 +51,39 @@ baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
 baseload.set_index(baseload.Time, inplace = True)
 baseload.drop(labels="Time", axis=1, inplace = True)
 
-weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
-weather_data.set_index("index", inplace = True)
+environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year)
+
+user_profile = VPPUserProfile(identifier=name, latitude=latitude,
+                              longitude=longitude)
 
 #create pv object and timeseries
-pv = VPPPhotovoltaic(timebase=1, identifier=(name+'_PV'), latitude=latitude, longitude=longitude, environment = None, userProfile = None,
-                     start = start, end = end,
-                     module_lib = 'SandiaMod', module = 'Canadian_Solar_CS5P_220M___2009_', 
-                     inverter_lib = 'cecinverter', inverter = 'ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_',
-                     surface_tilt = 20, surface_azimuth = 200,
-                     modules_per_string = 4, strings_per_inverter = 2)
+pv = VPPPhotovoltaic(unit=unit, identifier=(name+'_pv'), 
+                     environment=environment, 
+                     user_profile=user_profile,
+                     module_lib=module_lib, 
+                     module=module, 
+                     inverter_lib=inverter_lib, 
+                     inverter=inverter,
+                     surface_tilt=surface_tilt, 
+                     surface_azimuth=surface_azimuth,
+                     modules_per_string=modules_per_string, 
+                     strings_per_inverter=strings_per_inverter)
 
-pv.prepareTimeSeries(weather_data)
+pv.prepareTimeSeries()
 
 #create storage object
-storage = VPPEnergyStorage(timebase = timebase, identifier=(name+'_storage'), capacity=capacity, 
-                           chargeEfficiency=chargeEfficiency, 
-                           dischargeEfficiency=dischargeEfficiency, 
-                           maxPower=maxPower, maxC=maxC, 
-                           environment = None, userProfile = None)
+storage = VPPEnergyStorage(unit = unit, identifier=(name+'_storage'), 
+                           environment = environment, 
+                           user_profile = user_profile, 
+                           capacity=capacity, 
+                           charge_efficiency=charge_efficiency, 
+                           discharge_efficiency=discharge_efficiency, 
+                           max_power=max_power, max_c=max_c)
 
 #combine baseload and pv timeseries to get residual load
 house_loadshape = pd.DataFrame(baseload['0'].loc[start:end]/1000)
 house_loadshape['pv_gen'] = pv.timeseries.loc[start:end]
-house_loadshape['residual_load'] = baseload['0'].loc[start:end]/1000 - pv.timeseries.Cologne_PV
+house_loadshape['residual_load'] = baseload['0'].loc[start:end]/1000 - pv.timeseries.bus_pv
 
 #assign residual load to storage
 storage.residual_load = house_loadshape.residual_load
