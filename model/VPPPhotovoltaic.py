@@ -97,7 +97,10 @@ class VPPPhotovoltaic(VPPComponent):
 
 
     def prepareTimeSeries(self):
-    
+        
+        if len(self.environment.irradiation_data) == 0:
+            self.environment.get_irradiation_data()
+            
         self.modelchain.run_model(
                 times = self.environment.irradiation_data.loc[
                         self.environment.start:self.environment.end].index, 

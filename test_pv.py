@@ -25,7 +25,6 @@ timestamp_int = 48
 timestamp_str = '2017-01-01 12:00:00'
 
 environment = VPPEnvironment(start=start, end=end)
-environment.get_irradiation_data()
 
 user_profile = VPPUserProfile(identifier=identifier, latitude=latitude,
                               longitude=longitude)
