@@ -10,7 +10,8 @@ from .VPPComponent import VPPComponent
 class VPPThermalEnergyStorage(VPPComponent):
     
     # 
-    def __init__(self, unit = "kWh", environment = None, user_profile = None, 
+    def __init__(self, unit = "kWh", identifier = None,
+                 environment = None, user_profile = None, 
                  target_temperature = 60, hysteresis = 3, mass = 300, cp = 4.2, 
                  heatloss_per_day = 0.13 ):
         
@@ -52,6 +53,7 @@ class VPPThermalEnergyStorage(VPPComponent):
         super(VPPThermalEnergyStorage, self).__init__(unit, environment, user_profile)
     
         # Configure attributes
+        self.identifier = identifier
         self.target_temperature = target_temperature
         self.current_temperature = target_temperature - hysteresis
         self.hysteresis = hysteresis
