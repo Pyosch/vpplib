@@ -12,34 +12,38 @@ from model.VPPBEV import VPPBEV
 from model.VPPPhotovoltaic import VPPPhotovoltaic
 from model.VPPEnergyStorage import VPPEnergyStorage
 from model.VPPHeatPump import VPPHeatPump
-from model.VPPUserProfile import VPPUserProfile as UP
+from model.VPPEnvironment import VPPEnvironment
+from model.VPPUserProfile import VPPUserProfile
 from model.VPPThermalEnergyStorage import VPPThermalEnergyStorage
 from model.VPPCombinedHeatAndPower import VPPCombinedHeatAndPower
 
+# Values for environment
 start = '2017-06-01 00:00:00'
 end = '2017-06-07 23:45:00'
+year = '2017'
 time_freq = "15 min"
-index_year = pd.date_range(start='2017', periods = 35040, freq=time_freq, name ='Time')
-timebase = 15/60 #for calculations from kW to kWh
-scenario = 2
-identifier = "house_1"
+index_year = pd.date_range(start=year, periods = 35040, freq=time_freq, name ='Time')
+timebase = 15 #for calculations from kW to kWh
+scenario = 1
+identifier = "bus_1"
 
 #plot
 figsize=(14,7)
 
+#dataframes for exporting timeseries and component values
 df_timeseries = pd.DataFrame(index = pd.date_range(start=start, end=end, 
                                          freq=time_freq, name ='Time'))
 
 df_component_values = pd.DataFrame(index = [0])
 
 #Values for user profile
-target_temperature = 60 # °C
-yearly_heat_demand = 8700 # kWh
-full_load_hours = 2100
-
-#Values for pv
 latitude = 50.941357
 longitude = 6.958307
+target_temperature = 60 # °C
+t_0 = 40 # °C
+yearly_heat_demand = 12500 # kWh thermal
+
+#Values for pv
 module_lib = 'SandiaMod'
 module = 'Canadian_Solar_CS5P_220M___2009_'
 inverter_lib = 'cecinverter'
@@ -50,31 +54,28 @@ modules_per_string = 10
 strings_per_inverter = 2
 
 #Values for el storage
-chargeEfficiency = 0.98
-dischargeEfficiency = 0.98
-maxPower = 4 #kW
+charge_efficiency = 0.98
+discharge_efficiency = 0.98
+max_power = 4 #kW
 capacity = 4 #kWh
-maxC = 1 #factor between 0.5 and 1.2
+max_c = 1 #factor between 0.5 and 1.2
 
 #Values for bev
-start = start
-end = end
-time_freq = time_freq
 battery_max = 16
 battery_min = 4
 battery_usage = 1
 charging_power = 11
-bev_chargeEfficiency = 0.98
+bev_charge_efficiency = 0.98
 
 #Values for heat pump
-timebase = 1
 heatpump_type = "Air"
 heat_sys_temp = 60
-heatpump_power = 5
-#heatpump_power_el = 5 #TODO: Implement different el power/therm power
-heat_demand_year = None
+el_power_hp = 5
+th_power_hp = None
 building_type = 'DE_HEF33'
-year = '2017'
+min_runtime_hp = 1 #timesteps
+min_stop_time_hp = 2 #timesteps
+
     
 #Values for Thermal Storage
 hysteresis = 5 # °K
@@ -83,21 +84,34 @@ cp = 4.2
 heatloss_per_day = 0.13 
 
 #Values for chp
-nominalPowerEl =  6#kW
-nominalPowerTh = 10 #kW
+el_power_chp =  6#kW
+th_power_chp = 10 #kW
 overall_efficiency = 0.8
 rampUpTime = 1/15 #timesteps
 rampDownTime = 1/15 #timesteps
-minimumRunningTime = 1 #timesteps
-minimumStopTime = 2 #timesteps
+min_runtime_chp = 1 #timesteps
+min_stop_time_chp = 2 #timesteps
+
+#%% environment
+
+environment = VPPEnvironment(timebase=timebase, timezone='Europe/Berlin', 
+                             start=start, end=end, year=year,
+                             time_freq=time_freq)
 
 #%% user profile
 
-up = UP(heat_sys_temp = target_temperature, #Das könnte problematisch werden
-        yearly_heat_demand = yearly_heat_demand, 
-        full_load_hours = full_load_hours)
+user_profile = VPPUserProfile(identifier=identifier,
+                     latitude=latitude,
+                     longitude=longitude,
+                     yearly_heat_demand=yearly_heat_demand,
+                     building_type=building_type,
+                     comfort_factor=None,
+                     t_0=t_0, year=year,
+                     daily_vehicle_usage=None,
+                     week_trip_start=[], week_trip_end=[],
+                     weekend_trip_start=[], weekend_trip_end=[])
 
-up.get_heat_demand()
+user_profile.get_heat_demand()
 
 #%% baseload
 
@@ -115,17 +129,15 @@ df_timeseries.baseload.plot(figsize=figsize, label="baseload [kW]")
 weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
 weather_data.set_index("index", inplace = True)
 
-pv = VPPPhotovoltaic(timebase=1, identifier=(identifier+'_pv'), 
-                     latitude=latitude, longitude=longitude, 
-                     environment = None, userProfile = None,
-                     start = start, end = end,
+pv = VPPPhotovoltaic(unit="kW", identifier=(identifier+'_pv'), 
+                     environment=environment, user_profile=user_profile,
                      module_lib = module_lib, module = module, 
                      inverter_lib = inverter_lib, inverter = inverter,
                      surface_tilt = surface_tilt, surface_azimuth = surface_azimuth,
                      modules_per_string = modules_per_string, 
                      strings_per_inverter = strings_per_inverter)
 
-df_timeseries["pv"] = pv.prepareTimeSeries(weather_data=weather_data) *-1
+df_timeseries["pv"] = pv.prepareTimeSeries() *-1
 
 df_component_values["pv_kWp"] = pv.module.Impo * pv.module.Vmpo / 1000 *pv.system.modules_per_string * pv.system.strings_per_inverter
 df_timeseries.pv.plot(figsize=figsize, label="pv [kW]")
@@ -133,65 +145,39 @@ df_timeseries.pv.plot(figsize=figsize, label="pv [kW]")
 #%% el storage
 
 #create storage object
-storage = VPPEnergyStorage(timebase = timebase, identifier=(identifier+'_storage'), capacity=capacity, 
-                           chargeEfficiency=chargeEfficiency, 
-                           dischargeEfficiency=dischargeEfficiency, 
-                           maxPower=maxPower, maxC=maxC, 
-                           environment = None, userProfile = None)
+storage = VPPEnergyStorage(unit="kWh", identifier=(identifier+'_storage'), 
+                           environment = environment, user_profile = user_profile, 
+                           capacity=capacity, 
+                           charge_efficiency=charge_efficiency, 
+                           discharge_efficiency=discharge_efficiency, 
+                           max_power=max_power, max_c=max_c)
 
 df_component_values["el_storage_capacity"] = storage.capacity
-df_component_values["el_storage_power"] = storage.maxPower
-df_component_values["el_storage_charge_efficiency"] = storage.chargeEfficiency
-df_component_values["el_storage_discharge_efficiency"] = storage.dischargeEfficiency
+df_component_values["el_storage_power"] = storage.max_power
+df_component_values["el_storage_charge_efficiency"] = storage.charge_efficiency
+df_component_values["el_storage_discharge_efficiency"] = storage.discharge_efficiency
 
 
 #%% BEV
 
-bev = VPPBEV(timebase=timebase, identifier=(identifier+'_bev'), 
-             start = start, end = end, time_freq = time_freq, 
+bev = VPPBEV(identifier=(identifier+'_bev'),  
              battery_max = battery_max, battery_min = battery_min, 
              battery_usage = battery_usage, 
-             charging_power = charging_power, chargeEfficiency = bev_chargeEfficiency, 
-             environment=None, userProfile=None)
+             charging_power = charging_power, 
+             charge_efficiency = bev_charge_efficiency, 
+             environment=environment, user_profile=user_profile)
 
 df_component_values["bev_power"] = bev.charging_power
-df_component_values["bev_efficiency"] = bev.chargeEfficiency
+df_component_values["bev_efficiency"] = bev.charge_efficiency
 df_component_values["bev_arrival_soc"] = bev.battery_min/bev.battery_max*100
 
 def get_at_home(bev):
     
-    weekend_trip_start = ['08:00:00', '08:15:00', '08:30:00', '08:45:00', 
-                          '09:00:00', '09:15:00', '09:30:00', '09:45:00',
-                          '10:00:00', '10:15:00', '10:30:00', '10:45:00', 
-                          '11:00:00', '11:15:00', '11:30:00', '11:45:00', 
-                          '12:00:00', '12:15:00', '12:30:00', '12:45:00', 
-                          '13:00:00']
-    
-    weekend_trip_end = ['17:00:00', '17:15:00', '17:30:00', '17:45:00', 
-                        '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
-                        '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
-                        '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
-                        '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
-                        '22:00:00', '22:15:00', '22:30:00', '22:45:00', 
-                        '23:00:00']
-    
-    work_start = ['07:00:00', '07:15:00', '07:30:00', '07:45:00', 
-                  '08:00:00', '08:15:00', '08:30:00', '08:45:00', 
-                  '09:00:00']
-    
-    work_end = ['16:00:00', '16:15:00', '16:30:00', '16:45:00', 
-                '17:00:00', '17:15:00', '17:30:00', '17:45:00', 
-                '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
-                '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
-                '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
-                '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
-                '22:00:00']
-    
-    bev.timeseries = pd.DataFrame(index = pd.date_range(start=bev.start, end=bev.end, 
-                                         freq=bev.time_freq, name ='Time'))
+    bev.timeseries = pd.DataFrame(index = pd.date_range(start=bev.environment.start, end=bev.environment.end, 
+                                         freq=bev.environment.time_freq, name ='Time'))
     bev.split_time() 
     bev.set_weekday()
-    bev.set_at_home(work_start, work_end, weekend_trip_start, weekend_trip_end)
+    bev.set_at_home()
     
     return bev.at_home
     
@@ -202,15 +188,13 @@ df_timeseries.at_home.plot(figsize=figsize, label="at home [0/1]")
 
 #%% heat_pump
 
-hp = VPPHeatPump(identifier = (identifier+'_hp'), timebase = timebase, 
+hp = VPPHeatPump(identifier = (identifier+'_hp'), 
+                 environment = environment, user_profile = user_profile,
                  heatpump_type = heatpump_type, 
-                 heat_sys_temp = heat_sys_temp, environment = None, userProfile = None, 
-                 heatpump_power = heatpump_power, full_load_hours = full_load_hours, 
-                 heat_demand_year = None,
-                 building_type = building_type, start = start,
-                 end = end, year = year)
+                 heat_sys_temp = heat_sys_temp,  
+                 el_power=el_power_hp, th_power=th_power_hp)
 
-df_component_values["heat_pump_power_therm"] = hp.heatpump_power
+df_component_values["heat_pump_power_therm"] = hp.el_power
 
 if scenario == 1:
     
@@ -218,33 +202,35 @@ if scenario == 1:
 #    df_timeseries["heat_pump"] = hp.prepareTimeSeries().el_demand
 #    df_timeseries.heat_pump.plot(figsize=figsize, label="heat pump [kW-el]")
     
-    tes_hp = VPPThermalEnergyStorage(timebase, mass = mass_of_storage, 
+    tes_hp = VPPThermalEnergyStorage(mass = mass_of_storage, 
                               hysteresis = hysteresis, 
                               target_temperature = target_temperature, 
-                              userProfile = up)
+                              environment=environment,
+                              user_profile = user_profile)
 
-    hp = VPPHeatPump(identifier='hp1', timebase=timebase, userProfile = up,
-                     heatpump_power = heatpump_power, rampUpTime = rampUpTime, 
-                     rampDownTime = rampDownTime, 
-                     minimumRunningTime = minimumRunningTime, 
-                     minimumStopTime = minimumStopTime, year=year)
+    hp = VPPHeatPump(identifier='hp1', 
+                     environment=environment, user_profile=user_profile,
+                     el_power=el_power_hp, rampUpTime=rampUpTime, 
+                     rampDownTime=rampDownTime, 
+                     min_runtime=min_runtime_hp, 
+                     min_stop_time=min_stop_time_hp)
 
     
     
-    loadshape = tes_hp.userProfile.heat_demand[0:]["heat_demand"]
-    outside_temp = tes_hp.userProfile.mean_temp_hours.mean_temp
+    loadshape = tes_hp.user_profile.heat_demand[0:]["heat_demand"]
+    outside_temp = tes_hp.user_profile.mean_temp_hours.mean_temp
     log, log_load, log_cop = [], [],[]
-    hp.lastRampUp = hp.userProfile.heat_demand.index[0]
-    hp.lastRampDown = hp.userProfile.heat_demand.index[0]
-    for i in hp.userProfile.heat_demand.index:
-        heat_demand = hp.userProfile.heat_demand.heat_demand.loc[i]
+    hp.lastRampUp = hp.user_profile.heat_demand.index[0]
+    hp.lastRampDown = hp.user_profile.heat_demand.index[0]
+    for i in hp.user_profile.heat_demand.index:
+        heat_demand = hp.user_profile.heat_demand.heat_demand.loc[i]
         if tes_hp.get_needs_loading(): 
             hp.rampUp(i)              
         else: 
             hp.rampDown(i)
         temp = tes_hp.operate_storage(heat_demand, i, hp)
         if hp.isRunning: 
-            log_load.append(heatpump_power)
+            log_load.append(el_power_hp)
         else: 
             log_load.append(0)
         log.append(temp)
@@ -254,7 +240,7 @@ if scenario == 1:
     
 elif scenario == 2:
     
-    df_timeseries["heat_demand"] = hp.get_heat_demand()
+    df_timeseries["heat_demand"] = user_profile.heat_demand
     df_timeseries["cop"] = hp.get_cop()
     df_timeseries.cop.interpolate(inplace = True)
     
@@ -267,18 +253,24 @@ else:
     
 #%% chp
 
-tes_chp = VPPThermalEnergyStorage(timebase, mass = mass_of_storage, 
-                              hysteresis = hysteresis, 
-                              target_temperature = target_temperature,
-                              cp = cp, heatloss_per_day=heatloss_per_day,
-                              userProfile = up)
+tes_chp = VPPThermalEnergyStorage(identifier='th_storage',
+                                  mass = mass_of_storage,
+                                  environment=environment, 
+                                  user_profile = user_profile, 
+                                  hysteresis = hysteresis, 
+                                  target_temperature = target_temperature,
+                                  cp = cp, heatloss_per_day=heatloss_per_day)
 
-chp = VPPCombinedHeatAndPower(environment = None, identifier='chp1', timebase=timebase, userProfile = up,
-                 nominalPowerEl = nominalPowerEl, nominalPowerTh = nominalPowerTh, 
-                 overall_efficiency = overall_efficiency, rampUpTime = rampUpTime, 
-                 rampDownTime = rampDownTime, 
-                 minimumRunningTime = minimumRunningTime, 
-                 minimumStopTime = minimumStopTime)
+chp = VPPCombinedHeatAndPower(identifier='chp1',
+                              environment=environment,  
+                              user_profile=user_profile,
+                             el_power=el_power_chp, 
+                             th_power=th_power_chp, 
+                             overall_efficiency=overall_efficiency, 
+                             rampUpTime=rampUpTime, 
+                             rampDownTime=rampDownTime, 
+                             min_runtime=min_runtime_chp, 
+                             min_stop_time=min_stop_time_chp)
 
 #Formula: E = m * cp * T
 df_component_values["therm_storage_capacity"] = tes_chp.mass * tes_chp.cp * (tes_chp.target_temperature + tes_chp.hysteresis + 273.15) #°K
@@ -286,21 +278,21 @@ df_component_values["thermal_storage_efficiency"] = 100 * (1 - tes_chp.heatloss_
 
 if scenario == 1:
     
-    loadshape = tes_chp.userProfile.heat_demand[0:]["heat_demand"]
-    outside_temp = tes_chp.userProfile.mean_temp_hours.mean_temp
+    loadshape = tes_chp.user_profile.heat_demand[0:]["heat_demand"]
+    outside_temp = tes_chp.user_profile.mean_temp_hours.mean_temp
     log, log_load, log_el = [], [],[]
-    chp.lastRampUp = chp.userProfile.heat_demand.index[0]
-    chp.lastRampDown = chp.userProfile.heat_demand.index[0]
-    for i in chp.userProfile.heat_demand.index:
-        heat_demand = chp.userProfile.heat_demand.heat_demand.loc[i]
+    chp.lastRampUp = chp.user_profile.heat_demand.index[0]
+    chp.lastRampDown = chp.user_profile.heat_demand.index[0]
+    for i in chp.user_profile.heat_demand.index:
+        heat_demand = chp.user_profile.heat_demand.heat_demand.loc[i]
         if tes_chp.get_needs_loading(): 
             chp.rampUp(i)              
         else: 
             chp.rampDown(i)
         temp = tes_chp.operate_storage(heat_demand, i, chp)
         if chp.isRunning: 
-            log_load.append(nominalPowerTh)
-            log_el.append(nominalPowerEl)
+            log_load.append(th_power_chp)
+            log_el.append(el_power_chp)
         else: 
             log_load.append(0)
             log_el.append(0)
@@ -314,8 +306,8 @@ if scenario == 1:
 
 elif scenario == 2:
     
-    df_component_values["chp_power_therm"] = chp.nominalPowerTh
-    df_component_values["chp_power_el"] = chp.nominalPowerEl
+    df_component_values["chp_power_therm"] = chp.th_power
+    df_component_values["chp_power_el"] = chp.el_power
     df_component_values["chp_efficiency"] = chp.overall_efficiency
     
 else:
