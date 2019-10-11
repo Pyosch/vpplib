@@ -19,10 +19,10 @@ from model.VPPPhotovoltaic import VPPPhotovoltaic
 latitude = 50.941357
 longitude = 6.958307
 identifier = 'Cologne'
-start = '2017-01-01 00:00:00'
-end = '2017-12-31 23:45:00'
+start = '2017-06-01 00:00:00'
+end = '2017-06-07 23:45:00'
 timestamp_int = 48
-timestamp_str = '2017-01-01 12:00:00'
+timestamp_str = '2017-06-05 12:00:00'
 
 environment = VPPEnvironment(start=start, end=end)
 
