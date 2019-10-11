@@ -14,7 +14,7 @@ class VPPHeatPump(VPPComponent):
     def __init__(self, unit="kW", identifier=None,
                  environment=None, user_profile=None,
                  heatpump_type="Air",
-                 heat_sys_temp=60, t_0=40,
+                 heat_sys_temp=60,
                  el_power=None, th_power=None,
                  rampUpTime=0, rampDownTime=0,
                  min_runtime=0, min_stop_time=0):
@@ -78,7 +78,6 @@ class VPPHeatPump(VPPComponent):
         self.timeseries = pd.DataFrame()
 
         self.heat_sys_temp = heat_sys_temp
-        self.t_0 = t_0 #°C
         
         self.isRunning = False
               

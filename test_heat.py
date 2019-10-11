@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 start = '2017-01-01 00:00:00'
 end = '2017-01-14 23:45:00'
 year = '2017'
-freq = "15 min"
+time_freq = "15 min"
 timestamp_int = 48
 timestamp_str = '2017-01-01 12:00:00'
 timebase = 15
@@ -35,9 +35,10 @@ rampDownTime = 1/15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
 
-environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year)
+environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year,
+                             time_freq=time_freq)
 
-user_profile = VPPUserProfile(yearly_heat_demand = yearly_heat_demand)
+user_profile = VPPUserProfile(yearly_heat_demand=yearly_heat_demand, t_0=t_0)
 
 hp = VPPHeatPump(identifier='hp1', environment=environment, user_profile = user_profile,
                  el_power = el_power, rampUpTime = rampUpTime, 

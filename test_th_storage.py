@@ -38,14 +38,15 @@ timebase = 15
 
 environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year)
 
-up = VPPUserProfile(yearly_heat_demand = yearly_heat_demand)
+user_profile = VPPUserProfile(yearly_heat_demand=yearly_heat_demand, t_0=t_0)
 
-tes = VPPThermalEnergyStorage(environment=environment, user_profile = up,
-                              mass = mass_of_storage, 
-                              hysteresis = hysteresis, 
-                              target_temperature = target_temperature)
+tes = VPPThermalEnergyStorage(environment=environment, user_profile=user_profile,
+                              mass=mass_of_storage, 
+                              hysteresis=hysteresis, 
+                              target_temperature=target_temperature)
 
-hp = VPPHeatPump(identifier='hp1', environment=environment, user_profile = up,
+hp = VPPHeatPump(identifier='hp1', 
+                 environment=environment, user_profile = user_profile,
                  el_power = el_power, rampUpTime = rampUpTime, 
                  rampDownTime = rampDownTime, 
                  min_runtime = min_runtime, 
