@@ -174,7 +174,9 @@ class VPPWind(VPPComponent):
 
     def prepareTimeSeries(self):
     
-        self.environment.get_wind_data()
+        if len(self.environment.wind_data) == 0:
+            self.environment.get_wind_data()
+            
         self.get_wind_turbine()
         self.calculate_power_output()
         

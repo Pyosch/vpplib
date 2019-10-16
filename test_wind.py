@@ -25,11 +25,14 @@ timezone = 'Europe/Berlin'
 timestamp_int = 12
 timestamp_str = '2010-01-01 12:00:00'
 
-wind_filename = "./Input_House/Wind/weather.csv"
+
 
 #create environment and load wind data
 environment = VPPEnvironment(start=start, end=end, timezone=timezone)
-environment.get_wind_data()
+
+#to use custom wind data:
+#wind_filename = "./Input_House/Wind/weather.csv"
+#environment.get_wind_data(wind_filename)
 
 #WindTurbine data
 turbine_type = 'E-126/4200'
