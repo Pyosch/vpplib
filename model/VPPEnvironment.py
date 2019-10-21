@@ -90,7 +90,8 @@ class VPPEnvironment(object):
         
         
 
-    def get_wind_data(self, file = "./Input_House/Wind/weather.csv"): #, **kwargs
+    def get_wind_data(self, file = "./Input_House/wind/dwd_wind_data_2015.csv", utc=False):
+        
         r"""
         Imports weather data from a file.
     
@@ -103,8 +104,10 @@ class VPPEnvironment(object):
         Parameters
         ----------
         file : string
-            Filename of the weather data file. Default: 'weather.csv'.
-    
+            Filename of the weather data file. Default: 'dwd_wind_data_2015.csv'.
+            
+        utc : boolean
+            Decide, weather to use utc conversion or not
     
         Returns
         -------
@@ -118,20 +121,23 @@ class VPPEnvironment(object):
                 (e.g. 10, if it was measured at a height of 10 m).
     
         """
+
+        if utc == True:
+            df = pd.read_csv(
+                file, index_col=0, header=[0, 1],
+                date_parser=lambda idx: pd.to_datetime(idx, utc=True))
+            # change type of index to datetime and set time zone
+            df.index = pd.to_datetime(df.index).tz_convert(
+                    self.timezone)
+            
+        else:
+            df = pd.read_csv(file, index_col=0, header=[0, 1])
+            df.index = pd.to_datetime(df.index)
         
-        # read csv file
-        weather_df = pd.read_csv(
-            file, index_col=0, header=[0, 1],
-            date_parser=lambda idx: pd.to_datetime(idx, utc=True))
-        # change type of index to datetime and set time zone
-        weather_df.index = pd.to_datetime(weather_df.index).tz_convert(
-                self.timezone)
         # change type of height from str to int by resetting columns
-        l0 = [_[0] for _ in weather_df.columns]
-        l1 = [int(_[1]) for _ in weather_df.columns]
-        weather_df.columns = [l0, l1]
+        l0 = [_[0] for _ in df.columns]
+        l1 = [int(_[1]) for _ in df.columns]
+        df.columns = [l0, l1]
         
-        self.wind_data = weather_df
-        
-        return weather_df
+        self.wind_data = df
         

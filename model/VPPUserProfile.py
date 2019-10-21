@@ -5,7 +5,6 @@ The class "VPPUserProfile" reflects different patterns of use and behaviour.
 This makes it possible, for example, to simulate different usage profiles of 
 electric vehicles.
 
-TODO: Collect information about parameters that must be represented in a use case.
 """
 
 import traceback
@@ -26,9 +25,9 @@ class VPPUserProfile(object):
         """
         Info
         ----
-        This attributes can be used to derive profiles for different components. 
-        The BEV for example will probably care more about the daily vehicle usage, than the comfort factor. 
-        The heat pump will probably not care about the daily vehicle usage at all (and so on).
+        This attributes can be used to derive profiles for different 
+        components. 
+        
         
         Parameters
         ----------
@@ -69,25 +68,30 @@ class VPPUserProfile(object):
         self.weekend_trip_start = weekend_trip_start
         self.weekend_trip_end = weekend_trip_end
         
-        self.comfort_factor = comfort_factor        # For people that likes to have their homes quite warm 
+        # For people that likes to have their homes quite warm 
+        self.comfort_factor = comfort_factor 
         
-        mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, freq = "D", name="time"))
+        mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, 
+                                                    freq = "D", name="time"))
         mean_temp_days['Mean_Temp'] = pd.read_csv(
                 "./Input_House/heatpump_model/mean_temp_days_2017.csv", 
                 header = None)
         self.mean_temp_days = mean_temp_days
         self.heat_demand = None
         
-        self.building_type = building_type #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
+        #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
+        self.building_type = building_type
         self.mean_temp_hours = pd.read_csv(
-                './Input_House/heatpump_model/mean_temp_hours_2017_indexed.csv', index_col="time") #for cop
+                './Input_House/heatpump_model/mean_temp_hours_2017_indexed.csv'
+                , index_col="time") #for cop
         self.mean_temp_quarter_hours = self.temp_hour_to_qarter()
         self.demand_daily = pd.read_csv(
                 './Input_House/heatpump_model/demand_daily.csv')
         self.t_0 = t_0 #°C
         
         #for SigLinDe calculations
-        self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv", decimal=",")
+        self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv"
+                                    , decimal=",")
         self.building_parameters = None
         self.h_del = None
         self.yearly_heat_demand = yearly_heat_demand
@@ -129,32 +133,36 @@ class VPPUserProfile(object):
         
         """
         
-        self.week_trip_start = ['07:00:00', '07:15:00', '07:30:00', '07:45:00', 
-                      '08:00:00', '08:15:00', '08:30:00', '08:45:00', 
-                      '09:00:00']
+        self.week_trip_start = [
+                '07:00:00', '07:15:00', '07:30:00', '07:45:00', 
+                '08:00:00', '08:15:00', '08:30:00', '08:45:00', 
+                '09:00:00']
         
-        self.week_trip_end = ['16:00:00', '16:15:00', '16:30:00', '16:45:00', 
-                    '17:00:00', '17:15:00', '17:30:00', '17:45:00', 
-                    '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
-                    '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
-                    '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
-                    '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
-                    '22:00:00']
+        self.week_trip_end = [
+                '16:00:00', '16:15:00', '16:30:00', '16:45:00', 
+                '17:00:00', '17:15:00', '17:30:00', '17:45:00', 
+                '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
+                '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
+                '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
+                '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
+                '22:00:00']
         
-        self.weekend_trip_start = ['08:00:00', '08:15:00', '08:30:00', '08:45:00', 
-                              '09:00:00', '09:15:00', '09:30:00', '09:45:00',
-                              '10:00:00', '10:15:00', '10:30:00', '10:45:00', 
-                              '11:00:00', '11:15:00', '11:30:00', '11:45:00', 
-                              '12:00:00', '12:15:00', '12:30:00', '12:45:00', 
-                              '13:00:00']
+        self.weekend_trip_start = [
+                '08:00:00', '08:15:00', '08:30:00', '08:45:00',
+                '09:00:00', '09:15:00', '09:30:00', '09:45:00',
+                '10:00:00', '10:15:00', '10:30:00', '10:45:00', 
+                '11:00:00', '11:15:00', '11:30:00', '11:45:00', 
+                '12:00:00', '12:15:00', '12:30:00', '12:45:00', 
+                '13:00:00']
         
-        self.weekend_trip_end = ['17:00:00', '17:15:00', '17:30:00', '17:45:00', 
-                            '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
-                            '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
-                            '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
-                            '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
-                            '22:00:00', '22:15:00', '22:30:00', '22:45:00', 
-                            '23:00:00']
+        self.weekend_trip_end = [
+                '17:00:00', '17:15:00', '17:30:00', '17:45:00', 
+                '18:00:00', '18:15:00', '18:30:00', '18:45:00', 
+                '19:00:00', '19:15:00', '19:30:00', '19:45:00', 
+                '20:00:00', '20:15:00', '20:30:00', '20:45:00', 
+                '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
+                '22:00:00', '22:15:00', '22:30:00', '22:45:00', 
+                '23:00:00']
         
         
         return self.week_trip_start, self.week_trip_end, self.weekend_trip_start, self.weekend_trip_end
@@ -209,9 +217,9 @@ class VPPUserProfile(object):
         return self.heat_demand
     
     #%%:
-    # ===================================================================================
+    # =========================================================================
     # Basic Functions for get_heat_demand
-    # ===================================================================================
+    # =========================================================================
     
     def get_building_parameters(self):
         
@@ -322,7 +330,8 @@ class VPPUserProfile(object):
         """
         Info
         ----
-        distribute daily demand load over 24 hours according to the outside temperature
+        distribute daily demand load over 24 hours according to the outside 
+        temperature
         
         Parameters
         ----------
@@ -411,7 +420,12 @@ class VPPUserProfile(object):
             else:
                 traceback.print_exc("df.mean_temp is out of bounds")
             
-        self.heat_demand_daily = pd.DataFrame(demand_daily_lst, index = pd.date_range(self.year, periods=8760, freq = "H", name="time"))
+        self.heat_demand_daily = pd.DataFrame(
+                demand_daily_lst, 
+                index = pd.date_range(self.year, 
+                                      periods=8760, 
+                                      freq = "H", 
+                                      name="time"))
         
         return self.heat_demand_daily
     
@@ -532,7 +546,8 @@ class VPPUserProfile(object):
         
         """
         
-        self.heat_demand = pd.DataFrame(index = pd.date_range(self.year, periods=35040, freq='15min', name="time"))
+        self.heat_demand = pd.DataFrame(index = pd.date_range(
+                self.year, periods=35040, freq='15min', name="time"))
         self.heat_demand["heat_demand"] = self.hourly_heat_demand
         self.heat_demand.interpolate(inplace = True)
         
@@ -573,7 +588,8 @@ class VPPUserProfile(object):
         
         """
         
-        df = pd.DataFrame(index = pd.date_range(self.year, periods=35040, freq='15min', name="time"))
+        df = pd.DataFrame(index = pd.date_range(
+                self.year, periods=35040, freq='15min', name="time"))
         self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
         df["quart_temp"] = self.mean_temp_hours
         df.interpolate(inplace = True)

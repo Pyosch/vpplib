@@ -61,6 +61,7 @@ fetch_curve = 'power_curve'
 data_source = 'oedb'
 
 #Wind ModelChain data
+wind_file = "./Input_House/wind/dwd_wind_data_2017.csv"
 wind_speed_model = 'logarithmic'
 density_model = 'ideal_gas'
 temperature_model = 'linear_gradient'
@@ -113,6 +114,8 @@ wind_percentage = 0
 environment = VPPEnvironment(timebase=timebase, timezone=timezone, 
                              start=start, end=end, year=year,
                              time_freq=time_freq)
+
+environment.get_wind_data(file=wind_file, utc=False)
 
 #%% user profile
 
@@ -273,12 +276,6 @@ for bus in vpp.buses_with_wind:
                  hellman_exp=hellman_exp))
     
     vpp.components[list(vpp.components.keys())[-1]].prepareTimeSeries()
-    #TODO: fix with weather data from 2017
-    vpp.components[list(vpp.components.keys())[-1]].timeseries.index = pd.date_range(start='2017-01-01 00:00:00', end='2017-12-31 23:45:00', freq='H')
-    tmp = pd.DataFrame(index = pd.date_range(start='2017-01-01 00:00:00', end='2017-12-31 23:45:00', freq='15 min'))
-    tmp['Wind'] = vpp.components[list(vpp.components.keys())[-1]].timeseries
-    tmp.interpolate(inplace=True)
-    vpp.components[list(vpp.components.keys())[-1]].timeseries = tmp.loc[start:end] #TODO: Adjust start:end in __init__ data when using other weather data
 
 #%% create elements in the pandapower.net
 
