@@ -175,9 +175,7 @@ class VPPWind(VPPComponent):
     def prepareTimeSeries(self):
     
         if len(self.environment.wind_data) == 0:
-            self.environment.get_wind_data()
-            print("\nUsing wind data from:",
-                  "./Input_House/wind/dwd_wind_data_2015.csv")
+            traceback.print_exc("self.environment.wind_data is empty.")
             
         self.get_wind_turbine()
         self.calculate_power_output()

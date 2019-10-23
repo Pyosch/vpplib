@@ -18,7 +18,7 @@ class VPPEnvironment(object):
                  time_freq="15 min",
                  mean_temp_days=[], 
                  mean_temp_hours=[], 
-                 irradiation_data=[], 
+                 pv_data=[], 
                  wind_data=[]):
         
         """
@@ -62,10 +62,10 @@ class VPPEnvironment(object):
         self.time_freq = time_freq
         self.mean_temp_days = mean_temp_days
         self.mean_temp_hours = mean_temp_hours
-        self.irradiation_data = irradiation_data
+        self.pv_data = pv_data
         self.wind_data = wind_data
         
-    def get_irradiation_data(self, file = "./Input_House/PV/2017_irradiation_15min.csv"):
+    def get_pv_data(self, file = "./Input_House/PV/dwd_pv_data_2015.csv"):
         
         self.irradiation_data = pd.read_csv(file, index_col="index")
         
@@ -79,10 +79,10 @@ class VPPEnvironment(object):
         
         return self.mean_temp_days
     
-    def get_mean_temp_hours(self):
+    def get_mean_temp_hours(self, file = 
+                            './Input_House/heatpump_model/mean_temp_hours_2017_indexed.csv'):
         
-        self.mean_temp_hours = pd.read_csv(
-            './Input_House/heatpump_model/mean_temp_hours_2017_indexed.csv', index_col="time")
+        self.mean_temp_hours = pd.read_csv(file, index_col="time")
         
     def get_wind_filename(self, file = "./Input_House/Wind/weather.csv"):
         
