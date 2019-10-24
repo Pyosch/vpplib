@@ -15,10 +15,10 @@ class VPPUserProfile(object):
     def __init__(self, identifier=None,
                  latitude = None,
                  longitude = None,
-                 yearly_heat_demand = 12500,
-                 building_type = 'DE_HEF33',
+                 yearly_heat_demand = None,
+                 building_type = None, #'DE_HEF33'
                  comfort_factor = None,
-                 t_0 = 40, year = '2017',
+                 t_0 = 40,
                  daily_vehicle_usage = None,
                  week_trip_start=[], week_trip_end=[],
                  weekend_trip_start=[], weekend_trip_end=[]):
@@ -60,7 +60,6 @@ class VPPUserProfile(object):
         self.identifier = identifier
         self.latitude = latitude
         self.longitude = longitude
-        self.year = year
         
         self.daily_vehicle_usage = daily_vehicle_usage    # km
         self.week_trip_start = week_trip_start
@@ -71,27 +70,32 @@ class VPPUserProfile(object):
         # For people that likes to have their homes quite warm 
         self.comfort_factor = comfort_factor 
         
-        mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, 
-                                                    freq = "D", name="time"))
-        mean_temp_days['Mean_Temp'] = pd.read_csv(
-                "./Input_House/heatpump_model/mean_temp_days_2017.csv", 
-                header = None)
-        self.mean_temp_days = mean_temp_days
+#        mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, 
+#                                                    freq = "D", name="time"))
+#        mean_temp_days['Mean_Temp'] = pd.read_csv(
+#                "./Input_House/heatpump_model/mean_temp_days_2017.csv", 
+#                header = None)
+        self.mean_temp_days = pd.read_csv(
+                "./input/thermal/dwd_temp_days_2015.csv", index_col="time")
+        self.year = self.mean_temp_days.index[0][:4]
+        
         self.heat_demand = None
         
         #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.building_type = building_type
+        #for cop
         self.mean_temp_hours = pd.read_csv(
-                './Input_House/heatpump_model/mean_temp_hours_2017_indexed.csv'
-                , index_col="time") #for cop
-        self.mean_temp_quarter_hours = self.temp_hour_to_qarter()
-        self.demand_daily = pd.read_csv(
-                './Input_House/heatpump_model/demand_daily.csv')
+                "./input/thermal/dwd_temp_hours_2015.csv" , index_col="time")
+        
+        self.mean_temp_quarter_hours = pd.read_csv(
+                "./input/thermal/dwd_temp_15min_2015.csv", index_col="time")
+        
+        self.demand_daily = pd.read_csv("./input/thermal/demand_daily.csv")
         self.t_0 = t_0 #°C
         
         #for SigLinDe calculations
-        self.SigLinDe = pd.read_csv("./Input_House/heatpump_model/SigLinDe.csv"
-                                    , decimal=",")
+        self.SigLinDe = pd.read_csv("./input/thermal/SigLinDe.csv", 
+                                    decimal=",")
         self.building_parameters = None
         self.h_del = None
         self.yearly_heat_demand = yearly_heat_demand
@@ -308,20 +312,24 @@ class VPPUserProfile(object):
         for i, temp in self.mean_temp_days.iterrows():
             
             #H and W are for linearisation in SigLinDe function below 8°C
-            H = m_H * temp.Mean_Temp + b_H
-            W = m_W * temp.Mean_Temp + b_W
+            H = m_H * temp.temperature + b_H
+            W = m_W * temp.temperature + b_W
             if H > W:
-                h_del = ((A/(1+((B/(temp.Mean_Temp - self.t_0))**C))) + D) + H
+                h_del = ((A/(1+((B/(temp.temperature - self.t_0))**C))) + D) + H
                 h_lst.append(h_del)
     
             else:
-                h_del = ((A/(1+((B/(temp.Mean_Temp - self.t_0))**C))) + D) + W
+                h_del = ((A/(1+((B/(temp.temperature - self.t_0))**C))) + D) + W
                 h_lst.append(h_del)
     
-        df_h_del = pd.DataFrame(h_lst)
-        self.h_del = df_h_del[0]
+#        df_h_del = pd.DataFrame(h_lst)
+#        self.h_del = df_h_del[0]
+#        
+#        return df_h_del[0]
+        self.h_del = pd.DataFrame(h_lst, index=self.mean_temp_days.index, 
+                                  columns=["h_del"])
         
-        return df_h_del[0]
+        return self.h_del 
     
     #%%: 
         
@@ -361,9 +369,9 @@ class VPPUserProfile(object):
         """
         
         demand_daily_lst = []
-        df = pd.DataFrame()
-        df["h_del"] = self.h_del
-        df["Mean_Temp"] = self.mean_temp_days.Mean_Temp
+        #df = pd.DataFrame()
+        df = self.h_del.copy()
+        df["Mean_Temp"] = self.mean_temp_days.temperature
         
         for i, d in df.iterrows():
         
@@ -426,6 +434,7 @@ class VPPUserProfile(object):
                                       periods=8760, 
                                       freq = "H", 
                                       name="time"))
+                
         
         return self.heat_demand_daily
     
@@ -466,7 +475,7 @@ class VPPUserProfile(object):
         """
         
         #consumerfactor (Kundenwert) K_w
-        self.consumerfactor = self.yearly_heat_demand/(sum(self.h_del)) 
+        self.consumerfactor = self.yearly_heat_demand/(sum(self.h_del["h_del"])) 
         return self.consumerfactor
     
     #%%:
@@ -552,46 +561,46 @@ class VPPUserProfile(object):
         self.heat_demand.interpolate(inplace = True)
         
         return self.heat_demand
-    #%%:
-        
-    def temp_hour_to_qarter(self):
-        
-        """
-        Info
-        ----
-        ...
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
-        """
-        
-        df = pd.DataFrame(index = pd.date_range(
-                self.year, periods=35040, freq='15min', name="time"))
-        self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
-        df["quart_temp"] = self.mean_temp_hours
-        df.interpolate(inplace = True)
-        
-        return df
+#    #%%:
+#        
+#    def temp_hour_to_qarter(self):
+#        
+#        """
+#        Info
+#        ----
+#        ...
+#        
+#        Parameters
+#        ----------
+#        
+#        ...
+#        	
+#        Attributes
+#        ----------
+#        
+#        ...
+#        
+#        Notes
+#        -----
+#        
+#        ...
+#        
+#        References
+#        ----------
+#        
+#        ...
+#        
+#        Returns
+#        -------
+#        
+#        ...
+#        
+#        """
+#        
+#        df = pd.DataFrame(index = pd.date_range(
+#                self.year, periods=35040, freq='15min', name="time"))
+#        self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
+#        df["quart_temp"] = self.mean_temp_hours
+#        df.interpolate(inplace = True)
+#        
+#        return df

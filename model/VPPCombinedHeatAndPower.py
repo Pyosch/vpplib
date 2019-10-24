@@ -6,7 +6,6 @@ This file contains the basic functionalities of the VPPCombinedHeatAndPower clas
 """
 
 from .VPPComponent import VPPComponent
-import traceback
 import pandas as pd
 
 class VPPCombinedHeatAndPower(VPPComponent):
@@ -89,9 +88,10 @@ class VPPCombinedHeatAndPower(VPPComponent):
         """
         Info
         ----
-        This function limits the power of the combined heat and power plant to the given percentage.
-        It cuts the current power production down to the peak power multiplied by
-        the limit (Float [0;1])
+        This function limits the power of the combined heat and power plant to 
+        the given percentage.
+        It cuts the current power production down to the peak power multiplied 
+        by the limit (Float [0;1])
         
         Parameters
         ----------
@@ -147,7 +147,8 @@ class VPPCombinedHeatAndPower(VPPComponent):
             else: self.isRunning = False
             
         else:
-            traceback.print_exc("timestamp needs to be of type int or pandas._libs.tslibs.timestamps.Timestamp")
+            raise ValueError("timestamp needs to be of type int or " +
+                             "pandas._libs.tslibs.timestamps.Timestamp")
         
     def isLegitRampDown(self, timestamp):
         
@@ -162,19 +163,23 @@ class VPPCombinedHeatAndPower(VPPComponent):
             else: self.isRunning = True
             
         else:
-            traceback.print_exc("timestamp needs to be of type int or pandas._libs.tslibs.timestamps.Timestamp")
+            raise ValueError("timestamp needs to be of type int or " +
+                             "pandas._libs.tslibs.timestamps.Timestamp")
         
     def rampUp(self, timestamp):
         
         """
         Info
         ----
-        This function ramps up the combined heat and power plant. The timestamp is neccessary to calculate
-        if the combined heat and power plant is running in later iterations of balancing. The possible
+        This function ramps up the combined heat and power plant. 
+        The timestamp is neccessary to calculate if the combined heat and 
+        power plant is running in later iterations of balancing. The possible
         return values are:
-            - None:       Ramp up has no effect since the combined heat and power plant is already running
+            - None:       Ramp up has no effect since the combined heat and 
+                          power plant is already running
             - True:       Ramp up was successful
-            - False:      Ramp up was not successful (due to constraints for minimum running and stop times)
+            - False:      Ramp up was not successful (due to constraints for 
+                          minimum running and stop times)
         
         Parameters
         ----------

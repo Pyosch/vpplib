@@ -14,11 +14,11 @@ from model.VPPBEV import VPPBEV
 import matplotlib.pyplot as plt
 
 identifier = 'bev_1'
-start = '2017-06-01 00:00:00'
-end = '2017-06-01 23:45:00'
+start = '2015-06-01 00:00:00'
+end = '2015-06-01 23:45:00'
 timebase = 15
 timestamp_int = 48
-timestamp_str = '2017-06-01 12:00:00'
+timestamp_str = '2015-06-01 12:00:00'
 
 charging_power = 11
 battery_max = 16

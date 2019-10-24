@@ -14,9 +14,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 #environment
-start = '2017-06-01 00:00:00'
-end = '2017-06-07 23:45:00'
-year = '2017'
+start = '2015-06-01 00:00:00'
+end = '2015-06-07 23:45:00'
+year = '2015'
 
 #user_profile
 latitude = 50.941357
@@ -44,14 +44,11 @@ max_c = 1 #factor between 0.5 and 1.2
 
 #test
 timestamp_int = 48
-timestamp_str = '2017-06-01 12:00:00'
+timestamp_str = '2015-06-01 12:00:00'
 
-#input data
-baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
-baseload.set_index(baseload.Time, inplace = True)
-baseload.drop(labels="Time", axis=1, inplace = True)
 
 environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year)
+environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
 
 user_profile = VPPUserProfile(identifier=name, latitude=latitude,
                               longitude=longitude)
@@ -79,6 +76,10 @@ storage = VPPEnergyStorage(unit = unit, identifier=(name+'_storage'),
                            charge_efficiency=charge_efficiency, 
                            discharge_efficiency=discharge_efficiency, 
                            max_power=max_power, max_c=max_c)
+
+baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
+baseload.drop(columns=["Time"], inplace=True)
+baseload.set_index(environment.pv_data.index, inplace = True)
 
 #combine baseload and pv timeseries to get residual load
 house_loadshape = pd.DataFrame(baseload['0'].loc[start:end]/1000)

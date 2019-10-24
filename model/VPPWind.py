@@ -7,7 +7,6 @@ This file contains the basic functionalities of the VPPWind class.
 
 from .VPPComponent import VPPComponent
 
-import traceback
 
 # windpowerlib imports
 from windpowerlib import ModelChain
@@ -175,7 +174,7 @@ class VPPWind(VPPComponent):
     def prepareTimeSeries(self):
     
         if len(self.environment.wind_data) == 0:
-            traceback.print_exc("self.environment.wind_data is empty.")
+            raise ValueError("self.environment.wind_data is empty.")
             
         self.get_wind_turbine()
         self.calculate_power_output()
@@ -199,7 +198,7 @@ class VPPWind(VPPComponent):
             self.limit = limit
 
         else:
-            traceback.print_exc("Paramter is invalid")
+            raise ValueError("Paramter is invalid")
         
             return
         
@@ -220,7 +219,7 @@ class VPPWind(VPPComponent):
             return self.timeseries.loc[timestamp].item() * self.limit
         
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
             
 
     def observationsForTimestamp(self, timestamp):
@@ -268,7 +267,8 @@ class VPPWind(VPPComponent):
             wind_generation= self.timeseries.loc[timestamp]
         
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. "+
+                             "Stringformat: YYYY-MM-DD hh:mm:ss")
         
         
         observations = {'wind_generation':wind_generation}

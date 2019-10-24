@@ -31,8 +31,8 @@ timestamp_str = '2015-01-01 12:00:00'
 environment = VPPEnvironment(start=start, end=end, timezone=timezone)
 
 #to use custom wind data:
-#environment.get_wind_data(file="./Input_House/wind/dwd_wind_data_2017.csv", 
-#                          utc=False)
+environment.get_wind_data(file="./input/wind/dwd_wind_data_2015.csv", 
+                          utc=False)
 
 #WindTurbine data
 turbine_type = 'E-126/4200'

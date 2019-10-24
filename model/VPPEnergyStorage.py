@@ -6,7 +6,6 @@ This file contains the basic functionalities of the VPPEnergyStorage class.
 """
 
 from .VPPComponent import VPPComponent
-import traceback
 import pandas as pd
 
 class VPPEnergyStorage(VPPComponent):
@@ -222,7 +221,7 @@ class VPPEnergyStorage(VPPComponent):
             state_of_charge, residual_load = self.timeseries.loc[timestamp]
         
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
         
         observations = {'state_of_charge':state_of_charge, 
                         'residual_load':residual_load, 
@@ -372,7 +371,7 @@ class VPPEnergyStorage(VPPComponent):
             return self.timeseries['residual_load'].loc[timestamp]
         
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
         
     
     

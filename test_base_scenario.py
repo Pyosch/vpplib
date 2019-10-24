@@ -19,19 +19,21 @@ from model.VPPWind import VPPWind
 from model.VirtualPowerPlant import VirtualPowerPlant
 from model.VPPOperator import VPPOperator
 
-import logging
-logging.getLogger().setLevel(logging.DEBUG)
+#import logging
+#logging.getLogger().setLevel(logging.DEBUG)
 
 
 
 #environment
-start = '2017-03-01 00:00:00'
-end = '2017-03-01 23:45:00'
+start = '2015-03-01 00:00:00'
+end = '2015-03-01 23:45:00'
 timezone = 'Europe/Berlin'
-year = '2017'
+year = '2015'
 time_freq = "15 min"
 timebase=15
 index=pd.date_range(start=start, end=end, freq=time_freq)
+temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
+temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
 
 #user_profile
 identifier = "bus_1"
@@ -47,9 +49,9 @@ week_trip_end=[]
 weekend_trip_start=[]
 weekend_trip_end=[]
 
-baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
-baseload.set_index("Time", inplace=True)
-baseload.index = pd.to_datetime(baseload.index)
+baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
+baseload.drop(columns=["Time"], inplace=True)
+baseload.index =  pd.date_range(start=year, periods = 35040, freq=time_freq, name ='time')
 
 unit = "kW"
 
@@ -61,7 +63,7 @@ fetch_curve = 'power_curve'
 data_source = 'oedb'
 
 #Wind ModelChain data
-wind_file = "./Input_House/wind/dwd_wind_data_2017.csv"
+wind_file = "./input/wind/dwd_wind_data_2015.csv"
 wind_speed_model = 'logarithmic'
 density_model = 'ideal_gas'
 temperature_model = 'linear_gradient'
@@ -71,6 +73,7 @@ obstacle_height = 0
 hellman_exp = None
 
 #PV data
+pv_file = "./input/pv/dwd_pv_data_2015.csv"
 module_lib = 'SandiaMod'
 module = 'Canadian_Solar_CS5P_220M___2009_'
 inverter_lib = 'cecinverter'
@@ -116,6 +119,9 @@ environment = VPPEnvironment(timebase=timebase, timezone=timezone,
                              time_freq=time_freq)
 
 environment.get_wind_data(file=wind_file, utc=False)
+environment.get_pv_data(file=pv_file)
+environment.get_mean_temp_days(file=temp_days_file)
+environment.get_mean_temp_hours(file=temp_hours_file)
 
 #%% user profile
 
@@ -125,7 +131,7 @@ user_profile = VPPUserProfile(identifier=identifier,
                      yearly_heat_demand=yearly_heat_demand,
                      building_type=building_type,
                      comfort_factor=comfort_factor,
-                     t_0=t_0, year=year,
+                     t_0=t_0,
                      daily_vehicle_usage=daily_vehicle_usage,
                      week_trip_start=week_trip_start, 
                      week_trip_end=week_trip_end,

@@ -6,7 +6,6 @@ This file contains the basic functionalities of the VPPHeatPump class.
 """
 
 import pandas as pd
-import traceback
 from .VPPComponent import VPPComponent
 
 class VPPHeatPump(VPPComponent):
@@ -133,7 +132,7 @@ class VPPHeatPump(VPPComponent):
                 cop_lst.append(cop)
         
         else:
-            traceback.print_exc("Heatpump type is not defined!")
+            raise ValueError("Heatpump type is not defined!")
         
         self.cop = pd.DataFrame(
                 data = cop_lst, 
@@ -285,8 +284,8 @@ class VPPHeatPump(VPPComponent):
             return self.timeseries.el_demand.loc[timestamp] * self.limit
         
         else:
-            traceback.print_exc(
-                    "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. " +
+                             "Stringformat: YYYY-MM-DD hh:mm:ss")
         
     
     def observationsForTimestamp(self, timestamp):
@@ -339,8 +338,8 @@ class VPPHeatPump(VPPComponent):
                 heat_demand, cop , el_demand = self.timeseries.loc[timestamp]
             
             else:
-                traceback.print_exc(
-                        "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+                raise ValueError("timestamp needs to be of type int or " +
+                                 "string. Stringformat: YYYY-MM-DD hh:mm:ss")
             
             # TODO: cop would change if power of heatpump is limited. 
             # Dropping limiting factor for heatpumps
@@ -352,7 +351,7 @@ class VPPHeatPump(VPPComponent):
 
                 if self.isRunning: 
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.quart_temp.iloc[timestamp]
+                    temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
                     cop = self.get_current_cop(temp)                   
                     heat_output = el_demand * cop
                 else: 
@@ -362,15 +361,15 @@ class VPPHeatPump(VPPComponent):
                 
                 if self.isRunning: 
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.quart_temp.loc[timestamp]
+                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
                     cop = self.get_current_cop(temp)                   
                     heat_output = el_demand * cop
                 else: 
                     el_demand, cop, heat_output = 0, 0, 0
             
             else:
-                traceback.print_exc(
-                        "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+                raise ValueError("timestamp needs to be of type int or " +
+                                 "string. Stringformat: YYYY-MM-DD hh:mm:ss")
                 
             observations = {'heat_output':heat_output, 
                             'cop':cop, 'el_demand':el_demand}
@@ -393,7 +392,8 @@ class VPPHeatPump(VPPComponent):
             else: self.isRunning = False
             
         else:
-            traceback.print_exc("timestamp needs to be of type int or pandas._libs.tslibs.timestamps.Timestamp")
+            raise ValueError("timestamp needs to be of type int or " +
+                             "pandas._libs.tslibs.timestamps.Timestamp")
         
     def isLegitRampDown(self, timestamp):
         
@@ -408,7 +408,8 @@ class VPPHeatPump(VPPComponent):
             else: self.isRunning = True
             
         else:
-            traceback.print_exc("timestamp needs to be of type int or pandas._libs.tslibs.timestamps.Timestamp")
+            raise ValueError("timestamp needs to be of type int or " +
+                             "pandas._libs.tslibs.timestamps.Timestamp")
         
     def rampUp(self, timestamp):
         

@@ -8,7 +8,6 @@ This file contains the basic functionalities of the VPPPhotovoltaic class.
 from .VPPComponent import VPPComponent
 
 import pandas as pd
-import traceback
 
 # pvlib imports
 import pvlib
@@ -99,12 +98,12 @@ class VPPPhotovoltaic(VPPComponent):
     def prepareTimeSeries(self):
         
         if len(self.environment.pv_data) == 0:
-            traceback.print_exc("self.environment.pv_data is empty.")
+            raise ValueError("self.environment.pv_data is empty.")
             
         self.modelchain.run_model(
-                times = self.environment.irradiation_data.loc[
+                times = self.environment.pv_data.loc[
                         self.environment.start:self.environment.end].index, 
-                weather = self.environment.irradiation_data.loc[
+                weather = self.environment.pv_data.loc[
                         self.environment.start:self.environment.end])
         
         timeseries = pd.DataFrame(self.modelchain.ac/1000) #convert to kW
@@ -154,7 +153,8 @@ class VPPPhotovoltaic(VPPComponent):
             return self.timeseries[self.identifier].loc[timestamp] * self.limit
         
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. "+
+                             "Stringformat: YYYY-MM-DD hh:mm:ss")
             
 
     def observationsForTimestamp(self, timestamp):
@@ -206,7 +206,8 @@ class VPPPhotovoltaic(VPPComponent):
             el_generation= self.timeseries.loc[timestamp]
         
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. "+
+                             "Stringformat: YYYY-MM-DD hh:mm:ss")
         
         
         observations = {'el_generation':el_generation}

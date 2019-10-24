@@ -20,17 +20,21 @@ import pandas as pd
 #from tqdm import tqdm 
 
 
-start = '2017-01-01 00:00:00'
-end = '2017-12-31 23:45:00'
-year = '2017'
+start = '2015-01-01 00:00:00'
+end = '2015-12-31 23:45:00'
+year = '2015'
 periods = None
 time_freq = "15 min"
+
+#Values for user_profile
+yearly_heat_demand = 2500 # kWh
+building_type = 'DE_HEF33'
+t_0 = 40 # °C
 
 #Values for Thermal Storage
 target_temperature = 60 # °C
 hysteresis = 5 # °K
 mass_of_storage = 500 # kg
-yearly_heat_demand = 2500 # kWh
 
 #Values for chp
 el_power = 4 #kw
@@ -46,7 +50,13 @@ timebase = 15
 environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year,
                              time_freq=time_freq)
 
-user_profile = VPPUserProfile(yearly_heat_demand = yearly_heat_demand)
+user_profile = VPPUserProfile(identifier=None,
+                                 latitude = None,
+                                 longitude = None,
+                                 yearly_heat_demand=yearly_heat_demand,
+                                 building_type = building_type,
+                                 comfort_factor = None,
+                                 t_0=t_0)
 
 tes = VPPThermalEnergyStorage(environment=environment, 
                               user_profile = user_profile,
@@ -75,7 +85,7 @@ test_get_heat_demand(tes)
 
 
 loadshape = tes.user_profile.get_heat_demand()[0:]["heat_demand"]
-outside_temp = tes.user_profile.mean_temp_hours.mean_temp
+outside_temp = tes.user_profile.mean_temp_hours.temperature
 outside_temp.plot()
 log, log_load, log_el = [], [],[]
 #for i, heat_demand in tqdm(enumerate(loadshape)): 

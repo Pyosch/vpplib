@@ -65,32 +65,29 @@ class VPPEnvironment(object):
         self.pv_data = pv_data
         self.wind_data = wind_data
         
-    def get_pv_data(self, file = "./Input_House/PV/dwd_pv_data_2015.csv"):
+    def get_pv_data(self, file = "./input/pv/dwd_pv_data_2015.csv"):
         
-        self.irradiation_data = pd.read_csv(file, index_col="index")
+        self.pv_data = pd.read_csv(file, index_col="time")
         
-        return self.irradiation_data
+        return self.pv_data
     
-    def get_mean_temp_days(self, file = "./Input_House/heatpump_model/mean_temp_days_2017.csv"):
+    def get_mean_temp_days(self, file = 
+                           "./input/thermal/dwd_temp_days_2015.csv"):
         
-        self.mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, freq = "D", name="time"))
-        self.mean_temp_days['Mean_Temp'] = pd.read_csv(
-                file, header = None)
+        self.mean_temp_days = pd.read_csv(file, index_col="time")
         
         return self.mean_temp_days
     
     def get_mean_temp_hours(self, file = 
-                            './Input_House/heatpump_model/mean_temp_hours_2017_indexed.csv'):
+                            "./input/thermal/dwd_temp_hours_2015.csv"):
         
         self.mean_temp_hours = pd.read_csv(file, index_col="time")
         
-    def get_wind_filename(self, file = "./Input_House/Wind/weather.csv"):
-        
-        self.wind_filename = file
-        
+        return self.mean_temp_hours
         
 
-    def get_wind_data(self, file = "./Input_House/wind/dwd_wind_data_2015.csv", utc=False):
+    def get_wind_data(self, file = "./input/wind/dwd_wind_data_2015.csv", 
+                      utc=False):
         
         r"""
         Imports weather data from a file.
@@ -141,3 +138,4 @@ class VPPEnvironment(object):
         
         self.wind_data = df
         
+        return self.wind_data

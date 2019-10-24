@@ -11,7 +11,6 @@ TODO: Setup data type for target data and alter the referencing accordingly!
 
 """
 
-import traceback
 import math
 import pandas as pd
 import pandapower as pp
@@ -228,14 +227,16 @@ class VPPOperator(object):
                     valueForTimestamp = self.virtualPowerPlant.components[component].valueForTimestamp(str(idx))
                     
                     if math.isnan(valueForTimestamp):
-                        traceback.print_exc(("The value of ", component, "at timestep ", idx, "is NaN!"))
+                        raise ValueError(("The value of ", component, 
+                                          "at timestep ", idx, "is NaN!"))
                 
                 if component in list(self.net.sgen.name):
                     
                     self.net.sgen.p_mw[self.net.sgen.name == component] = valueForTimestamp/-1000 #kW to MW; negative due to generation
                     
                     if math.isnan(self.net.sgen.p_mw[self.net.sgen.name == component]):
-                        traceback.print_exc(("The value of ", component, "at timestep ", idx, "is NaN!"))
+                        raise ValueError(("The value of ", component, 
+                                          "at timestep ", idx, "is NaN!"))
                 
                 if component in list(self.net.load.name):
                     

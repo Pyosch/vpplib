@@ -8,7 +8,6 @@ from .VPPComponent import VPPComponent
 
 import pandas as pd
 import random
-import traceback
 
 class VPPBEV(VPPComponent):
 
@@ -286,9 +285,12 @@ class VPPBEV(VPPComponent):
         """
         Info
         ----
-        Determine the Times when the car is at home. During the week (weekday < 5) and on the weekend (weekday >= 5).
-        Pick departure and arrival times from the preconfigured lists: work_start, work_end, weekend_trip_start, weekend_trip_end.
-        (len(...)-1) is necessary because len() starts counting at 1 and randrange() starts indexing at 0.
+        Determine the Times when the car is at home. 
+        During the week (weekday < 5) and on the weekend (weekday >= 5).
+        Pick departure and arrival times from the preconfigured lists: 
+            work_start, work_end, weekend_trip_start, weekend_trip_end.
+        (len(...)-1) is necessary because len() starts counting at 1 and 
+        randrange() starts indexing at 0.
         If the car is at home add 1 to the list. If not add 0 to the list
         
         Parameters
@@ -329,15 +331,21 @@ class VPPBEV(VPPComponent):
         for hour, weekday in zip(self.hour, self.weekday):
             if (hour == '00:00:00') & (weekday < 5):
                 departure = self.user_profile.week_trip_start[
-                        random.randrange(0,(len(self.user_profile.week_trip_start) - 1),1)]
+                        random.randrange(0,(len(
+                                self.user_profile.week_trip_start) - 1),1)]
+                        
                 arrival = self.user_profile.week_trip_end[
-                        random.randrange(0,(len(self.user_profile.week_trip_end) - 1),1)]
+                        random.randrange(0,(len(
+                                self.user_profile.week_trip_end) - 1),1)]
     
             elif (hour == '00:00:00') & (weekday >= 5):
                 departure = self.user_profile.weekend_trip_start[
-                        random.randrange(0,(len(self.user_profile.weekend_trip_start) - 1),1)]
+                        random.randrange(0,(len(
+                                self.user_profile.weekend_trip_start) - 1),1)]
+                        
                 arrival = self.user_profile.weekend_trip_end[
-                        random.randrange(0,(len(self.user_profile.weekend_trip_end) - 1),1)]
+                        random.randrange(0,(len(
+                                self.user_profile.weekend_trip_end) - 1),1)]
     
             if (hour > arrival) | (hour < departure):
                 lst.append(1)
@@ -348,9 +356,9 @@ class VPPBEV(VPPComponent):
         self.at_home.index = self.timeseries.index
         
 
-    # ===================================================================================
+    # =========================================================================
     # Balancing Functions
-    # ===================================================================================
+    # =========================================================================
 
     # Override balancing function from super class.
     def valueForTimestamp(self, timestamp):
@@ -364,7 +372,8 @@ class VPPBEV(VPPComponent):
             return self.timeseries['car_charger'].loc[timestamp] * self.limit
         
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. " +
+                             "Stringformat: YYYY-MM-DD hh:mm:ss")
         
         
     def observationsForTimestamp(self, timestamp):
@@ -416,8 +425,11 @@ class VPPBEV(VPPComponent):
             car_charger, car_capacity , at_home= self.timeseries.loc[timestamp]
         
         else:
-            traceback.print_exc("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError("timestamp needs to be of type int or string. " +
+                             "Stringformat: YYYY-MM-DD hh:mm:ss")
         
-        observations = {'car_charger':car_charger, 'car_capacity':car_capacity, 'at_home':at_home}
+        observations = {'car_charger':car_charger, 
+                        'car_capacity':car_capacity, 
+                        'at_home':at_home}
         
         return observations

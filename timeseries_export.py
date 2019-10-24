@@ -18,25 +18,28 @@ from model.VPPThermalEnergyStorage import VPPThermalEnergyStorage
 from model.VPPCombinedHeatAndPower import VPPCombinedHeatAndPower
 
 # Values for environment
-start = '2017-06-01 00:00:00'
-end = '2017-06-07 23:45:00'
-year = '2017'
+start = '2015-06-01 00:00:00'
+end = '2015-06-07 23:45:00'
+year = '2015'
 time_freq = "15 min"
-index_year = pd.date_range(start=year, periods = 35040, freq=time_freq, name ='Time')
+index_year = pd.date_range(start=year, periods = 35040, freq=time_freq, name ='time')
 timebase = 15 #for calculations from kW to kWh
-scenario = 1
-identifier = "bus_1"
+temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
+temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
+
+scenario = 2
 
 #plot
 figsize=(14,7)
 
 #dataframes for exporting timeseries and component values
 df_timeseries = pd.DataFrame(index = pd.date_range(start=start, end=end, 
-                                         freq=time_freq, name ='Time'))
+                                         freq=time_freq, name ='time'))
 
 df_component_values = pd.DataFrame(index = [0])
 
 #Values for user profile
+identifier = "bus_1"
 latitude = 50.941357
 longitude = 6.958307
 target_temperature = 60 # °C
@@ -44,10 +47,11 @@ t_0 = 40 # °C
 yearly_heat_demand = 12500 # kWh thermal
 
 #Values for pv
+pv_file = "./input/pv/dwd_pv_data_2015.csv"
 module_lib = 'SandiaMod'
 module = 'Canadian_Solar_CS5P_220M___2009_'
 inverter_lib = 'cecinverter'
-inverter = 'ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_' #'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_'
+inverter = 'ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_'
 surface_tilt = 20
 surface_azimuth = 200
 modules_per_string = 10
@@ -98,6 +102,10 @@ environment = VPPEnvironment(timebase=timebase, timezone='Europe/Berlin',
                              start=start, end=end, year=year,
                              time_freq=time_freq)
 
+environment.get_pv_data(file=pv_file)
+environment.get_mean_temp_days(file=temp_days_file)
+environment.get_mean_temp_hours(file=temp_hours_file)
+
 #%% user profile
 
 user_profile = VPPUserProfile(identifier=identifier,
@@ -106,7 +114,7 @@ user_profile = VPPUserProfile(identifier=identifier,
                      yearly_heat_demand=yearly_heat_demand,
                      building_type=building_type,
                      comfort_factor=None,
-                     t_0=t_0, year=year,
+                     t_0=t_0,
                      daily_vehicle_usage=None,
                      week_trip_start=[], week_trip_end=[],
                      weekend_trip_start=[], weekend_trip_end=[])
@@ -116,18 +124,16 @@ user_profile.get_heat_demand()
 #%% baseload
 
 #input data
-baseload = pd.read_csv("./Input_House/Base_Szenario/df_S_15min.csv")
-baseload.set_index(baseload.Time, inplace = True)
-baseload.drop(labels="Time", axis=1, inplace = True)
+baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
+baseload.drop(columns=["Time"], inplace=True)
+baseload.index =  pd.date_range(start=year, periods = 35040, freq=time_freq, 
+                                name ='time')
 
 df_timeseries["baseload"] = pd.DataFrame(baseload['0'].loc[start:end]/1000)
 
 df_timeseries.baseload.plot(figsize=figsize, label="baseload [kW]")
 
 #%% PV
-
-weather_data = pd.read_csv("./Input_House/PV/2017_irradiation_15min.csv")
-weather_data.set_index("index", inplace = True)
 
 pv = VPPPhotovoltaic(unit="kW", identifier=(identifier+'_pv'), 
                      environment=environment, user_profile=user_profile,
@@ -218,7 +224,7 @@ if scenario == 1:
     
     
     loadshape = tes_hp.user_profile.heat_demand[0:]["heat_demand"]
-    outside_temp = tes_hp.user_profile.mean_temp_hours.mean_temp
+    outside_temp = tes_hp.user_profile.mean_temp_hours.temperature
     log, log_load, log_cop = [], [],[]
     hp.lastRampUp = hp.user_profile.heat_demand.index[0]
     hp.lastRampDown = hp.user_profile.heat_demand.index[0]
@@ -279,7 +285,7 @@ df_component_values["thermal_storage_efficiency"] = 100 * (1 - tes_chp.heatloss_
 if scenario == 1:
     
     loadshape = tes_chp.user_profile.heat_demand[0:]["heat_demand"]
-    outside_temp = tes_chp.user_profile.mean_temp_hours.mean_temp
+    outside_temp = tes_chp.user_profile.mean_temp_hours.temperature
     log, log_load, log_el = [], [],[]
     chp.lastRampUp = chp.user_profile.heat_demand.index[0]
     chp.lastRampDown = chp.user_profile.heat_demand.index[0]
@@ -317,5 +323,5 @@ else:
 plt.legend()
 print(df_component_values)
 
-df_timeseries.to_csv("./Results/df_timeseries.csv")
-df_component_values.to_csv("./Results/df_component_values.csv")
+#df_timeseries.to_csv("./Results/df_timeseries.csv")
+#df_component_values.to_csv("./Results/df_component_values.csv")

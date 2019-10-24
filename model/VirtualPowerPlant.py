@@ -7,7 +7,6 @@ This is the overall aggregator of the technologies used.
 """
 
 import random
-import traceback
 
 class VirtualPowerPlant(object):
 
@@ -220,7 +219,7 @@ class VirtualPowerPlant(object):
             return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev, self.buses_with_wind, self.buses_with_storage
         
         else:
-            traceback.print_exc("method ", method, " is invalid")
+            raise ValueError("method ", method, " is invalid")
 
 
     def balanceAtTimestamp(self, timestamp):
