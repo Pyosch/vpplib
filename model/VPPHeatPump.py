@@ -68,13 +68,13 @@ class VPPHeatPump(VPPComponent):
         self.rampDownTime = rampDownTime
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
-        self.lastRampUp = 0
-        self.lastRampDown = 0
+        self.lastRampUp = self.user_profile.heat_demand.index[0]
+        self.lastRampDown = self.user_profile.heat_demand.index[0]
 
-        
-        self.heat_demand = None
         self.timeseries_year = None
-        self.timeseries = pd.DataFrame()
+        self.timeseries = pd.DataFrame(
+                columns=["heat_output", "cop", "el_demand"], 
+                index=self.user_profile.heat_demand.index)
 
         self.heat_sys_temp = heat_sys_temp
         
@@ -210,10 +210,10 @@ class VPPHeatPump(VPPComponent):
     
     def get_timeseries_year(self):
         
-        self.timeseries_year = self.user_profile.heat_demand
+        self.timeseries_year["heat_output"] = self.user_profile.heat_demand
         self.timeseries_year["cop"] = self.cop#.cop
         self.timeseries_year.cop.interpolate(inplace = True)
-        self.timeseries_year['el_demand'] = (self.timeseries_year.heat_demand / 
+        self.timeseries_year["el_demand"] = (self.timeseries_year.heat_demand / 
                             self.timeseries_year.cop)
         
         return self.timeseries_year
@@ -328,23 +328,25 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-        if self.timeseries.empty == False:
+        if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
             if type(timestamp) == int:
                 
-                heat_demand, cop , el_demand = self.timeseries.iloc[timestamp]
+                heat_output, cop , el_demand = self.timeseries.iloc[timestamp]
             
             elif type(timestamp) == str:
                 
-                heat_demand, cop , el_demand = self.timeseries.loc[timestamp]
+                heat_output, cop , el_demand = self.timeseries.loc[timestamp]
+                
+            elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+                
+                 heat_output, cop , el_demand = self.timeseries.loc[timestamp]
             
             else:
                 raise ValueError("timestamp needs to be of type int or " +
                                  "string. Stringformat: YYYY-MM-DD hh:mm:ss")
             
-            # TODO: cop would change if power of heatpump is limited. 
-            # Dropping limiting factor for heatpumps
-            
-            observations = {'heat_demand':heat_demand, 'cop':cop, 'el_demand':el_demand}
+            observations = {'heat_output':heat_output, 
+                            'cop':cop, 'el_demand':el_demand}
         else:
             if type(timestamp) == int:
                 
@@ -357,6 +359,11 @@ class VPPHeatPump(VPPComponent):
                 else: 
                     el_demand, cop, heat_output = 0, 0, 0
                     
+                #log values in timeseries of the heatpump
+                self.timeseries.heat_output.iloc[timestamp] = heat_output
+                self.timeseries.cop.iloc[timestamp] = cop
+                self.timeseries.el_demand.iloc[timestamp] = el_demand
+                    
             elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
                 
                 if self.isRunning: 
@@ -366,10 +373,17 @@ class VPPHeatPump(VPPComponent):
                     heat_output = el_demand * cop
                 else: 
                     el_demand, cop, heat_output = 0, 0, 0
+                    
+                #log values in timeseries of the heatpump
+                self.timeseries.heat_output.loc[timestamp] = heat_output
+                self.timeseries.cop.loc[timestamp] = cop
+                self.timeseries.el_demand.loc[timestamp] = el_demand
             
             else:
                 raise ValueError("timestamp needs to be of type int or " +
-                                 "string. Stringformat: YYYY-MM-DD hh:mm:ss")
+                                 "pd._libs.tslibs.timestamps.Timestamp")
+                
+                
                 
             observations = {'heat_output':heat_output, 
                             'cop':cop, 'el_demand':el_demand}

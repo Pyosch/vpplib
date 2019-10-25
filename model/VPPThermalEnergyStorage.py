@@ -5,6 +5,8 @@ This file contains the basic functionalities of the VPPComponent class.
 This is the mother class of all VPPx classes
 
 """
+
+import pandas as pd
 from .VPPComponent import VPPComponent
 
 class VPPThermalEnergyStorage(VPPComponent):
@@ -56,33 +58,59 @@ class VPPThermalEnergyStorage(VPPComponent):
         self.identifier = identifier
         self.target_temperature = target_temperature
         self.current_temperature = target_temperature - hysteresis
+        self.timeseries = pd.DataFrame(columns=["temperature"], 
+                                       index=self.user_profile.heat_demand.index)
         self.hysteresis = hysteresis
         self.mass = mass
         self.cp = cp
         self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
-        #Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10% Bereitschaftsverluste hat (ohne Rohrleitungen!!)
+        #Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10% 
+        #Bereitschaftsverluste hat (ohne Rohrleitungen!!)
         self.heatloss_per_day = heatloss_per_day
-        self.heatloss_per_timestep = 1 - (heatloss_per_day / (24 * (60 / self.environment.timebase)))
+        self.heatloss_per_timestep = 1 - (heatloss_per_day / 
+                                          (24 * (60 / self.environment.timebase)))
         self.needs_loading = None
     
-    def operate_storage(self, thermal_demand, timestamp, heat_generator_class):
+    def operate_storage(self, timestamp, heat_generator_class):
+        
+        if self.get_needs_loading(): 
+            heat_generator_class.rampUp(timestamp)              
+        else: 
+            heat_generator_class.rampDown(timestamp)
+            
+        heat_demand = self.user_profile.heat_demand.heat_demand.loc[timestamp]
+        thermal_production = heat_generator_class.observationsForTimestamp(timestamp)["heat_output"]
+        
         #Formula: E = m * cp * T
         #     <=> T = E / (m * cp)
-        thermal_production = heat_generator_class.observationsForTimestamp(timestamp)["heat_output"]
-        self.state_of_charge -= (thermal_demand - thermal_production) * 1000 / (60/self.environment.timebase)
+        self.state_of_charge -= (heat_demand - thermal_production) * 1000 / (60/self.environment.timebase)
         self.state_of_charge *= self.heatloss_per_timestep
         self.current_temperature = (self.state_of_charge / (self.mass * self.cp)) - 273.15
-        return self.current_temperature
+        
+        if heat_generator_class.isRunning: 
+            el_load = heat_generator_class.el_power
+        else: 
+            el_load = 0
+        
+        self.timeseries.temperature[timestamp] = self.current_temperature
+        #should happen inside the heat generator class:
+#        heat_generator_class.timeseries.el_demand[timestamp] = el_load 
+        
+        return self.current_temperature, el_load
 
     
-    def get_needs_loading(self):     
+    def get_needs_loading(self):
+        
         if self.current_temperature <= (self.target_temperature - self.hysteresis): 
             self.needs_loading = True
             
         if self.current_temperature >= (self.target_temperature + self.hysteresis): 
             self.needs_loading = False
             
-        if self.current_temperature < 40: raise ValueError("Thermal energy production to low to maintain heat storage temperature!")
+        if self.current_temperature < 40: 
+            raise ValueError("Thermal energy production to low to maintain " +
+                             "heat storage temperature!")
+            
         return self.needs_loading       
         
     def valueForTimestamp(self, timestamp):
@@ -212,5 +240,6 @@ class VPPThermalEnergyStorage(VPPComponent):
         
         """
 
-        self.timeseries = []
+        self.timeseries = pd.DataFrame(columns=["temperature"], 
+                                       index=self.user_profile.heat_demand.index)
         

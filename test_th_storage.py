@@ -9,13 +9,12 @@ from model.VPPEnvironment import VPPEnvironment
 from model.VPPThermalEnergyStorage import VPPThermalEnergyStorage
 from model.VPPHeatPump import VPPHeatPump
 import matplotlib.pyplot as plt
-import pandas as pd
-#from tqdm import tqdm 
 
+figsize = (10,6)
 #Values for environment
-start = '2017-01-01 00:00:00'
-end = '2017-12-31 23:45:00'
-year = '2017'
+start = '2015-01-01 00:00:00'
+end = '2015-12-31 23:45:00'
+year = '2015'
 
 #Values for user_profile
 yearly_heat_demand = 2500 # kWh
@@ -45,6 +44,14 @@ user_profile = VPPUserProfile(identifier=None,
                                  comfort_factor = None,
                                  t_0=t_0)
 
+def test_get_heat_demand(user_profile):
+    
+    user_profile.get_heat_demand()
+    user_profile.heat_demand.plot()
+    plt.show()
+    
+test_get_heat_demand(user_profile)
+
 tes = VPPThermalEnergyStorage(environment=environment, user_profile=user_profile,
                               mass=mass_of_storage, 
                               hysteresis=hysteresis, 
@@ -57,38 +64,20 @@ hp = VPPHeatPump(identifier='hp1',
                  min_runtime = min_runtime, 
                  min_stop_time = min_stop_time)
 
-def test_get_heat_demand(tes):
-    
-    tes.user_profile.get_heat_demand()
-    tes.user_profile.heat_demand.plot()
-    plt.show()
-    
-test_get_heat_demand(tes)
+
+for i in tes.user_profile.heat_demand.index:
+    tes.operate_storage(i, hp)
 
 
-loadshape = tes.user_profile.get_heat_demand()[0:]["heat_demand"]
-outside_temp = tes.user_profile.mean_temp_hours.temperature
-outside_temp.plot()
-log, log_load, log_cop = [], [],[]
-hp.lastRampUp = hp.user_profile.heat_demand.index[0]
-hp.lastRampDown = hp.user_profile.heat_demand.index[0]
-for i in hp.user_profile.heat_demand.index:
-    heat_demand = hp.user_profile.heat_demand.heat_demand.loc[i]
-    if tes.get_needs_loading(): 
-        hp.rampUp(i)              
-    else: 
-        hp.rampDown(i)
-    temp = tes.operate_storage(heat_demand, i, hp)
-    if hp.isRunning: 
-        log_load.append(el_power)
-    else: 
-        log_load.append(0)
-    log.append(temp)
-
-pd.DataFrame(log).plot(figsize = (16,9), title = "Yearly Temperature of Storage")
-pd.DataFrame(log)[10000:10960].plot(figsize = (16,9),title = "10-Day View")
-pd.DataFrame(log)[10000:10096].plot(figsize = (16,9),title = "Daily View")
-pd.DataFrame(log_load).plot(figsize = (16,9), title = "Yearly Electrical Loadshape")
-pd.DataFrame(log_load)[20000:20960].plot(figsize = (16,9),title = "10-Day View")
-pd.DataFrame(log_load)[20000:20096].plot(figsize = (16,9),title = "Daily View")
+tes.timeseries.plot(figsize = figsize, title = "Yearly Temperature of Storage")
+plt.show()
+tes.timeseries.iloc[10000:10960].plot(figsize = figsize,title = "10-Day View")
+plt.show()
+tes.timeseries.iloc[10000:10096].plot(figsize = figsize,title = "Daily View")
+plt.show()
+hp.timeseries.el_demand.plot(figsize = figsize, title = "Yearly Electrical Loadshape")
+plt.show()
+hp.timeseries.el_demand.iloc[20000:20960].plot(figsize = figsize,title = "10-Day View")
+plt.show()
+hp.timeseries.el_demand.iloc[20000:20096].plot(figsize = figsize,title = "Daily View")
 
