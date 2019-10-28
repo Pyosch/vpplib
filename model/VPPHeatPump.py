@@ -57,7 +57,7 @@ class VPPHeatPump(VPPComponent):
         self.identifier = identifier
         
         #heatpump parameters
-        self.cop = None
+        self.cop = pd.DataFrame()
         self.heatpump_type = heatpump_type
         self.el_power = el_power
         self.th_power = th_power
@@ -71,10 +71,15 @@ class VPPHeatPump(VPPComponent):
         self.lastRampUp = self.user_profile.heat_demand.index[0]
         self.lastRampDown = self.user_profile.heat_demand.index[0]
 
-        self.timeseries_year = None
-        self.timeseries = pd.DataFrame(
+        self.timeseries_year = pd.DataFrame(
                 columns=["heat_output", "cop", "el_demand"], 
                 index=self.user_profile.heat_demand.index)
+        self.timeseries = pd.DataFrame(
+                columns=["heat_output", "cop", "el_demand"], 
+                index=pd.date_range(start=self.environment.start, 
+                                    end=self.environment.end, 
+                                    freq=self.environment.time_freq, 
+                                    name="time"))
 
         self.heat_sys_temp = heat_sys_temp
         
@@ -194,14 +199,13 @@ class VPPHeatPump(VPPComponent):
     #from VPPComponents
     def prepareTimeSeries(self):
         
-        if self.cop == None:
+        if len(self.cop) == 0:
             self.get_cop()
             
-            
-        if self.user_profile.heat_demand == None:
+        if pd.isna(next(iter(self.user_profile.heat_demand.heat_demand))) == True:
             self.user_profile.get_heat_demand()
-            
-        if self.timeseries_year == None:
+          
+        if pd.isna(next(iter(self.timeseries_year.heat_output))) == True:
             self.get_timeseries_year()
         
         self.timeseries = self.timeseries_year.loc[self.environment.start:self.environment.end]
@@ -211,9 +215,9 @@ class VPPHeatPump(VPPComponent):
     def get_timeseries_year(self):
         
         self.timeseries_year["heat_output"] = self.user_profile.heat_demand
-        self.timeseries_year["cop"] = self.cop#.cop
+        self.timeseries_year["cop"] = self.cop
         self.timeseries_year.cop.interpolate(inplace = True)
-        self.timeseries_year["el_demand"] = (self.timeseries_year.heat_demand / 
+        self.timeseries_year["el_demand"] = (self.timeseries_year.heat_output / 
                             self.timeseries_year.cop)
         
         return self.timeseries_year
@@ -328,29 +332,14 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-        if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-            if type(timestamp) == int:
+        if type(timestamp) == int:
+            
+            if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
                 
                 heat_output, cop , el_demand = self.timeseries.iloc[timestamp]
-            
-            elif type(timestamp) == str:
                 
-                heat_output, cop , el_demand = self.timeseries.loc[timestamp]
-                
-            elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-                
-                 heat_output, cop , el_demand = self.timeseries.loc[timestamp]
-            
             else:
-                raise ValueError("timestamp needs to be of type int or " +
-                                 "string. Stringformat: YYYY-MM-DD hh:mm:ss")
-            
-            observations = {'heat_output':heat_output, 
-                            'cop':cop, 'el_demand':el_demand}
-        else:
-            if type(timestamp) == int:
                 
-
                 if self.isRunning: 
                     el_demand = self.el_power
                     temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
@@ -358,13 +347,29 @@ class VPPHeatPump(VPPComponent):
                     heat_output = el_demand * cop
                 else: 
                     el_demand, cop, heat_output = 0, 0, 0
-                    
-                #log values in timeseries of the heatpump
-                self.timeseries.heat_output.iloc[timestamp] = heat_output
-                self.timeseries.cop.iloc[timestamp] = cop
-                self.timeseries.el_demand.iloc[timestamp] = el_demand
-                    
-            elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+            
+        elif type(timestamp) == str:
+            
+            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
+                
+                heat_output, cop , el_demand = self.timeseries.loc[timestamp]
+            else:
+                
+                if self.isRunning: 
+                    el_demand = self.el_power
+                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp]
+                    cop = self.get_current_cop(temp)                   
+                    heat_output = el_demand * cop
+                else: 
+                    el_demand, cop, heat_output = 0, 0, 0
+                
+        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+            
+            if pd.isna(next(iter(self.timeseries.loc[str(timestamp)]))) == False:
+                
+                 heat_output, cop , el_demand = self.timeseries.loc[str(timestamp)]
+                 
+            else:
                 
                 if self.isRunning: 
                     el_demand = self.el_power
@@ -373,23 +378,24 @@ class VPPHeatPump(VPPComponent):
                     heat_output = el_demand * cop
                 else: 
                     el_demand, cop, heat_output = 0, 0, 0
-                    
-                #log values in timeseries of the heatpump
-                self.timeseries.heat_output.loc[timestamp] = heat_output
-                self.timeseries.cop.loc[timestamp] = cop
-                self.timeseries.el_demand.loc[timestamp] = el_demand
             
-            else:
-                raise ValueError("timestamp needs to be of type int or " +
-                                 "pd._libs.tslibs.timestamps.Timestamp")
-                
-                
-                
-            observations = {'heat_output':heat_output, 
-                            'cop':cop, 'el_demand':el_demand}
+        else:
+            raise ValueError("timestamp needs to be of type int, " +
+                             "string (Stringformat: YYYY-MM-DD hh:mm:ss)" +
+                             " or pd._libs.tslibs.timestamps.Timestamp")
+        
+        observations = {'heat_output':heat_output, 
+                        'cop':cop, 'el_demand':el_demand}
+        
         return observations
 
-    
+    def log_observation(self, observation, timestamp):
+        
+        self.timeseries.heat_output.loc[timestamp] = observation["heat_output"]
+        self.timeseries.cop.loc[timestamp] = observation["cop"]
+        self.timeseries.el_demand.loc[timestamp] = observation["el_demand"]
+        
+        return self.timeseries
     #%% ramping functions
     
     

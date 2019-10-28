@@ -79,7 +79,8 @@ class VPPThermalEnergyStorage(VPPComponent):
             heat_generator_class.rampDown(timestamp)
             
         heat_demand = self.user_profile.heat_demand.heat_demand.loc[timestamp]
-        thermal_production = heat_generator_class.observationsForTimestamp(timestamp)["heat_output"]
+        observation = heat_generator_class.observationsForTimestamp(timestamp)
+        thermal_production = observation["heat_output"]
         
         #Formula: E = m * cp * T
         #     <=> T = E / (m * cp)
@@ -88,13 +89,14 @@ class VPPThermalEnergyStorage(VPPComponent):
         self.current_temperature = (self.state_of_charge / (self.mass * self.cp)) - 273.15
         
         if heat_generator_class.isRunning: 
-            el_load = heat_generator_class.el_power
+            el_load = observation["el_demand"]
         else: 
             el_load = 0
         
         self.timeseries.temperature[timestamp] = self.current_temperature
-        #should happen inside the heat generator class:
-#        heat_generator_class.timeseries.el_demand[timestamp] = el_load 
+        
+        #log timeseries of heat_generator_class:
+        heat_generator_class.log_observation(observation, timestamp)
         
         return self.current_temperature, el_load
 

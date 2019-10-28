@@ -77,7 +77,8 @@ class VPPUserProfile(object):
 #                header = None)
         self.mean_temp_days = pd.read_csv(
                 "./input/thermal/dwd_temp_days_2015.csv", index_col="time")
-        self.year = self.mean_temp_days.index[0][:4]
+        self.mean_temp_days.index = pd.to_datetime(self.mean_temp_days.index)
+        self.year = str(next(iter(self.mean_temp_days.index)))[:4]
         
         self.heat_demand = None
         
@@ -86,9 +87,12 @@ class VPPUserProfile(object):
         #for cop
         self.mean_temp_hours = pd.read_csv(
                 "./input/thermal/dwd_temp_hours_2015.csv" , index_col="time")
+        self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
         
         self.mean_temp_quarter_hours = pd.read_csv(
                 "./input/thermal/dwd_temp_15min_2015.csv", index_col="time")
+        self.mean_temp_quarter_hours.index = pd.to_datetime(
+                self.mean_temp_quarter_hours.index)
         
         self.demand_daily = pd.read_csv("./input/thermal/demand_daily.csv")
         self.t_0 = t_0 #°C

@@ -67,21 +67,28 @@ class VPPCombinedHeatAndPower(VPPComponent):
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
         self.isRunning = False
+        self.timeseries = pd.DataFrame(
+                columns=["heat_output", "el_demand"], 
+                index=pd.date_range(start=self.environment.start, 
+                                    end=self.environment.end, 
+                                    freq=self.environment.time_freq, 
+                                    name="time"))
 
-        self.lastRampUp = 0
-        self.lastRampDown = 0
+        self.lastRampUp = self.user_profile.heat_demand.index[0]
+        self.lastRampDown = self.user_profile.heat_demand.index[0]
         self.limit = 1.0
     
 
     def prepareTimeSeries(self):
     
-        # -> Functions stub <-
-        self.timeseries = []
+        self.timeseries = pd.DataFrame(
+                columns=["heat_output", "el_demand"], 
+                index=self.user_profile.heat_demand.index)
 
 
-    # ===================================================================================
+    # =========================================================================
     # Controlling functions
-    # ===================================================================================
+    # =========================================================================
 
     def limitPowerTo(self, limit):
         
@@ -268,28 +275,43 @@ class VPPCombinedHeatAndPower(VPPComponent):
 
 
     
-    # ===================================================================================
+    # =========================================================================
     # Balancing Functions
-    # ===================================================================================
+    # =========================================================================
 
     def observationsForTimestamp(self, timestamp):
 
         # Return result
-        if self.isRunning: heat_output = self.th_power
-        else: heat_output = 0
+        if self.isRunning: 
+            heat_output = self.th_power
+            el_demand = self.el_power *-1
+            
+        else: 
+            heat_output = 0
+            el_demand = 0
+            
+        
         return {
-            "heat_output": heat_output,   
+            "heat_output": heat_output, 
+            "el_demand" : el_demand,
             "isRunning": self.isRunning,
             "lastRampUp": self.lastRampUp,
             "lastRampDown": self.lastRampDown,
             "limit": self.limit
         }
+        
+    def log_observation(self, observation, timestamp):
+        
+        self.timeseries.heat_output.loc[timestamp] = observation["heat_output"]
+        self.timeseries.el_demand.loc[timestamp] = observation["el_demand"]
+        
+        return self.timeseries
 
 
 
-    # ===================================================================================
+    # =========================================================================
     # Balancing Functions
-    # ===================================================================================
+    # =========================================================================
 
     # Override balancing function from super class.
     def valueForTimestamp(self, timestamp):

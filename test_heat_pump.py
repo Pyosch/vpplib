@@ -46,6 +46,14 @@ user_profile = VPPUserProfile(identifier=None,
                                  comfort_factor = None,
                                  t_0=t_0)
 
+def test_get_heat_demand(user_profile):
+    
+    user_profile.get_heat_demand()
+    user_profile.heat_demand.plot()
+    plt.show()
+    
+test_get_heat_demand(user_profile)
+
 hp = VPPHeatPump(identifier='hp1', 
                  environment=environment, user_profile = user_profile,
                  el_power = el_power, rampUpTime = rampUpTime, 
@@ -79,9 +87,10 @@ def test_observationsForTimestamp(hp, timestamp):
     print('observationsForTimestamp:')
     observation = hp.observationsForTimestamp(timestamp)
     print(observation, '\n')
-    
+
+test_get_cop(hp)    
 test_prepareTimeseries(hp)  
-test_get_cop(hp)
+
 test_valueForTimestamp(hp, timestamp_int)
 test_observationsForTimestamp(hp, timestamp_int)
 

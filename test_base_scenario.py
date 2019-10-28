@@ -138,6 +138,8 @@ user_profile = VPPUserProfile(identifier=identifier,
                      weekend_trip_start=weekend_trip_start, 
                      weekend_trip_end=weekend_trip_end)
 
+user_profile.get_heat_demand()
+
 #%% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
 
