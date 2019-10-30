@@ -11,7 +11,7 @@ import pandas as pd
 class VPPCombinedHeatAndPower(VPPComponent):
 
     def __init__(self, unit="kW", identifier=None, 
-                 environment=None, user_profile=None, 
+                 environment=None, user_profile=None, cost = None,
                  el_power=None, th_power=None, 
                  overall_efficiency=None,
                  rampUpTime=0, rampDownTime=0,
@@ -54,7 +54,7 @@ class VPPCombinedHeatAndPower(VPPComponent):
         """
 
         # Call to super class
-        super(VPPCombinedHeatAndPower, self).__init__(unit, environment, user_profile)
+        super(VPPCombinedHeatAndPower, self).__init__(unit, environment, user_profile, cost)
     
     
         # Configure attributes

@@ -11,7 +11,7 @@ import pandas as pd
 class VPPEnergyStorage(VPPComponent):
 
     def __init__(self, unit=None, identifier=None, capacity=None, 
-                 environment=None, user_profile=None, 
+                 environment=None, user_profile=None, cost = None,
                  charge_efficiency=0.98, discharge_efficiency=0.98, 
                  max_power=None, max_c=None):
         
@@ -54,7 +54,7 @@ class VPPEnergyStorage(VPPComponent):
         """
 
         # Call to super class
-        super(VPPEnergyStorage, self).__init__(unit, environment, user_profile)
+        super(VPPEnergyStorage, self).__init__(unit, environment, user_profile, cost)
 
 
         # Setup attributes

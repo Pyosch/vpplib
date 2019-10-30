@@ -19,7 +19,7 @@ from pvlib.modelchain import ModelChain
 class VPPPhotovoltaic(VPPComponent):
 
     def __init__(self, unit, identifier, environment = None, 
-                 user_profile = None,
+                 user_profile = None, cost = None,
                  module_lib = 'SandiaMod', 
                  module = 'Canadian_Solar_CS5P_220M___2009_', 
                  inverter_lib = 'cecinverter', 
@@ -59,7 +59,7 @@ class VPPPhotovoltaic(VPPComponent):
         """
 
         # Call to super class
-        super(VPPPhotovoltaic, self).__init__(unit, environment, user_profile)
+        super(VPPPhotovoltaic, self).__init__(unit, environment, user_profile, cost)
     
     
         # Configure attributes

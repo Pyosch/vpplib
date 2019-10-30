@@ -15,7 +15,7 @@ from windpowerlib import WindTurbine
 class VPPWind(VPPComponent):
 
     def __init__(self, unit = "kW", identifier = None, 
-                 environment = None, user_profile = None,
+                 environment = None, user_profile = None, cost = None,
                  turbine_type = 'E-126/4200', hub_height = 135,
                  rotor_diameter = 127, fetch_curve = 'power_curve',
                  data_source = 'oedb', wind_speed_model = 'logarithmic', 
@@ -58,7 +58,7 @@ class VPPWind(VPPComponent):
         """
 
         # Call to super class
-        super(VPPWind, self).__init__(unit, environment, user_profile)
+        super(VPPWind, self).__init__(unit, environment, user_profile, cost)
     
     
         # Configure attributes

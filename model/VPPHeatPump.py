@@ -12,6 +12,7 @@ class VPPHeatPump(VPPComponent):
     
     def __init__(self, unit="kW", identifier=None,
                  environment=None, user_profile=None,
+                 cost = None,
                  heatpump_type="Air",
                  heat_sys_temp=60,
                  el_power=None, th_power=None,
@@ -51,7 +52,7 @@ class VPPHeatPump(VPPComponent):
         """
         
         # Call to super class
-        super(VPPHeatPump, self).__init__(unit, environment, user_profile)
+        super(VPPHeatPump, self).__init__(unit, environment, user_profile, cost)
         
         # Configure attributes
         self.identifier = identifier

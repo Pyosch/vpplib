@@ -13,7 +13,7 @@ class VPPThermalEnergyStorage(VPPComponent):
     
     # 
     def __init__(self, unit = "kWh", identifier = None,
-                 environment = None, user_profile = None, 
+                 environment = None, user_profile = None, cost = None, 
                  target_temperature = 60, hysteresis = 3, mass = 300, cp = 4.2, 
                  heatloss_per_day = 0.13 ):
         
@@ -52,7 +52,7 @@ class VPPThermalEnergyStorage(VPPComponent):
         """
         
         # Call to super class
-        super(VPPThermalEnergyStorage, self).__init__(unit, environment, user_profile)
+        super(VPPThermalEnergyStorage, self).__init__(unit, environment, user_profile, cost)
     
         # Configure attributes
         self.identifier = identifier

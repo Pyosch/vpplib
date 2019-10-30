@@ -12,13 +12,13 @@ import random
 class VPPBEV(VPPComponent):
 
     def __init__(self, unit="kW", identifier=None,
-                 environment=None, user_profile=None,
+                 environment=None, user_profile=None, cost = None,
                  battery_max = 16, battery_min = 0, battery_usage = 1, 
                  charging_power = 11, load_degradiation_begin = 0.8, 
                  charge_efficiency = 0.98):
 
         # Call to super class
-        super(VPPBEV, self).__init__(unit=unit, environment=environment, user_profile=user_profile)
+        super(VPPBEV, self).__init__(unit, environment, user_profile, cost)
         
         """
         Info
