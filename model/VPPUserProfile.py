@@ -17,6 +17,7 @@ class VPPUserProfile(object):
                  longitude = None,
                  yearly_heat_demand = None,
                  building_type = None, #'DE_HEF33'
+                 max_connection_power = None,
                  comfort_factor = None,
                  t_0 = 40,
                  daily_vehicle_usage = None,
@@ -70,11 +71,9 @@ class VPPUserProfile(object):
         # For people that likes to have their homes quite warm 
         self.comfort_factor = comfort_factor 
         
-#        mean_temp_days = pd.DataFrame(pd.date_range(self.year, periods=365, 
-#                                                    freq = "D", name="time"))
-#        mean_temp_days['Mean_Temp'] = pd.read_csv(
-#                "./Input_House/heatpump_model/mean_temp_days_2017.csv", 
-#                header = None)
+        #Define the maximal connection power for a certain user
+        self.max_connection_power = max_connection_power
+
         self.mean_temp_days = pd.read_csv(
                 "./input/thermal/dwd_temp_days_2015.csv", index_col="time")
         self.mean_temp_days.index = pd.to_datetime(self.mean_temp_days.index)
