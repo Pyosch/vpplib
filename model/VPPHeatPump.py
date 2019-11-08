@@ -213,6 +213,16 @@ class VPPHeatPump(VPPComponent):
         
         return self.timeseries
     
+    def resetTimeSeries(self):
+        
+        self.timeseries = pd.DataFrame(
+                columns=["heat_output", "cop", "el_demand"], 
+                index=pd.date_range(start=self.environment.start, 
+                                    end=self.environment.end, 
+                                    freq=self.environment.time_freq, 
+                                    name="time"))
+        return self.timeseries
+    
     def get_timeseries_year(self):
         
         self.timeseries_year["heat_output"] = self.user_profile.heat_demand

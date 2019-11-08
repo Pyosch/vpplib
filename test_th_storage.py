@@ -65,19 +65,20 @@ hp = VPPHeatPump(identifier='hp1',
                  min_stop_time = min_stop_time)
 
 
-for i in tes.user_profile.heat_demand.index:
+for i in tes.user_profile.heat_demand.loc[start:end].index:
     tes.operate_storage(i, hp)
 
+tes.timeseries.dropna(inplace=True)
 
-tes.timeseries.plot(figsize = figsize, title = "Yearly Temperature of Storage")
+tes.timeseries.plot(figsize = figsize, title = "Temperature of Storage during timeseries")
 plt.show()
-tes.timeseries.iloc[10000:10960].plot(figsize = figsize,title = "10-Day View")
+tes.timeseries.iloc[0:960].plot(figsize = figsize,title = "10-Day View")
 plt.show()
-tes.timeseries.iloc[10000:10096].plot(figsize = figsize,title = "Daily View")
+tes.timeseries.iloc[0:96].plot(figsize = figsize,title = "Daily View")
 plt.show()
 hp.timeseries.el_demand.plot(figsize = figsize, title = "Yearly Electrical Loadshape")
 plt.show()
-hp.timeseries.el_demand.iloc[10000:10960].plot(figsize = figsize,title = "10-Day View")
+hp.timeseries.el_demand.iloc[0:960].plot(figsize = figsize,title = "10-Day View")
 plt.show()
-hp.timeseries.el_demand.iloc[10000:10096].plot(figsize = figsize,title = "Daily View")
+hp.timeseries.el_demand.iloc[0:96].plot(figsize = figsize,title = "Daily View")
 plt.show()
