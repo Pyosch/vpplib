@@ -87,6 +87,13 @@ class VPPEnergyStorage(VPPComponent):
         self.timeseries.index = self.residual_load.index
         
         return self.timeseries
+    
+    
+    def resetTimeSeries(self):
+        
+        self.timeseries = None
+        
+        return self.timeseries
 
     
     def operate_storage(self, residual_load):

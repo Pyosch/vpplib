@@ -91,6 +91,13 @@ class VPPBEV(VPPComponent):
         self.charge()
         self.timeseries.set_index('Time', inplace = True, drop = True)
         self.timeseries['at_home'] = self.at_home
+        
+        
+    def resetTimeSeries(self):
+        
+        self.timeseries = None
+        
+        return self.timeseries
     
     
     # ===================================================================================

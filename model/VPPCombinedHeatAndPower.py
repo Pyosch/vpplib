@@ -84,6 +84,19 @@ class VPPCombinedHeatAndPower(VPPComponent):
         self.timeseries = pd.DataFrame(
                 columns=["heat_output", "el_demand"], 
                 index=self.user_profile.heat_demand.index)
+        
+        return self.timeseries
+    
+    
+    def resetTimeSeries(self):
+        
+        self.timeseries = pd.DataFrame(
+                columns=["heat_output", "el_demand"], 
+                index=pd.date_range(start=self.environment.start, 
+                                    end=self.environment.end, 
+                                    freq=self.environment.time_freq, 
+                                    name="time"))
+        return self.timeseries
 
 
     # =========================================================================

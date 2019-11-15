@@ -114,8 +114,15 @@ class VPPPhotovoltaic(VPPComponent):
         self.timeseries = timeseries
         
         return timeseries
-
-
+    
+    
+    def resetTimeSeries(self):
+        
+        self.timeseries = None
+        
+        return self.timeseries
+		
+		
     # ===================================================================================
     # Controlling functions
     # ===================================================================================

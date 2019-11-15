@@ -180,3 +180,10 @@ class VPPComponent(object):
         """
 
         self.timeseries = []
+        
+        
+    def resetTimeSeries(self):
+        
+        self.timeseries = None
+        
+        return self.timeseries
