@@ -14,6 +14,7 @@ TODO: Setup data type for target data and alter the referencing accordingly!
 import math
 import pandas as pd
 import pandapower as pp
+import matplotlib.pyplot as plt
 
 class VPPOperator(object):
 
@@ -370,11 +371,6 @@ class VPPOperator(object):
             sgen_p_mw[idx] = net_dict[idx]['res_sgen'].p_mw
             load_p_mw[idx] = net_dict[idx]['res_load'].p_mw
             storage_p_mw[idx] = net_dict[idx]['res_storage'].p_mw
-
-        #TODO: adjust method to other extractions            
-        #ext_grid = ext_grid.T
-#        if self.net.ext_grid.name.item() is not None:
-#            ext_grid_p_mw.rename(self.net.ext_grid.name, axis='columns', inplace=True)
     
         if len(line_loading_percent.columns) >0:
             line_loading_percent = line_loading_percent.T
@@ -504,16 +500,41 @@ class VPPOperator(object):
         """
         
         results['ext_grid'].plot(figsize=(16,9), title='ext_grid')
+        plt.show()
         results['trafo_loading_percent'].plot(figsize=(16,9), title='trafo_loading_percent')
+        plt.show()
         results['line_loading_percent'].plot(figsize=(16,9), title='line_loading_percent')
+        plt.show()
         results['bus_vm_pu'].plot(figsize=(16,9), title='bus_vm_pu')
+        plt.show()
         results['load_p_mw'].plot(figsize=(16,9), title='load_p_mw')
+        plt.show()
         
-        if len(self.virtualPowerPlant.buses_with_pv) > 0:
-            results['sgen_p_mw'].plot(figsize=(16,9), title='sgen_p_mw')
-            
+        self.plot_pv(results)
+           
+        self.plot_wind(results)
+        
         if len(self.virtualPowerPlant.buses_with_storage) > 0:
             results['storage_p_mw'].plot(figsize=(16,9), title='storage_p_mw')
+            
+            
+    def plot_pv(self, results):
+        
+        if len(self.virtualPowerPlant.buses_with_pv) > 0:
+            for gen in results['sgen_p_mw'].columns:
+                if "PV" in gen:
+                    results['sgen_p_mw'][gen].plot(figsize=(16,9), title='PV [MW]')
+            plt.show()
+            
+    
+    def plot_wind(self, results):
+        
+        if len(self.virtualPowerPlant.buses_with_wind) > 0:
+            for gen in results['sgen_p_mw'].columns:
+                if "Wind" in gen:
+                    results['sgen_p_mw'][gen].plot(figsize=(16,9), title='Wind [MW]')
+            plt.show()
+            
             
     def plot_storages(self):
         
