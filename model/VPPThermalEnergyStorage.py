@@ -58,8 +58,12 @@ class VPPThermalEnergyStorage(VPPComponent):
         self.identifier = identifier
         self.target_temperature = target_temperature
         self.current_temperature = target_temperature - hysteresis
-        self.timeseries = pd.DataFrame(columns=["temperature"], 
-                                       index=self.user_profile.heat_demand.index)
+        self.timeseries = pd.DataFrame(
+                columns=["temperature"], 
+                index=pd.date_range(start=self.environment.start, 
+                                    end=self.environment.end, 
+                                    freq=self.environment.time_freq, 
+                                    name="time"))
         self.hysteresis = hysteresis
         self.mass = mass
         self.cp = cp
@@ -207,13 +211,8 @@ class VPPThermalEnergyStorage(VPPComponent):
         """
         Info
         ----
-        This function is called to prepare the time series for generations and 
-        consumptions that are based on a non controllable data series. 
-        An empty array is stored for generation units that are independent of 
-        external influences.
-        
-        Setting an empty array. 
-        Override this function if generation or consumption is based on data series.
+        This function is called to prepare the time series.
+        Currently equals resetTimeSeries. Adjust if needed in later versions.
         
         Parameters
         ----------
@@ -242,6 +241,54 @@ class VPPThermalEnergyStorage(VPPComponent):
         
         """
 
-        self.timeseries = pd.DataFrame(columns=["temperature"], 
-                                       index=self.user_profile.heat_demand.index)
+        self.timeseries = pd.DataFrame(
+                columns=["temperature"], 
+                index=pd.date_range(start=self.environment.start, 
+                                    end=self.environment.end, 
+                                    freq=self.environment.time_freq, 
+                                    name="time"))
+        return self.timeseries
+    
+    
+    def resetTimeSeries(self):
         
+        """
+        Info
+        ----
+        This function is called to reset the time series
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+
+        self.timeseries = pd.DataFrame(
+                columns=["temperature"], 
+                index=pd.date_range(start=self.environment.start, 
+                                    end=self.environment.end, 
+                                    freq=self.environment.time_freq, 
+                                    name="time"))
+        
+        return self.timeseries

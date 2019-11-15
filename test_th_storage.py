@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 figsize = (10,6)
 #Values for environment
 start = '2015-01-01 00:00:00'
-end = '2015-12-31 23:45:00'
+end = '2015-01-31 23:45:00'
 year = '2015'
 
 #Values for user_profile
@@ -65,19 +65,19 @@ hp = VPPHeatPump(identifier='hp1',
                  min_stop_time = min_stop_time)
 
 
-for i in tes.user_profile.heat_demand.index:
+for i in tes.user_profile.heat_demand.loc[start:end].index:
     tes.operate_storage(i, hp)
 
 
-tes.timeseries.plot(figsize = figsize, title = "Yearly Temperature of Storage")
+tes.timeseries.plot(figsize = figsize, title = "Temperature of Storage")
 plt.show()
-tes.timeseries.iloc[10000:10960].plot(figsize = figsize,title = "10-Day View")
+tes.timeseries.iloc[0:960].plot(figsize = figsize,title = "Temperature of Storage 10-Day View")
 plt.show()
-tes.timeseries.iloc[10000:10096].plot(figsize = figsize,title = "Daily View")
+tes.timeseries.iloc[0:96].plot(figsize = figsize,title = "Temperature of Storage Daily View")
 plt.show()
-hp.timeseries.el_demand.plot(figsize = figsize, title = "Yearly Electrical Loadshape")
+hp.timeseries.el_demand.plot(figsize = figsize, title = "Electrical Loadshape")
 plt.show()
-hp.timeseries.el_demand.iloc[10000:10960].plot(figsize = figsize,title = "10-Day View")
+hp.timeseries.el_demand.iloc[0:960].plot(figsize = figsize,title = "Electrical Loadshape 10-Day View")
 plt.show()
-hp.timeseries.el_demand.iloc[10000:10096].plot(figsize = figsize,title = "Daily View")
+hp.timeseries.el_demand.iloc[0:96].plot(figsize = figsize,title = "Electrical Loadshape Daily View")
 plt.show()
