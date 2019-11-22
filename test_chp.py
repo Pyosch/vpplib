@@ -4,10 +4,10 @@ Created on Thu Aug 22 15:33:53 2019
 
 @author: patri, pyosch
 """
-from model.VPPUserProfile import VPPUserProfile
-from model.VPPEnvironment import VPPEnvironment
-from model.VPPThermalEnergyStorage import VPPThermalEnergyStorage
-from model.VPPCombinedHeatAndPower import VPPCombinedHeatAndPower
+from vpplib.user_profile import UserProfile
+from vpplib.environment import Environment
+from vpplib.thermal_storage import ThermalEnergyStorage
+from vpplib.combined_heat_and_power import CombinedHeatAndPower
 import matplotlib.pyplot as plt
 
 figsize = (10,6)
@@ -39,16 +39,16 @@ min_stop_time = 2 #timesteps
 timebase = 15
 
 
-environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year,
-                             time_freq=time_freq)
+environment = Environment(timebase=timebase, start=start, end=end, year=year,
+                          time_freq=time_freq)
 
-user_profile = VPPUserProfile(identifier=None,
-                                 latitude = None,
-                                 longitude = None,
-                                 yearly_heat_demand=yearly_heat_demand,
-                                 building_type = building_type,
-                                 comfort_factor = None,
-                                 t_0=t_0)
+user_profile = UserProfile(identifier=None,
+                           latitude = None,
+                           longitude = None,
+                           yearly_heat_demand=yearly_heat_demand,
+                           building_type = building_type,
+                           comfort_factor = None,
+                           t_0=t_0)
 
 def test_get_heat_demand(user_profile):
     
@@ -58,37 +58,37 @@ def test_get_heat_demand(user_profile):
     
 test_get_heat_demand(user_profile)
 
-tes = VPPThermalEnergyStorage(environment=environment, 
-                              user_profile = user_profile,
-                              mass = mass_of_storage, 
-                              hysteresis = hysteresis, 
-                              target_temperature = target_temperature)
+tes = ThermalEnergyStorage(environment=environment,
+                           user_profile=user_profile,
+                           mass=mass_of_storage,
+                           hysteresis=hysteresis,
+                           target_temperature=target_temperature)
 
-chp = VPPCombinedHeatAndPower(unit = "kW", identifier='chp1',
-                              environment = environment, 
-                              user_profile = user_profile,
-                              el_power = el_power, 
-                              th_power = th_power, 
-                              overall_efficiency = overall_efficiency, 
-                              rampUpTime = rampUpTime,
-                              rampDownTime = rampDownTime, 
-                              min_runtime = min_runtime,
-                              min_stop_time = min_stop_time)
+chp = CombinedHeatAndPower(unit="kW", identifier='chp1',
+                           environment=environment,
+                           user_profile=user_profile,
+                           el_power=el_power,
+                           th_power=th_power,
+                           overall_efficiency=overall_efficiency,
+                           ramp_up_time=rampUpTime,
+                           ramp_down_time=rampDownTime,
+                           min_runtime=min_runtime,
+                           min_stop_time=min_stop_time)
 
 
 for i in tes.user_profile.heat_demand.index:
     tes.operate_storage(i, chp)
 
 
-tes.timeseries.plot(figsize = figsize, title = "Yearly Temperature of Storage")
+tes.timeseries.plot(figsize=figsize, title="Yearly Temperature of Storage")
 plt.show()
-tes.timeseries.iloc[10000:10960].plot(figsize = figsize,title = "10-Day View")
+tes.timeseries.iloc[10000:10960].plot(figsize=figsize, title="10-Day View")
 plt.show()
-tes.timeseries.iloc[10000:10096].plot(figsize = figsize,title = "Daily View")
+tes.timeseries.iloc[10000:10096].plot(figsize=figsize, title="Daily View")
 plt.show()
-chp.timeseries.el_demand.plot(figsize = figsize, title = "Yearly Electrical Loadshape")
+chp.timeseries.el_demand.plot(figsize=figsize, title="Yearly Electrical Loadshape")
 plt.show()
-chp.timeseries.el_demand.iloc[10000:10960].plot(figsize = figsize,title = "10-Day View")
+chp.timeseries.el_demand.iloc[10000:10960].plot(figsize=figsize, title="10-Day View")
 plt.show()
-chp.timeseries.el_demand.iloc[10000:10096].plot(figsize = figsize,title = "Daily View")
+chp.timeseries.el_demand.iloc[10000:10096].plot(figsize=figsize, title="Daily View")
 plt.show()

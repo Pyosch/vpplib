@@ -1,22 +1,22 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPHeatPump class.
+This file contains the basic functionalities of the HeatPump class.
 
 """
 
 import pandas as pd
-from .VPPComponent import VPPComponent
+from .component import Component
 
-class VPPHeatPump(VPPComponent):
+class HeatPump(Component):
     
     def __init__(self, unit="kW", identifier=None,
                  environment=None, user_profile=None,
-                 cost = None,
-                 heatpump_type="Air",
+                 cost=None,
+                 heat_pump_type="Air",
                  heat_sys_temp=60,
                  el_power=None, th_power=None,
-                 rampUpTime=0, rampDownTime=0,
+                 ramp_up_time=0, ramp_down_time=0,
                  min_runtime=0, min_stop_time=0):
         
         """
@@ -52,25 +52,25 @@ class VPPHeatPump(VPPComponent):
         """
         
         # Call to super class
-        super(VPPHeatPump, self).__init__(unit, environment, user_profile, cost)
+        super(HeatPump, self).__init__(unit, environment, user_profile, cost)
         
         # Configure attributes
         self.identifier = identifier
         
         #heatpump parameters
         self.cop = pd.DataFrame()
-        self.heatpump_type = heatpump_type
+        self.heat_pump_type = heat_pump_type
         self.el_power = el_power
         self.th_power = th_power
         self.limit = 1
         
         #Ramp parameters
-        self.rampUpTime = rampUpTime
-        self.rampDownTime = rampDownTime
+        self.rampUpTime = ramp_up_time
+        self.rampDownTime = ramp_down_time
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
-        self.lastRampUp = self.user_profile.heat_demand.index[0]
-        self.lastRampDown = self.user_profile.heat_demand.index[0]
+        self.last_ramp_up = self.user_profile.heat_demand.index[0]
+        self.last_ramp_down = self.user_profile.heat_demand.index[0]
 
         self.timeseries_year = pd.DataFrame(
                 columns=["heat_output", "cop", "el_demand"], 
@@ -84,7 +84,7 @@ class VPPHeatPump(VPPComponent):
 
         self.heat_sys_temp = heat_sys_temp
         
-        self.isRunning = False
+        self.is_running = False
               
     
     def get_cop(self):
@@ -125,13 +125,13 @@ class VPPHeatPump(VPPComponent):
             
         cop_lst = []
         
-        if self.heatpump_type == "Air":
+        if self.heat_pump_type == "Air":
             for i, tmp in self.environment.mean_temp_hours.iterrows():
                 cop = (6.81 - 0.121 * (self.heat_sys_temp - tmp)
                        + 0.00063 * (self.heat_sys_temp - tmp)**2)
                 cop_lst.append(cop)
         
-        elif self.heatpump_type == "Ground":
+        elif self.heat_pump_type == "Ground":
             for i, tmp in self.environment.mean_temp_hours.iterrows():
                 cop = (8.77 - 0.15 * (self.heat_sys_temp - tmp)
                        + 0.000734 * (self.heat_sys_temp - tmp)**2)
@@ -141,9 +141,9 @@ class VPPHeatPump(VPPComponent):
             raise ValueError("Heatpump type is not defined!")
         
         self.cop = pd.DataFrame(
-                data = cop_lst, 
-                index = pd.date_range(self.environment.year, periods=8760, 
-                                      freq = "H", name="time"))
+                data=cop_lst,
+                index=pd.date_range(self.environment.year, periods=8760,
+                                      freq="H", name="time"))
         self.cop.columns = ['cop']
         
         return self.cop  
@@ -183,11 +183,11 @@ class VPPHeatPump(VPPComponent):
         """
         
         
-        if self.heatpump_type == "Air":
+        if self.heat_pump_type == "Air":
             cop = (6.81 - 0.121 * (self.heat_sys_temp - tmp)
                        + 0.00063 * (self.heat_sys_temp - tmp)**2)
         
-        elif self.heatpump_type == "Ground":
+        elif self.heat_pump_type == "Ground":
             cop = (8.77 - 0.15 * (self.heat_sys_temp - tmp)
                        + 0.000734 * (self.heat_sys_temp - tmp)**2)
         
@@ -198,7 +198,7 @@ class VPPHeatPump(VPPComponent):
         return cop
      
     #from VPPComponents
-    def prepareTimeSeries(self):
+    def prepare_time_series(self):
         
         if len(self.cop) == 0:
             self.get_cop()
@@ -217,13 +217,13 @@ class VPPHeatPump(VPPComponent):
         
         self.timeseries_year["heat_output"] = self.user_profile.heat_demand
         self.timeseries_year["cop"] = self.cop
-        self.timeseries_year.cop.interpolate(inplace = True)
+        self.timeseries_year.cop.interpolate(inplace=True)
         self.timeseries_year["el_demand"] = (self.timeseries_year.heat_output / 
                             self.timeseries_year.cop)
         
         return self.timeseries_year
     
-    def resetTimeSeries(self):
+    def reset_time_series(self):
         
         self.timeseries = pd.DataFrame(
                 columns=["heat_output", "cop", "el_demand"], 
@@ -236,7 +236,7 @@ class VPPHeatPump(VPPComponent):
     # =========================================================================
     # Controlling functions
     # =========================================================================
-    def limitPowerTo(self, limit):
+    def limit_power_to(self, limit):
         
         """
         Info
@@ -279,16 +279,17 @@ class VPPHeatPump(VPPComponent):
             self.limit = limit
 
         else:
-        
-            # Paramter is invalid
-            return
+
+            # Parameter is invalid
+
+            raise ValueError("Limit-parameter is not valid")
 
     # =========================================================================
     # Balancing Functions
     # =========================================================================
 
     # Override balancing function from super class.
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
 
         if type(timestamp) == int:
             
@@ -303,7 +304,7 @@ class VPPHeatPump(VPPComponent):
                              "Stringformat: YYYY-MM-DD hh:mm:ss")
         
     
-    def observationsForTimestamp(self, timestamp):
+    def observations_for_timestamp(self, timestamp):
         
         """
         Info
@@ -351,7 +352,7 @@ class VPPHeatPump(VPPComponent):
                 
             else:
                 
-                if self.isRunning: 
+                if self.is_running:
                     el_demand = self.el_power
                     temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
                     cop = self.get_current_cop(temp)                   
@@ -366,7 +367,7 @@ class VPPHeatPump(VPPComponent):
                 heat_output, cop , el_demand = self.timeseries.loc[timestamp]
             else:
                 
-                if self.isRunning: 
+                if self.is_running:
                     el_demand = self.el_power
                     temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp]
                     cop = self.get_current_cop(temp)                   
@@ -382,7 +383,7 @@ class VPPHeatPump(VPPComponent):
                  
             else:
                 
-                if self.isRunning: 
+                if self.is_running:
                     el_demand = self.el_power
                     temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
                     cop = self.get_current_cop(temp)                   
@@ -410,39 +411,39 @@ class VPPHeatPump(VPPComponent):
     #%% ramping functions
     
     
-    def isLegitRampUp(self, timestamp):
+    def is_valid_ramp_up(self, timestamp):
         
         if type(timestamp) == int:
-            if timestamp - self.lastRampDown > self.min_stop_time:
-                self.isRunning = True
-            else: self.isRunning = False
+            if timestamp - self.last_ramp_down > self.min_stop_time:
+                self.is_running = True
+            else: self.is_running = False
         
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            if self.lastRampDown + self.min_stop_time * timestamp.freq < timestamp:
-                self.isRunning = True
-            else: self.isRunning = False
+            if self.last_ramp_down + self.min_stop_time * timestamp.freq < timestamp:
+                self.is_running = True
+            else: self.is_running = False
             
         else:
             raise ValueError("timestamp needs to be of type int or " +
                              "pandas._libs.tslibs.timestamps.Timestamp")
         
-    def isLegitRampDown(self, timestamp):
+    def is_valid_ramp_down(self, timestamp):
         
         if type(timestamp) == int:
-            if timestamp - self.lastRampUp > self.min_runtime:
-                self.isRunning = False
-            else: self.isRunning = True
+            if timestamp - self.last_ramp_up > self.min_runtime:
+                self.is_running = False
+            else: self.is_running = True
         
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            if self.lastRampUp + self.min_runtime * timestamp.freq < timestamp:
-                self.isRunning = False
-            else: self.isRunning = True
+            if self.last_ramp_up + self.min_runtime * timestamp.freq < timestamp:
+                self.is_running = False
+            else: self.is_running = True
             
         else:
             raise ValueError("timestamp needs to be of type int or " +
                              "pandas._libs.tslibs.timestamps.Timestamp")
         
-    def rampUp(self, timestamp):
+    def ramp_up(self, timestamp):
         
         """
         Info
@@ -480,17 +481,17 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-        if self.isRunning:
+        if self.is_running:
             return None
         else:
-            if self.isLegitRampUp(timestamp):
-                self.isRunning = True
+            if self.is_valid_ramp_up(timestamp):
+                self.is_running = True
                 return True
             else: 
                 return False
 
 
-    def rampDown(self, timestamp):
+    def ramp_down(self, timestamp):
         
         """
         Info
@@ -528,13 +529,12 @@ class VPPHeatPump(VPPComponent):
         ...
         
         """
-    
 
-        if not self.isRunning:
+        if not self.is_running:
             return None
         else:
-            if self.isLegitRampDown(timestamp):
-                self.isRunning = False
+            if self.is_valid_ramp_down(timestamp):
+                self.is_running = False
                 return True
             else: 
                 return False

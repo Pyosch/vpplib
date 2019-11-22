@@ -2,16 +2,16 @@
 """
 Info
 ----
-In this testfile the basic functionalities of the VPPHeatPump class are tested.
+In this testfile the basic functionalities of the HeatPump class are tested.
 Run each time you make changes on an existing function.
 Adjust if a new function is added or 
 parameters in an existing function are changed.
 
 """
 
-from model.VPPUserProfile import VPPUserProfile
-from model.VPPEnvironment import VPPEnvironment
-from model.VPPHeatPump import VPPHeatPump
+from vpplib.user_profile import UserProfile
+from vpplib.environment import Environment
+from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
 
 #Values for environment
@@ -35,31 +35,34 @@ rampDownTime = 1/15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
 
-environment = VPPEnvironment(timebase=timebase, start=start, end=end, year=year,
-                             time_freq=time_freq)
+environment = Environment(timebase=timebase, start=start, end=end, year=year,
+                          time_freq=time_freq)
 
-user_profile = VPPUserProfile(identifier=None,
-                                 latitude = None,
-                                 longitude = None,
-                                 yearly_heat_demand=yearly_heat_demand,
-                                 building_type = building_type,
-                                 comfort_factor = None,
-                                 t_0=t_0)
+user_profile = UserProfile(identifier=None,
+                           latitude=None,
+                           longitude=None,
+                           yearly_heat_demand=yearly_heat_demand,
+                           building_type=building_type,
+                           comfort_factor=None,
+                           t_0=t_0)
+
 
 def test_get_heat_demand(user_profile):
     
     user_profile.get_heat_demand()
     user_profile.heat_demand.plot()
     plt.show()
-    
+
+
 test_get_heat_demand(user_profile)
 
-hp = VPPHeatPump(identifier='hp1', 
-                 environment=environment, user_profile = user_profile,
-                 el_power = el_power, rampUpTime = rampUpTime, 
-                 rampDownTime = rampDownTime, 
-                 min_runtime = min_runtime, 
-                 min_stop_time = min_stop_time)
+hp = HeatPump(identifier='hp1',
+              environment=environment, user_profile = user_profile,
+              el_power = el_power, ramp_up_time= rampUpTime,
+              ramp_down_time= rampDownTime,
+              min_runtime = min_runtime,
+              min_stop_time = min_stop_time)
+
 
 def test_get_cop(hp):
     
@@ -69,30 +72,31 @@ def test_get_cop(hp):
     plt.show()
     
     
-def test_prepareTimeseries(hp):
+def test_prepare_timeseries(hp):
     
     print('prepareTimeseries:')
-    hp.prepareTimeSeries()
+    hp.prepare_time_series()
     hp.timeseries.plot(figsize=(16,9))
     plt.show()
     
-def test_valueForTimestamp(hp, timestamp):
+def test_value_for_timestamp(hp, timestamp):
     
-    print('valueForTimestamp:')
-    demand= hp.valueForTimestamp(timestamp)
+    print('value_for_timestamp:')
+    demand= hp.value_for_timestamp(timestamp)
     print("El. Demand: ",demand, '\n')
     
-def test_observationsForTimestamp(hp, timestamp):
+def test_observations_for_timestamp(hp, timestamp):
     
-    print('observationsForTimestamp:')
-    observation = hp.observationsForTimestamp(timestamp)
+    print('observations_for_timestamp:')
+    observation = hp.observations_for_timestamp(timestamp)
     print(observation, '\n')
 
-test_get_cop(hp)    
-test_prepareTimeseries(hp)  
 
-test_valueForTimestamp(hp, timestamp_int)
-test_observationsForTimestamp(hp, timestamp_int)
+test_get_cop(hp)
+test_prepare_timeseries(hp)
 
-test_valueForTimestamp(hp, timestamp_str)
-test_observationsForTimestamp(hp, timestamp_str)
+test_value_for_timestamp(hp, timestamp_int)
+test_observations_for_timestamp(hp, timestamp_int)
+
+test_value_for_timestamp(hp, timestamp_str)
+test_observations_for_timestamp(hp, timestamp_str)

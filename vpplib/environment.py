@@ -1,8 +1,8 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPEnvironment class.
-The object "VPPEnvironment" defines external influences on the system to be simulated. 
+This file contains the basic functionalities of the Environment class.
+The object "Environment" defines external influences on the system to be simulated.
 In addition to weather and location, this also includes regulatory influences.
 
 TODO: Add regulatory influences e. g. photovoltaik maximum power at the grid connection point
@@ -11,9 +11,9 @@ TODO: Add regulatory influences e. g. photovoltaik maximum power at the grid con
 
 import pandas as pd
 
-class VPPEnvironment(object):
+class Environment(object):
 
-    def __init__(self, timebase=None, timezone='Europe/Berlin' ,
+    def __init__(self, timebase=None, timezone='Europe/Berlin',
                  start=None, end=None, year=None,
                  time_freq="15 min",
                  mean_temp_days=[], 
@@ -65,13 +65,13 @@ class VPPEnvironment(object):
         self.pv_data = pv_data
         self.wind_data = wind_data
         
-    def get_pv_data(self, file = "./input/pv/dwd_pv_data_2015.csv"):
+    def get_pv_data(self, file="./input/pv/dwd_pv_data_2015.csv"):
         
         self.pv_data = pd.read_csv(file, index_col="time")
         
         return self.pv_data
     
-    def get_mean_temp_days(self, file = 
+    def get_mean_temp_days(self, file=
                            "./input/thermal/dwd_temp_days_2015.csv"):
         
         self.mean_temp_days = pd.read_csv(file, index_col="time")
@@ -119,7 +119,7 @@ class VPPEnvironment(object):
     
         """
 
-        if utc == True:
+        if utc==True:
             df = pd.read_csv(
                 file, index_col=0, header=[0, 1],
                 date_parser=lambda idx: pd.to_datetime(idx, utc=True))

@@ -2,7 +2,7 @@
 """
 Info
 ----
-In this testfile the basic functionalities of the VPPWind class are tested.
+In this testfile the basic functionalities of the WindPower class are tested.
 Run each time you make changes on an existing function.
 Adjust if a new function is added or parameters in an existing function are 
 changed.
@@ -11,8 +11,8 @@ changed.
 
 import matplotlib.pyplot as plt
 
-from model.VPPEnvironment import VPPEnvironment
-from model.VPPWind import VPPWind
+from vpplib.environment import Environment
+from vpplib.wind_power import WindPower
 
 #For Debugging uncomment:
 #import logging
@@ -25,10 +25,8 @@ timezone = 'Europe/Berlin'
 timestamp_int = 12
 timestamp_str = '2015-01-01 12:00:00'
 
-
-
 #create environment and load wind data
-environment = VPPEnvironment(start=start, end=end, timezone=timezone)
+environment = Environment(start=start, end=end, timezone=timezone)
 
 #to use custom wind data:
 environment.get_wind_data(file="./input/wind/dwd_wind_data_2015.csv", 
@@ -52,41 +50,44 @@ density_correction = True
 obstacle_height = 0
 hellman_exp = None
 
-wind = VPPWind(unit = "kW", identifier = None, 
-                 environment = environment, user_profile = None,
-                 turbine_type = turbine_type, hub_height = hub_height,
-                 rotor_diameter = rotor_diameter, fetch_curve = fetch_curve,
-                 data_source = data_source,
-                 wind_speed_model = wind_speed_model, 
-                 density_model = density_model,
-                 temperature_model = temperature_model, 
-                 power_output_model = power_output_model, 
-                 density_correction = density_correction,
-                 obstacle_height = obstacle_height, hellman_exp = hellman_exp)
+wind = WindPower(unit="kW", identifier=None,
+                 environment=environment, user_profile=None,
+                 turbine_type=turbine_type, hub_height=hub_height,
+                 rotor_diameter=rotor_diameter, fetch_curve=fetch_curve,
+                 data_source=data_source,
+                 wind_speed_model=wind_speed_model,
+                 density_model=density_model,
+                 temperature_model=temperature_model,
+                 power_output_model=power_output_model,
+                 density_correction=density_correction,
+                 obstacle_height=obstacle_height, hellman_exp=hellman_exp)
 
-def test_prepareTimeSeries(wind):
+
+def test_prepare_time_series(wind):
     
-    wind.prepareTimeSeries()
-    print("prepareTimeSeries:")
+    wind.prepare_time_series()
+    print("prepare_time_series:")
     print(wind.timeseries.head())
     wind.timeseries.plot(figsize=(16,9))
     plt.show()
 
-def test_valueForTimestamp(wind, timestamp):
+
+def test_value_for_timestamp(wind, timestamp):
     
-    timestepvalue = wind.valueForTimestamp(timestamp)
-    print("\nvalueForTimestamp:\n", timestepvalue)
+    timestepvalue = wind.value_for_timestamp(timestamp)
+    print("\nvalue_for_timestamp:\n", timestepvalue)
+
     
-def observationsForTimestamp(wind, timestamp):
+def observations_for_timestamp(wind, timestamp):
     
-    print('observationsForTimestamp:')
-    observation = wind.observationsForTimestamp(timestamp)
+    print('observations_for_timestamp:')
+    observation = wind.observations_for_timestamp(timestamp)
     print(observation, '\n')
     
     
-test_prepareTimeSeries(wind)
-test_valueForTimestamp(wind, timestamp_int)
-test_valueForTimestamp(wind, timestamp_str)
+test_prepare_time_series(wind)
+test_value_for_timestamp(wind, timestamp_int)
+test_value_for_timestamp(wind, timestamp_str)
 
-observationsForTimestamp(wind, timestamp_int)
-observationsForTimestamp(wind, timestamp_str)
+observations_for_timestamp(wind, timestamp_int)
+observations_for_timestamp(wind, timestamp_str)

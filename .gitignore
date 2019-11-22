@@ -10,7 +10,7 @@
 ### Microsoft ###
 __pycache__/
 Results/
-Model/__pycache__/
+vpplib/__pycache__/
 
 # Icon must end with two \r
 Icon

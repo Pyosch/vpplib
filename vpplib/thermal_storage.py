@@ -1,21 +1,21 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPComponent class.
+This file contains the basic functionalities of the Component class.
 This is the mother class of all VPPx classes
 
 """
 
 import pandas as pd
-from .VPPComponent import VPPComponent
+from .component import Component
 
-class VPPThermalEnergyStorage(VPPComponent):
+class ThermalEnergyStorage(Component):
     
     # 
-    def __init__(self, unit = "kWh", identifier = None,
-                 environment = None, user_profile = None, cost = None, 
-                 target_temperature = 60, hysteresis = 3, mass = 300, cp = 4.2, 
-                 heatloss_per_day = 0.13 ):
+    def __init__(self, unit="kWh", identifier=None,
+                 environment=None, user_profile=None, cost=None,
+                 target_temperature=60, hysteresis=3, mass=300, cp=4.2,
+                 heatloss_per_day=0.13):
         
         """
         Info
@@ -26,7 +26,7 @@ class VPPThermalEnergyStorage(VPPComponent):
         ----------
         
         The parameter timebase determines the resolution of the given data. 
-        Furthermore the parameter environment (VPPEnvironment) is given to provide weather data and further external influences. 
+        Furthermore the parameter environment (Environment) is given to provide weather data and further external influences.
         To account for different people using a component, a use case (VPPUseCase) can be passed in to improve the simulation.
         	
         Attributes
@@ -52,7 +52,7 @@ class VPPThermalEnergyStorage(VPPComponent):
         """
         
         # Call to super class
-        super(VPPThermalEnergyStorage, self).__init__(unit, environment, user_profile, cost)
+        super(ThermalEnergyStorage, self).__init__(unit, environment, user_profile, cost)
     
         # Configure attributes
         self.identifier = identifier
@@ -78,12 +78,12 @@ class VPPThermalEnergyStorage(VPPComponent):
     def operate_storage(self, timestamp, heat_generator_class):
         
         if self.get_needs_loading(): 
-            heat_generator_class.rampUp(timestamp)              
+            heat_generator_class.ramp_up(timestamp)
         else: 
-            heat_generator_class.rampDown(timestamp)
+            heat_generator_class.ramp_down(timestamp)
             
         heat_demand = self.user_profile.heat_demand.heat_demand.loc[timestamp]
-        observation = heat_generator_class.observationsForTimestamp(timestamp)
+        observation = heat_generator_class.observations_for_timestamp(timestamp)
         thermal_production = observation["heat_output"]
         
         #Formula: E = m * cp * T
@@ -104,7 +104,6 @@ class VPPThermalEnergyStorage(VPPComponent):
         
         return self.current_temperature, el_load
 
-    
     def get_needs_loading(self):
         
         if self.current_temperature <= (self.target_temperature - self.hysteresis): 
@@ -119,7 +118,7 @@ class VPPThermalEnergyStorage(VPPComponent):
             
         return self.needs_loading       
         
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
         
         """
         Info
@@ -159,10 +158,9 @@ class VPPThermalEnergyStorage(VPPComponent):
         
         """
     
-        raise NotImplementedError("valueForTimestamp needs to be implemented by child classes!")
-    
+        raise NotImplementedError("value_for_timestamp needs to be implemented by child classes!")
 
-    def observationsForTimestamp(self, timestamp):
+    def observations_for_timestamp(self, timestamp):
         
         """
         Info
@@ -205,14 +203,13 @@ class VPPThermalEnergyStorage(VPPComponent):
     
         return {}
 
-
-    def prepareTimeSeries(self):
+    def prepare_time_series(self):
         
         """
         Info
         ----
         This function is called to prepare the time series.
-        Currently equals resetTimeSeries. Adjust if needed in later versions.
+        Currently equals reset_time_series. Adjust if needed in later versions.
         
         Parameters
         ----------
@@ -248,9 +245,8 @@ class VPPThermalEnergyStorage(VPPComponent):
                                     freq=self.environment.time_freq, 
                                     name="time"))
         return self.timeseries
-    
-    
-    def resetTimeSeries(self):
+
+    def reset_time_series(self):
         
         """
         Info

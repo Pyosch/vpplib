@@ -1,24 +1,25 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPBEV class.
+This file contains the basic functionalities of the BatteryElectricVehicle class.
 
 """
-from .VPPComponent import VPPComponent
+from .component import Component
 
 import pandas as pd
 import random
 
-class VPPBEV(VPPComponent):
+
+class BatteryElectricVehicle(Component):
 
     def __init__(self, unit="kW", identifier=None,
-                 environment=None, user_profile=None, cost = None,
-                 battery_max = 16, battery_min = 0, battery_usage = 1, 
-                 charging_power = 11, load_degradiation_begin = 0.8, 
-                 charge_efficiency = 0.98):
+                 environment=None, user_profile=None, cost=None,
+                 battery_max=16, battery_min=0, battery_usage=1,
+                 charging_power=11, load_degradation_begin=0.8,
+                 charge_efficiency=0.98):
 
         # Call to super class
-        super(VPPBEV, self).__init__(unit, environment, user_profile, cost)
+        super(BatteryElectricVehicle, self).__init__(unit, environment, user_profile, cost)
         
         """
         Info
@@ -74,16 +75,16 @@ class VPPBEV(VPPComponent):
         self.battery_usage = battery_usage
         self.charging_power = charging_power
         self.charge_efficiency = charge_efficiency
-        self.load_degradiation_begin = load_degradiation_begin
+        self.load_degradation_begin = load_degradation_begin
         self.identifier = identifier
       
-    def prepareTimeSeries(self):
+    def prepare_time_series(self):
         
         self.timeseries = pd.DataFrame(pd.date_range(start=self.environment.start, 
-                                                     end=self.environment.end, 
-                                             freq=self.environment.time_freq, name ='Time'))
+                                                     end=self.environment.end,
+                                                     freq=self.environment.time_freq, name='Time'))
         self.timeseries['car_charger'] = 0
-        self.timeseries.set_index(self.timeseries.Time, inplace = True)
+        self.timeseries.set_index(self.timeseries.Time, inplace=True)
         
         self.split_time() 
         self.set_weekday()
@@ -91,14 +92,12 @@ class VPPBEV(VPPComponent):
         self.charge()
         self.timeseries.set_index('Time', inplace = True, drop = True)
         self.timeseries['at_home'] = self.at_home
-        
-        
-    def resetTimeSeries(self):
+
+    def reset_time_series(self):
         
         self.timeseries = None
         
         return self.timeseries
-    
     
     # ===================================================================================
     # Controlling functions
@@ -138,9 +137,8 @@ class VPPBEV(VPPComponent):
         ...
         
         """
-        
-        
-        battery_charge = self.battery_max #initial state of charge at the first timestep
+
+        battery_charge = self.battery_max  # initial state of charge at the first timestep
         lst_battery = []
         lst_charger = []
     
@@ -156,11 +154,11 @@ class VPPBEV(VPPComponent):
                 lst_charger.append(0) #if car is not at home, chargers energy consumption is 0
             
             #Function to apply the load_degradation to the load profile
-            elif (at_home.item() == 1) & (battery_charge > self.battery_max * self.load_degradiation_begin): 
-                degraded_charging_power = (self.charging_power * 
-                                           (1 - (battery_charge / 
-                                                 self.battery_max - 
-                                                 self.load_degradiation_begin)/(1 - self.load_degradiation_begin)))
+            elif (at_home.item() == 1) & (battery_charge > self.battery_max * self.load_degradation_begin):
+                degraded_charging_power = (self.charging_power *
+                                           (1 - (battery_charge /
+                                                 self.battery_max -
+                                                 self.load_degradation_begin) / (1 - self.load_degradation_begin)))
                 
                 battery_charge = battery_charge + (degraded_charging_power * 
                                                    self.charge_efficiency * 
@@ -197,7 +195,6 @@ class VPPBEV(VPPComponent):
     
         self.timeseries['car_capacity'] = lst_battery
         self.timeseries.car_charger = lst_charger
-    
 
     # In[Separate date and hours]:
 
@@ -241,7 +238,6 @@ class VPPBEV(VPPComponent):
         self.date.index = self.timeseries.index
         self.hour = df.hour
         self.hour.index = self.timeseries.index
-        
 
     # In[Determine weekdays according to date time index]:
         
@@ -283,7 +279,6 @@ class VPPBEV(VPPComponent):
         
         """
         self.weekday = self.timeseries.index.weekday
-   
 
     # In[Determine times when car is at home]:
     
@@ -361,14 +356,13 @@ class VPPBEV(VPPComponent):
     
         self.at_home = pd.DataFrame({ "at home" : lst})
         self.at_home.index = self.timeseries.index
-        
 
     # =========================================================================
     # Balancing Functions
     # =========================================================================
 
     # Override balancing function from super class.
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
         
         if type(timestamp) == int:
             
@@ -381,9 +375,8 @@ class VPPBEV(VPPComponent):
         else:
             raise ValueError("timestamp needs to be of type int or string. " +
                              "Stringformat: YYYY-MM-DD hh:mm:ss")
-        
-        
-    def observationsForTimestamp(self, timestamp):
+
+    def observations_for_timestamp(self, timestamp):
         
         """
         Info

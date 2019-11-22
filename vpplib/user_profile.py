@@ -1,7 +1,7 @@
 """
 Info
 ----
-The class "VPPUserProfile" reflects different patterns of use and behaviour. 
+The class "UserProfile" reflects different patterns of use and behaviour.
 This makes it possible, for example, to simulate different usage profiles of 
 electric vehicles.
 
@@ -10,17 +10,18 @@ electric vehicles.
 import traceback
 import pandas as pd
 
-class VPPUserProfile(object):
+
+class UserProfile(object):
 
     def __init__(self, identifier=None,
-                 latitude = None,
-                 longitude = None,
-                 yearly_heat_demand = None,
-                 building_type = None, #'DE_HEF33'
-                 max_connection_power = None,
-                 comfort_factor = None,
-                 t_0 = 40,
-                 daily_vehicle_usage = None,
+                 latitude=None,
+                 longitude=None,
+                 yearly_heat_demand=None,
+                 building_type=None, #'DE_HEF33'
+                 max_connection_power=None,
+                 comfort_factor=None,
+                 t_0=40,
+                 daily_vehicle_usage=None,
                  week_trip_start=[], week_trip_end=[],
                  weekend_trip_start=[], weekend_trip_end=[]):
         """
@@ -57,7 +58,6 @@ class VPPUserProfile(object):
         
         """
 
-        
         self.identifier = identifier
         self.latitude = latitude
         self.longitude = longitude
@@ -71,7 +71,7 @@ class VPPUserProfile(object):
         # For people that likes to have their homes quite warm 
         self.comfort_factor = comfort_factor 
         
-        #Define the maximal connection power for a certain user
+        # Define the maximal connection power for a certain user
         self.max_connection_power = max_connection_power
 
         self.mean_temp_days = pd.read_csv(
@@ -81,9 +81,9 @@ class VPPUserProfile(object):
         
         self.heat_demand = None
         
-        #'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
+        # 'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.building_type = building_type
-        #for cop
+        # for cop
         self.mean_temp_hours = pd.read_csv(
                 "./input/thermal/dwd_temp_hours_2015.csv" , index_col="time")
         self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
@@ -94,9 +94,9 @@ class VPPUserProfile(object):
                 self.mean_temp_quarter_hours.index)
         
         self.demand_daily = pd.read_csv("./input/thermal/demand_daily.csv")
-        self.t_0 = t_0 #°C
+        self.t_0 = t_0  #°C
         
-        #for SigLinDe calculations
+        # for SigLinDe calculations
         self.SigLinDe = pd.read_csv("./input/thermal/SigLinDe.csv", 
                                     decimal=",")
         self.building_parameters = None
@@ -170,8 +170,7 @@ class VPPUserProfile(object):
                 '21:00:00', '21:15:00', '21:30:00', '21:45:00', 
                 '22:00:00', '22:15:00', '22:30:00', '22:45:00', 
                 '23:00:00']
-        
-        
+
         return self.week_trip_start, self.week_trip_end, self.weekend_trip_start, self.weekend_trip_end
     
         
@@ -223,7 +222,7 @@ class VPPUserProfile(object):
         
         return self.heat_demand
     
-    #%%:
+    # %%:
     # =========================================================================
     # Basic Functions for get_heat_demand
     # =========================================================================
@@ -270,7 +269,7 @@ class VPPUserProfile(object):
     
                 return self.building_parameters
          
-    #%%:
+    # %%:
                 
     def get_h_del(self):
         
@@ -308,13 +307,12 @@ class VPPUserProfile(object):
         
         A, B, C, D, m_H, b_H, m_W, b_W = self.building_parameters
         
-        #Calculating the daily heat demand h_del for each day of the year
+        # Calculating the daily heat demand h_del for each day of the year
         h_lst = []
-        
-    
+
         for i, temp in self.mean_temp_days.iterrows():
             
-            #H and W are for linearisation in SigLinDe function below 8°C
+            # H and W are for linearisation in SigLinDe function below 8°C
             H = m_H * temp.temperature + b_H
             W = m_W * temp.temperature + b_W
             if H > W:
@@ -334,7 +332,7 @@ class VPPUserProfile(object):
         
         return self.h_del 
     
-    #%%: 
+    # %%:
         
     def get_heat_demand_daily(self):
         
@@ -372,58 +370,58 @@ class VPPUserProfile(object):
         """
         
         demand_daily_lst = []
-        #df = pd.DataFrame()
+        # df = pd.DataFrame()
         df = self.h_del.copy()
         df["Mean_Temp"] = self.mean_temp_days.temperature
         
         for i, d in df.iterrows():
         
-            if (d.Mean_Temp <= -15):
+            if d.Mean_Temp <= -15:
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['Temp. <= -15 °C']
                     demand_daily_lst.append(demand)
         
-            elif ((d.Mean_Temp > -15) & (d.Mean_Temp <= -10)):
+            elif (d.Mean_Temp > -15) & (d.Mean_Temp <= -10):
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['-15 °C < Temp. <= -10 °C']
                     demand_daily_lst.append(demand)
         
-            elif ((d.Mean_Temp > -10) & (d.Mean_Temp <= -5)):
+            elif (d.Mean_Temp > -10) & (d.Mean_Temp <= -5):
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['-10 °C < Temp. <= -5 °C']
                     demand_daily_lst.append(demand)
         
-            elif ((d.Mean_Temp > -5) & (d.Mean_Temp <= 0)):
+            elif (d.Mean_Temp > -5) & (d.Mean_Temp <= 0):
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['-5 °C < Temp. <= 0 °C']
                     demand_daily_lst.append(demand)
         
-            elif ((d.Mean_Temp > 0) & (d.Mean_Temp <= 5)):
+            elif (d.Mean_Temp > 0) & (d.Mean_Temp <= 5):
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['0 °C < Temp. <= 5 °C']
                     demand_daily_lst.append(demand)
         
-            elif ((d.Mean_Temp > 5) & (d.Mean_Temp <= 10)):
+            elif (d.Mean_Temp > 5) & (d.Mean_Temp <= 10):
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['5 °C < Temp. <= 10 °C']
                     demand_daily_lst.append(demand)
         
-            elif ((d.Mean_Temp > 10) & (d.Mean_Temp <= 15)):
+            elif (d.Mean_Temp > 10) & (d.Mean_Temp <= 15):
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['10 °C < Temp. <= 15 °C']
                     demand_daily_lst.append(demand)
         
-            elif ((d.Mean_Temp > 15) & (d.Mean_Temp <= 20)):
+            elif (d.Mean_Temp > 15) & (d.Mean_Temp <= 20):
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['15 °C < Temp. <= 20 °C']
                     demand_daily_lst.append(demand)
         
-            elif ((d.Mean_Temp > 20) & (d.Mean_Temp <= 25)):
+            elif (d.Mean_Temp > 20) & (d.Mean_Temp <= 25):
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['20 °C < Temp. <= 25 °C']
                     demand_daily_lst.append(demand)
         
-            elif (d.Mean_Temp > 25):
+            elif d.Mean_Temp > 25:
                 for i, x in self.demand_daily.iterrows():
                     demand = d.h_del * x['Temp > 25 °C']
                     demand_daily_lst.append(demand)
@@ -435,13 +433,12 @@ class VPPUserProfile(object):
                 demand_daily_lst, 
                 index = pd.date_range(self.year, 
                                       periods=8760, 
-                                      freq = "H", 
+                                      freq="H",
                                       name="time"))
-                
-        
+
         return self.heat_demand_daily
     
-    #%%:
+    # %%:
     
     def get_consumerfactor(self):
         
@@ -477,11 +474,11 @@ class VPPUserProfile(object):
         
         """
         
-        #consumerfactor (Kundenwert) K_w
+        # consumerfactor (Kundenwert) K_w
         self.consumerfactor = self.yearly_heat_demand/(sum(self.h_del["h_del"])) 
         return self.consumerfactor
     
-    #%%:
+    # %%:
     
     def get_hourly_heat_demand(self):
         
@@ -520,9 +517,8 @@ class VPPUserProfile(object):
         self.hourly_heat_demand = self.heat_demand_daily * self.consumerfactor
         
         return self.hourly_heat_demand
-    
-   
-    #%%:
+
+    # %%:
         
     def hour_to_qarter(self):
         
@@ -558,9 +554,9 @@ class VPPUserProfile(object):
         
         """
         
-        self.heat_demand = pd.DataFrame(index = pd.date_range(
+        self.heat_demand = pd.DataFrame(index=pd.date_range(
                 self.year, periods=35040, freq='15min', name="time"))
         self.heat_demand["heat_demand"] = self.hourly_heat_demand
-        self.heat_demand.interpolate(inplace = True)
+        self.heat_demand.interpolate(inplace=True)
         
         return self.heat_demand

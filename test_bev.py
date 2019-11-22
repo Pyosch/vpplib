@@ -2,15 +2,15 @@
 """
 Info
 ----
-In this testfile the basic functionalities of the VPPBEV class are tested.
+In this testfile the basic functionalities of the BatteryElectricVehicle class are tested.
 Run each time you make changes on an existing function.
 Adjust if a new function is added or 
 parameters in an existing function are changed.
 
 """
-from model.VPPUserProfile import VPPUserProfile
-from model.VPPEnvironment import VPPEnvironment
-from model.VPPBEV import VPPBEV
+from vpplib.user_profile import UserProfile
+from vpplib.environment import Environment
+from vpplib.battery_electric_vehicle import BatteryElectricVehicle
 import matplotlib.pyplot as plt
 
 identifier = 'bev_1'
@@ -27,41 +27,45 @@ battery_usage = 1
 charge_efficiency = 0.98
 load_degradiation_begin = 0.8
 
-environment = VPPEnvironment(start=start, end=end, timebase=timebase)
+environment = Environment(start=start, end=end, timebase=timebase)
 
-user_profile = VPPUserProfile(identifier=identifier)
+user_profile = UserProfile(identifier=identifier)
 
 
-bev = VPPBEV(unit="kW", identifier=None,
-             environment=environment, user_profile=user_profile,
-             battery_max=battery_max, battery_min=battery_min, 
-             battery_usage=battery_usage, 
-             charging_power=charging_power, 
-             load_degradiation_begin=load_degradiation_begin, 
-             charge_efficiency=charge_efficiency)
+bev = BatteryElectricVehicle(unit="kW", identifier=None,
+                             environment=environment, user_profile=user_profile,
+                             battery_max=battery_max, battery_min=battery_min,
+                             battery_usage=battery_usage,
+                             charging_power=charging_power,
+                             load_degradation_begin=load_degradiation_begin,
+                             charge_efficiency=charge_efficiency)
+
+
+def test_prepare_time_series(bev):
     
-def test_prepareTimeSeries(bev):
-    
-    bev.prepareTimeSeries()
-    print("prepareTimeSeries:")
+    bev.prepare_time_series()
+    print("prepare_time_series:")
     print(bev.timeseries.head()) 
     bev.timeseries.plot(figsize=(16,9))
     plt.show()
-    
-def test_valueForTimestamp(bev, timestamp):
-    
-    timestepvalue = bev.valueForTimestamp(timestamp)
-    print("\nvalueForTimestamp:\n", timestepvalue)
-    
-def test_observationsForTimestamp(bev, timestamp):
-    
-    print('observationsForTimestamp:')
-    observation = bev.observationsForTimestamp(timestamp)
-    print(observation, '\n')
-    
-test_prepareTimeSeries(bev)
-test_valueForTimestamp(bev, timestamp_int)
-test_valueForTimestamp(bev, timestamp_str)
 
-test_observationsForTimestamp(bev, timestamp_int)
-test_observationsForTimestamp(bev, timestamp_str)
+
+def test_value_for_timestamp(bev, timestamp):
+    
+    timestepvalue = bev.value_for_timestamp(timestamp)
+    print("\nvalue_for_timestamp:\n", timestepvalue)
+
+
+def test_observations_for_timestamp(bev, timestamp):
+    
+    print('observations_for_timestamp:')
+    observation = bev.observations_for_timestamp(timestamp)
+    print(observation, '\n')
+
+
+test_prepare_time_series(bev)
+test_value_for_timestamp(bev, timestamp_int)
+test_value_for_timestamp(bev, timestamp_str)
+
+test_observations_for_timestamp(bev, timestamp_int)
+test_observations_for_timestamp(bev, timestamp_str)

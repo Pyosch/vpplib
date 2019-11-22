@@ -8,6 +8,7 @@ This is the overall aggregator of the technologies used.
 
 import random
 
+
 class VirtualPowerPlant(object):
 
     def __init__(self, name):
@@ -55,15 +56,14 @@ class VirtualPowerPlant(object):
         self.buses_with_wind = []
         self.buses_with_storage = []
 
-
-    def addComponent(self, component):
+    def add_component(self, component):
         
         """
         Info
         ----
         Component handling
         
-        This function takes a component of type VPPComponent and appends it to the
+        This function takes a component of type Component and appends it to the
         components of the virtual power plant.
         
         Parameters
@@ -97,8 +97,7 @@ class VirtualPowerPlant(object):
         #self.components.append(component)
         self.components[component.identifier] = component
 
-
-    def removeComponent(self, component):
+    def remove_component(self, component):
         
         """
         Info
@@ -134,11 +133,11 @@ class VirtualPowerPlant(object):
         """
 
         # Remove component
-        self.components.remove(component)
+        self.components.pop(component)
         
     def get_buses_with_components(self, net, method='random', pv_percentage=0, 
                                   hp_percentage=0, bev_percentage=0,
-                                  wind_percentage = 0, storage_percentage=0):
+                                  wind_percentage=0, storage_percentage=0):
         """
         Info
         ----
@@ -186,15 +185,15 @@ class VirtualPowerPlant(object):
             wind_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (wind_percentage/100)), 0))
             self.buses_with_wind = random.sample(list(net.bus.name[net.bus.type == 'b']), wind_amount)
 
-            #Distribution of el storage is only done for houses with pv
+            # Distribution of el storage is only done for houses with pv
             storage_amount = int(round((len(self.buses_with_pv) * (storage_percentage/100)), 0))
             self.buses_with_storage = random.sample(self.buses_with_pv, storage_amount)
             
-            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev, self.buses_with_wind, self.buses_with_storage
+            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev,\
+                   self.buses_with_wind, self.buses_with_storage
         
         elif method == 'random_loadbus':
-            
-   
+
             bus_lst = []
             for bus in net.bus.index:
                 if bus in list(net.load.bus):
@@ -212,17 +211,17 @@ class VirtualPowerPlant(object):
             wind_amount = int(round((len(bus_lst) * (wind_percentage/100)), 0))
             self.buses_with_wind = random.sample(bus_lst, wind_amount)
             
-            #Distribution of el storage is only done for houses with pv
+            # Distribution of el storage is only done for houses with pv
             storage_amount = int(round((len(self.buses_with_pv) * (storage_percentage/100)), 0))
             self.buses_with_storage = random.sample(self.buses_with_pv, storage_amount)
             
-            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev, self.buses_with_wind, self.buses_with_storage
+            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev,\
+                   self.buses_with_wind, self.buses_with_storage
         
         else:
             raise ValueError("method ", method, " is invalid")
 
-
-    def balanceAtTimestamp(self, timestamp):
+    def balance_at_timestamp(self, timestamp):
         
         """
         Info
@@ -262,16 +261,14 @@ class VirtualPowerPlant(object):
         # Create result variable
         result = 0
 
-
         # Iterate through all components
         for i in range(0, len(self.components)):
 
             # Get balance for component at timestamp
-            balance = self.components[i].valueForTimestamp(timestamp)
+            balance = self.components[i].value_for_timestamp(timestamp)
 
             # Add balance to result
             result += balance
-
 
         # Return result
         return result

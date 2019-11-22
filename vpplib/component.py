@@ -1,12 +1,12 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPComponent class.
+This file contains the basic functionalities of the Component class.
 This is the mother class of all VPPx classes
 
 """
 
-class VPPComponent(object):
+class Component(object):
     
     # 
     def __init__(self, unit, environment, user_profile, cost):
@@ -20,7 +20,7 @@ class VPPComponent(object):
         ----------
         
         The parameter timebase determines the resolution of the given data. 
-        Furthermore the parameter environment (VPPEnvironment) is given to provide weather data and further external influences. 
+        Furthermore the parameter environment (Environment) is given to provide weather data and further external influences.
         To account for different people using a component, a use case (VPPUseCase) can be passed in to improve the simulation.
         	
         Attributes
@@ -52,7 +52,7 @@ class VPPComponent(object):
         self.cost = cost # e.g. Euro/kWh
     
 
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
         
         """
         Info
@@ -92,10 +92,10 @@ class VPPComponent(object):
         
         """
     
-        raise NotImplementedError("valueForTimestamp needs to be implemented by child classes!")
+        raise NotImplementedError("value_for_timestamp needs to be implemented by child classes!")
     
 
-    def observationsForTimestamp(self, timestamp):
+    def observations_for_timestamp(self, timestamp):
         
         """
         Info
@@ -139,7 +139,7 @@ class VPPComponent(object):
         return {}
 
 
-    def prepareTimeSeries(self):
+    def prepare_time_series(self):
         
         """
         Info
@@ -182,7 +182,7 @@ class VPPComponent(object):
         self.timeseries = []
         
         
-    def resetTimeSeries(self):
+    def reset_time_series(self):
         
         self.timeseries = None
         

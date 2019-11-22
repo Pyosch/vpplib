@@ -1,20 +1,21 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPCombinedHeatAndPower class.
+This file contains the basic functionalities of the CombinedHeatAndPower class.
 
 """
 
-from .VPPComponent import VPPComponent
+from .component import Component
 import pandas as pd
 
-class VPPCombinedHeatAndPower(VPPComponent):
 
-    def __init__(self, unit="kW", identifier=None, 
+class CombinedHeatAndPower(Component):
+
+    def __init__(self, unit="kW", identifier=None,
                  environment=None, user_profile=None, cost = None,
-                 el_power=None, th_power=None, 
+                 el_power=None, th_power=None,
                  overall_efficiency=None,
-                 rampUpTime=0, rampDownTime=0,
+                 ramp_up_time=0, ramp_down_time=0,
                  min_runtime=0, min_stop_time=0):
         
         """
@@ -54,7 +55,7 @@ class VPPCombinedHeatAndPower(VPPComponent):
         """
 
         # Call to super class
-        super(VPPCombinedHeatAndPower, self).__init__(unit, environment, user_profile, cost)
+        super(CombinedHeatAndPower, self).__init__(unit, environment, user_profile, cost)
     
     
         # Configure attributes
@@ -62,11 +63,11 @@ class VPPCombinedHeatAndPower(VPPComponent):
         self.el_power = el_power
         self.th_power = th_power
         self.overall_efficiency = overall_efficiency
-        self.rampUpTime = rampUpTime
-        self.rampDownTime = rampDownTime
+        self.ramp_up_time = ramp_up_time
+        self.ramp_down_time = ramp_down_time
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
-        self.isRunning = False
+        self.is_running = False
         self.timeseries = pd.DataFrame(
                 columns=["heat_output", "el_demand"], 
                 index=pd.date_range(start=self.environment.start, 
@@ -74,12 +75,12 @@ class VPPCombinedHeatAndPower(VPPComponent):
                                     freq=self.environment.time_freq, 
                                     name="time"))
 
-        self.lastRampUp = self.user_profile.heat_demand.index[0]
-        self.lastRampDown = self.user_profile.heat_demand.index[0]
+        self.last_ramp_up = self.user_profile.heat_demand.index[0]
+        self.last_ramp_down = self.user_profile.heat_demand.index[0]
         self.limit = 1.0
     
 
-    def prepareTimeSeries(self):
+    def prepare_time_series(self):
     
         self.timeseries = pd.DataFrame(
                 columns=["heat_output", "el_demand"], 
@@ -88,7 +89,7 @@ class VPPCombinedHeatAndPower(VPPComponent):
         return self.timeseries
     
     
-    def resetTimeSeries(self):
+    def reset_time_series(self):
         
         self.timeseries = pd.DataFrame(
                 columns=["heat_output", "el_demand"], 
@@ -103,7 +104,7 @@ class VPPCombinedHeatAndPower(VPPComponent):
     # Controlling functions
     # =========================================================================
 
-    def limitPowerTo(self, limit):
+    def limit_power_to(self, limit):
         
         """
         Info
@@ -147,46 +148,49 @@ class VPPCombinedHeatAndPower(VPPComponent):
             self.limit = limit
 
         else:
-        
-            # Paramter is invalid
-            return
+            # Parameter is invalid
+            raise ValueError("Limit-parameter is not valid")
 
 
     #%% ramping functions
     
-    def isLegitRampUp(self, timestamp):
+    def is_valid_ramp_up(self, timestamp):
         
         if type(timestamp) == int:
-            if timestamp - self.lastRampDown > self.min_stop_time:
-                self.isRunning = True
-            else: self.isRunning = False
+            if timestamp - self.last_ramp_down > self.min_stop_time:
+                self.is_running = True
+            else:
+                self.is_running = False
         
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            if self.lastRampDown + self.min_stop_time * timestamp.freq < timestamp:
-                self.isRunning = True
-            else: self.isRunning = False
+            if self.last_ramp_down + self.min_stop_time * timestamp.freq < timestamp:
+                self.is_running = True
+            else:
+                self.is_running = False
             
         else:
             raise ValueError("timestamp needs to be of type int or " +
                              "pandas._libs.tslibs.timestamps.Timestamp")
         
-    def isLegitRampDown(self, timestamp):
+    def is_valid_ramp_down(self, timestamp):
         
         if type(timestamp) == int:
-            if timestamp - self.lastRampUp > self.min_runtime:
-                self.isRunning = False
-            else: self.isRunning = True
-        
+            if timestamp - self.last_ramp_up > self.min_runtime:
+                self.is_running = False
+            else:
+                self.is_running = True
+
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            if self.lastRampUp + self.min_runtime * timestamp.freq < timestamp:
-                self.isRunning = False
-            else: self.isRunning = True
+            if self.last_ramp_up + self.min_runtime * timestamp.freq < timestamp:
+                self.is_running = False
+            else:
+                self.is_running = True
             
         else:
             raise ValueError("timestamp needs to be of type int or " +
                              "pandas._libs.tslibs.timestamps.Timestamp")
         
-    def rampUp(self, timestamp):
+    def ramp_up(self, timestamp):
         
         """
         Info
@@ -227,17 +231,17 @@ class VPPCombinedHeatAndPower(VPPComponent):
         ...
         
         """
-        if self.isRunning:
+        if self.is_running:
             return None
         else:
-            if self.isLegitRampUp(timestamp):
-                self.isRunning = True
+            if self.is_valid_ramp_up(timestamp):
+                self.is_running = True
                 return True
             else: 
                 return False
 
 
-    def rampDown(self, timestamp):
+    def ramp_down(self, timestamp):
         
         """
         Info
@@ -277,11 +281,11 @@ class VPPCombinedHeatAndPower(VPPComponent):
         """
     
 
-        if not self.isRunning:
+        if not self.is_running:
             return None
         else:
-            if self.isLegitRampDown(timestamp):
-                self.isRunning = False
+            if self.is_valid_ramp_down(timestamp):
+                self.is_running = False
                 return True
             else: 
                 return False
@@ -292,10 +296,10 @@ class VPPCombinedHeatAndPower(VPPComponent):
     # Balancing Functions
     # =========================================================================
 
-    def observationsForTimestamp(self, timestamp):
+    def observations_for_timestamp(self, timestamp):
 
         # Return result
-        if self.isRunning: 
+        if self.is_running:
             heat_output = self.th_power
             el_demand = self.el_power *-1
             
@@ -306,10 +310,10 @@ class VPPCombinedHeatAndPower(VPPComponent):
         
         return {
             "heat_output": heat_output, 
-            "el_demand" : el_demand,
-            "isRunning": self.isRunning,
-            "lastRampUp": self.lastRampUp,
-            "lastRampDown": self.lastRampDown,
+            "el_demand": el_demand,
+            "is_running": self.is_running,
+            "last_ramp_up": self.last_ramp_up,
+            "last_ramp_down": self.last_ramp_down,
             "limit": self.limit
         }
         
@@ -327,10 +331,10 @@ class VPPCombinedHeatAndPower(VPPComponent):
     # =========================================================================
 
     # Override balancing function from super class.
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
     
         # Check if the power plant is running
-        if self.isRunning():
+        if self.is_running():
         
             # Return current value
             return self.el_power * self.limit

@@ -1,7 +1,7 @@
 """
 Info
 ----
-The VPPOperator class should be subclassed to implement different
+The Operator class should be subclassed to implement different
 operation stategies. One subclass for example could implement
 machine learning to operate the virtual power plant.
 Additional functions that help operating the virtual power plant,
@@ -16,9 +16,9 @@ import pandas as pd
 import pandapower as pp
 import matplotlib.pyplot as plt
 
-class VPPOperator(object):
+class Operator(object):
 
-    def __init__(self, virtualPowerPlant, net, targetData):
+    def __init__(self, virtual_power_plant, net, target_data):
         
         """
         Info
@@ -29,7 +29,7 @@ class VPPOperator(object):
         the target generation/consumption data. The operator tries
         to operate the virtual power plant in a way, that this target
         output is achieved.
-        The VPPOperator class should be subclassed to implement different
+        The Operator class should be subclassed to implement different
         operation stategies. One subclass for example could implement
         machine learning to operate the virtual power plant.
         Additional functions that help operating the virtual power plant,
@@ -63,12 +63,12 @@ class VPPOperator(object):
         """
 
         # Configure attributes
-        self.virtualPowerPlant = virtualPowerPlant
-        self.targetData = targetData
+        self.virtual_power_plant = virtual_power_plant
+        self.target_data = target_data
         self.net = net #pandapower net object
 
 
-    def operateVirtualPowerPlant(self):
+    def operate_virtual_power_plant(self):
         
         """
         Info
@@ -108,22 +108,22 @@ class VPPOperator(object):
         """
     
         # Create result variables
-        sum = 0
+        power_sum = 0
         count = 0
     
     
         # Iterate through timestamps
-        for i in range(0, len(self.targetData)):
+        for i in range(0, len(self.target_data)):
     
             # Operate at timestamp
-            self.operateAtTimestamp(self.targetData[i][0])
+            self.operate_at_timestamp(self.target_data[i][0])
 
     
             # Get balance of virtual power plant
-            balance = self.virtualPowerPlant.balanceAtTimestamp(self.targetData[i][0])
+            balance = self.virtual_power_plant.balance_at_timestamp(self.target_data[i][0])
             
             # Get target balance
-            target = self.targetData[i][1]
+            target = self.target_data[i][1]
 
     
             # Calculate match
@@ -131,19 +131,19 @@ class VPPOperator(object):
 
     
             # Add to sum and count
-            sum += match
+            power_sum += match
             count += 1
             
             
         # Calculate average of match
-        average = sum / count
+        average = power_sum / count
         
         
         # Return average
         return average
 
 
-    def operateAtTimestamp(self, timestamp):
+    def operate_at_timestamp(self, timestamp):
         
         """
         Info
@@ -177,7 +177,7 @@ class VPPOperator(object):
         
         """
 
-        raise NotImplementedError("operateAtTimestamp needs to be implemented by child classes!")
+        raise NotImplementedError("operate_at_timestamp needs to be implemented by child classes!")
         
             
     #%% assign values of generation/demand over time and run powerflow
@@ -217,23 +217,23 @@ class VPPOperator(object):
         """
 
         net_dict = {}
-        index = self.virtualPowerPlant.components[next(iter(self.virtualPowerPlant.components))].timeseries.index
+        index = self.virtual_power_plant.components[next(iter(self.virtual_power_plant.components))].timeseries.index
         res_loads = pd.DataFrame(columns=[self.net.bus.index[self.net.bus.type == 'b']], index=index) #maybe only take buses with storage
         
         for idx in index:
-            for component in self.virtualPowerPlant.components.keys():
+            for component in self.virtual_power_plant.components.keys():
         
                 if 'storage' not in component:
                     
-                    valueForTimestamp = self.virtualPowerPlant.components[component].valueForTimestamp(str(idx))
+                    value_for_timestamp = self.virtual_power_plant.components[component].value_for_timestamp(str(idx))
                     
-                    if math.isnan(valueForTimestamp):
+                    if math.isnan(value_for_timestamp):
                         raise ValueError(("The value of ", component, 
                                           "at timestep ", idx, "is NaN!"))
                 
                 if component in list(self.net.sgen.name):
                     
-                    self.net.sgen.p_mw[self.net.sgen.name == component] = valueForTimestamp/-1000 #kW to MW; negative due to generation
+                    self.net.sgen.p_mw[self.net.sgen.name == component] = value_for_timestamp/-1000 #kW to MW; negative due to generation
                     
                     if math.isnan(self.net.sgen.p_mw[self.net.sgen.name == component]):
                         raise ValueError(("The value of ", component, 
@@ -241,7 +241,7 @@ class VPPOperator(object):
                 
                 if component in list(self.net.load.name):
                     
-                    self.net.load.p_mw[self.net.load.name == component] = valueForTimestamp/1000 #kW to MW
+                    self.net.load.p_mw[self.net.load.name == component] = value_for_timestamp/1000 #kW to MW
                 
             
             for name in self.net.load.name:
@@ -251,7 +251,7 @@ class VPPOperator(object):
                     self.net.load.p_mw[self.net.load.name == name] = baseload[str(self.net.load.bus[self.net.load.name == name].item())][str(idx)]/1000000
                     self.net.load.q_mvar[self.net.load.name == name] = 0
                 
-            if len(self.virtualPowerPlant.buses_with_storage) > 0: 
+            if len(self.virtual_power_plant.buses_with_storage) > 0:
                 for bus in self.net.bus.index[self.net.bus.type == 'b']:
                 
                     storage_at_bus = pp.get_connected_elements(self.net, "storage", bus)
@@ -272,11 +272,11 @@ class VPPOperator(object):
                         
                         
                         #run storage operation with residual load
-                        state_of_charge, res_load = self.virtualPowerPlant.components[self.net.storage.loc[storage_at_bus].name.item()].operate_storage(res_loads.loc[idx][bus].item())
+                        state_of_charge, res_load = self.virtual_power_plant.components[self.net.storage.loc[storage_at_bus].name.item()].operate_storage(res_loads.loc[idx][bus].item())
                         
                         #save state of charge and residual load in timeseries
-                        self.virtualPowerPlant.components[self.net.storage.loc[storage_at_bus].name.item()].timeseries['state_of_charge'][idx] = state_of_charge # state_of_charge_df[idx][bus] = state_of_charge
-                        self.virtualPowerPlant.components[self.net.storage.loc[storage_at_bus].name.item()].timeseries['residual_load'][idx] = res_load
+                        self.virtual_power_plant.components[self.net.storage.loc[storage_at_bus].name.item()].timeseries['state_of_charge'][idx] = state_of_charge # state_of_charge_df[idx][bus] = state_of_charge
+                        self.virtual_power_plant.components[self.net.storage.loc[storage_at_bus].name.item()].timeseries['residual_load'][idx] = res_load
                         
                         #assign new residual load to loads and sgen depending on positive/negative values
                         if res_load >0:
@@ -402,13 +402,13 @@ class VPPOperator(object):
             storage_p_mw.rename(self.net.storage.name, axis='columns', inplace=True)
             storage_p_mw.index = pd.to_datetime(storage_p_mw.index)
             
-        results = {'ext_grid':ext_grid, 
-                   'trafo_loading_percent':trafo_loading_percent,
-                   'line_loading_percent':line_loading_percent,
-                   'bus_vm_pu':bus_vm_pu,
-                   'load_p_mw':load_p_mw,
-                   'sgen_p_mw':sgen_p_mw,
-                   'storage_p_mw':storage_p_mw}
+        results = {'ext_grid': ext_grid,
+                   'trafo_loading_percent': trafo_loading_percent,
+                   'line_loading_percent': line_loading_percent,
+                   'bus_vm_pu': bus_vm_pu,
+                   'load_p_mw': load_p_mw,
+                   'sgen_p_mw': sgen_p_mw,
+                   'storage_p_mw': storage_p_mw}
             
         return results
     
@@ -499,40 +499,40 @@ class VPPOperator(object):
         
         """
         
-        results['ext_grid'].plot(figsize=(16,9), title='ext_grid')
+        results['ext_grid'].plot(figsize=(16, 9), title='ext_grid')
         plt.show()
-        results['trafo_loading_percent'].plot(figsize=(16,9), title='trafo_loading_percent')
+        results['trafo_loading_percent'].plot(figsize=(16, 9), title='trafo_loading_percent')
         plt.show()
-        results['line_loading_percent'].plot(figsize=(16,9), title='line_loading_percent')
+        results['line_loading_percent'].plot(figsize=(16, 9), title='line_loading_percent')
         plt.show()
-        results['bus_vm_pu'].plot(figsize=(16,9), title='bus_vm_pu')
+        results['bus_vm_pu'].plot(figsize=(16, 9), title='bus_vm_pu')
         plt.show()
-        results['load_p_mw'].plot(figsize=(16,9), title='load_p_mw')
+        results['load_p_mw'].plot(figsize=(16, 9), title='load_p_mw')
         plt.show()
         
         self.plot_pv(results)
            
         self.plot_wind(results)
         
-        if len(self.virtualPowerPlant.buses_with_storage) > 0:
-            results['storage_p_mw'].plot(figsize=(16,9), title='storage_p_mw')
+        if len(self.virtual_power_plant.buses_with_storage) > 0:
+            results['storage_p_mw'].plot(figsize=(16, 9), title='storage_p_mw')
             
             
     def plot_pv(self, results):
         
-        if len(self.virtualPowerPlant.buses_with_pv) > 0:
+        if len(self.virtual_power_plant.buses_with_pv) > 0:
             for gen in results['sgen_p_mw'].columns:
                 if "PV" in gen:
-                    results['sgen_p_mw'][gen].plot(figsize=(16,9), title='PV [MW]')
+                    results['sgen_p_mw'][gen].plot(figsize=(16, 9), title='PV [MW]')
             plt.show()
             
     
     def plot_wind(self, results):
         
-        if len(self.virtualPowerPlant.buses_with_wind) > 0:
+        if len(self.virtual_power_plant.buses_with_wind) > 0:
             for gen in results['sgen_p_mw'].columns:
-                if "Wind" in gen:
-                    results['sgen_p_mw'][gen].plot(figsize=(16,9), title='Wind [MW]')
+                if "WindPower" in gen:
+                    results['sgen_p_mw'][gen].plot(figsize=(16, 9), title='WindPower [MW]')
             plt.show()
             
             
@@ -571,9 +571,9 @@ class VPPOperator(object):
         
         """
         
-        for comp in self.virtualPowerPlant.components.keys():
+        for comp in self.virtual_power_plant.components.keys():
             if 'storage' in comp:
-                self.virtualPowerPlant.components[comp].timeseries.plot(figsize=(16,9), title=comp)
+                self.virtual_power_plant.components[comp].timeseries.plot(figsize=(16, 9), title=comp)
                 
     
 

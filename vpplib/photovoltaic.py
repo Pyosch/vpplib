@@ -1,11 +1,11 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPPhotovoltaic class.
+This file contains the basic functionalities of the Photovoltaic class.
 
 """
 
-from .VPPComponent import VPPComponent
+from .component import Component
 
 import pandas as pd
 
@@ -16,16 +16,16 @@ from pvlib.pvsystem import PVSystem
 from pvlib.location import Location
 from pvlib.modelchain import ModelChain
 
-class VPPPhotovoltaic(VPPComponent):
+class Photovoltaic(Component):
 
-    def __init__(self, unit, identifier, environment = None, 
-                 user_profile = None, cost = None,
-                 module_lib = 'SandiaMod', 
-                 module = 'Canadian_Solar_CS5P_220M___2009_', 
-                 inverter_lib = 'cecinverter', 
-                 inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
-                 surface_tilt = 20, surface_azimuth = 200,
-                 modules_per_string = 1, strings_per_inverter = 1):
+    def __init__(self, unit, identifier, environment=None,
+                 user_profile=None, cost=None,
+                 module_lib='SandiaMod',
+                 module='Canadian_Solar_CS5P_220M___2009_',
+                 inverter_lib='cecinverter',
+                 inverter='ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
+                 surface_tilt=20, surface_azimuth=200,
+                 modules_per_string=1, strings_per_inverter=1):
         """
         Info
         ----
@@ -59,13 +59,12 @@ class VPPPhotovoltaic(VPPComponent):
         """
 
         # Call to super class
-        super(VPPPhotovoltaic, self).__init__(unit, environment, user_profile, cost)
+        super(Photovoltaic, self).__init__(unit, environment, user_profile, cost)
     
     
         # Configure attributes
         self.identifier = identifier
-        
-    
+
         self.limit = 1.0
         
         # load some module and inverter specifications
@@ -80,10 +79,10 @@ class VPPPhotovoltaic(VPPComponent):
         
         self.system = PVSystem(surface_tilt=surface_tilt, 
                                surface_azimuth=surface_azimuth,
-                          module_parameters=self.module,
-                          inverter_parameters=self.inverter,
-                          modules_per_string=modules_per_string,
-                          strings_per_inverter=strings_per_inverter)
+                               module_parameters=self.module,
+                               inverter_parameters=self.inverter,
+                               modules_per_string=modules_per_string,
+                               strings_per_inverter=strings_per_inverter)
         
         self.modelchain = ModelChain(self.system, self.location, 
                                      name=identifier)
@@ -94,29 +93,27 @@ class VPPPhotovoltaic(VPPComponent):
         
         self.timeseries = None
 
-
-    def prepareTimeSeries(self):
+    def prepare_time_series(self):
         
         if len(self.environment.pv_data) == 0:
             raise ValueError("self.environment.pv_data is empty.")
             
         self.modelchain.run_model(
-                times = self.environment.pv_data.loc[
+                times=self.environment.pv_data.loc[
                         self.environment.start:self.environment.end].index, 
-                weather = self.environment.pv_data.loc[
+                weather=self.environment.pv_data.loc[
                         self.environment.start:self.environment.end])
         
-        timeseries = pd.DataFrame(self.modelchain.ac/1000) #convert to kW
-        timeseries.rename(columns = {0:self.identifier}, inplace=True)
+        timeseries = pd.DataFrame(self.modelchain.ac/1000)  # convert to kW
+        timeseries.rename(columns={0: self.identifier}, inplace=True)
         timeseries.set_index(timeseries.index, inplace=True)
         timeseries.index = pd.to_datetime(timeseries.index)
         
         self.timeseries = timeseries
         
         return timeseries
-    
-    
-    def resetTimeSeries(self):
+
+    def reset_time_series(self):
         
         self.timeseries = None
         
@@ -130,18 +127,19 @@ class VPPPhotovoltaic(VPPComponent):
     # This function limits the power of the photovoltaic to the given percentage.
     # It cuts the current power production down to the peak power multiplied by
     # the limit (Float [0;1]).
-    def limitPowerTo(self, limit):
+    def limit_power_to(self, limit):
 
         # Validate input parameter
-        if limit >= 0 and limit <= 1:
+        if 0 <= limit <= 1:
 
             # Parameter is valid
             self.limit = limit
 
         else:
-        
-            # Paramter is invalid
-            return
+
+            # Parameter is invalid
+
+            raise ValueError("Limit-parameter is not valid")
         
 
     # ===================================================================================
@@ -149,7 +147,7 @@ class VPPPhotovoltaic(VPPComponent):
     # ===================================================================================
 
     # Override balancing function from super class.
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
         
         if type(timestamp) == int:
             
@@ -164,7 +162,7 @@ class VPPPhotovoltaic(VPPComponent):
                              "Stringformat: YYYY-MM-DD hh:mm:ss")
             
 
-    def observationsForTimestamp(self, timestamp):
+    def observations_for_timestamp(self, timestamp):
         
         """
         Info
@@ -206,17 +204,17 @@ class VPPPhotovoltaic(VPPComponent):
         """
         if type(timestamp) == int:
             
-            el_generation= self.timeseries.iloc[timestamp]
+            el_generation = self.timeseries.iloc[timestamp]
         
         elif type(timestamp) == str:
             
-            el_generation= self.timeseries.loc[timestamp]
+            el_generation = self.timeseries.loc[timestamp]
         
         else:
             raise ValueError("timestamp needs to be of type int or string. "+
                              "Stringformat: YYYY-MM-DD hh:mm:ss")
         
         
-        observations = {'el_generation':el_generation}
+        observations = {'el_generation': el_generation}
         
         return observations

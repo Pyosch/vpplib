@@ -1,24 +1,24 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPEnergyStorage class.
+This file contains the basic functionalities of the ElectricalStorage class.
 
 """
 
-from .VPPComponent import VPPComponent
+from .component import Component
 import pandas as pd
 
-class VPPEnergyStorage(VPPComponent):
+class ElectricalStorage(Component):
 
     def __init__(self, unit=None, identifier=None, capacity=None, 
-                 environment=None, user_profile=None, cost = None,
+                 environment=None, user_profile=None, cost=None,
                  charge_efficiency=0.98, discharge_efficiency=0.98, 
                  max_power=None, max_c=None):
         
         """
         Info
         ----
-        The class "VPPEnergyStorage" adds functionality to implement an 
+        The class "ElectricalStorage" adds functionality to implement an
         electrical energy storage to the virtual power plant.
         
         
@@ -54,7 +54,7 @@ class VPPEnergyStorage(VPPComponent):
         """
 
         # Call to super class
-        super(VPPEnergyStorage, self).__init__(unit, environment, user_profile, cost)
+        super(ElectricalStorage, self).__init__(unit, environment, user_profile, cost)
 
 
         # Setup attributes
@@ -70,7 +70,7 @@ class VPPEnergyStorage(VPPComponent):
         self.timeseries = None
 
 
-    def prepareTimeSeries(self):
+    def prepare_time_series(self):
         
         soc_lst = []
         res_load_lst = []
@@ -89,7 +89,7 @@ class VPPEnergyStorage(VPPComponent):
         return self.timeseries
     
     
-    def resetTimeSeries(self):
+    def reset_time_series(self):
         
         self.timeseries = None
         
@@ -179,7 +179,7 @@ class VPPEnergyStorage(VPPComponent):
     # Observation Functions
     # ===================================================================================
 
-    def observationsForTimestamp(self, timestamp):
+    def observations_for_timestamp(self, timestamp):
         
         """
         Info
@@ -285,12 +285,12 @@ class VPPEnergyStorage(VPPComponent):
 
 
         # Check if charge exceeds capacity
-        if self.state_of_charge + energy * self.chargeEfficiency > self.capacity:
-            energy = (self.capacity - self.state_of_charge) * (1 / self.chargeEfficiency)
+        if self.state_of_charge + energy * self.charge_efficiency > self.capacity:
+            energy = (self.capacity - self.state_of_charge) * (1 / self.charge_efficiency)
 
 
         # Update state of charge
-        self.state_of_charge += energy * self.chargeEfficiency
+        self.state_of_charge += energy * self.charge_efficiency
         
         
         # Check if data already exists
@@ -367,7 +367,7 @@ class VPPEnergyStorage(VPPComponent):
     # ===================================================================================
 
     # Override balancing function from super class.
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
         
         if type(timestamp) == int:
             

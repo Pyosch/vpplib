@@ -2,7 +2,7 @@
 """
 Info
 ----
-In this testfile the basic functionalities of the VPPPhotovoltaic class are tested.
+In this testfile the basic functionalities of the Photovoltaic class are tested.
 Run each time you make changes on an existing function.
 Adjust if a new function is added or 
 parameters in an existing function are changed.
@@ -11,9 +11,9 @@ parameters in an existing function are changed.
 
 import matplotlib.pyplot as plt
 
-from model.VPPEnvironment import VPPEnvironment
-from model.VPPUserProfile import VPPUserProfile
-from model.VPPPhotovoltaic import VPPPhotovoltaic
+from vpplib.environment import Environment
+from vpplib.user_profile import UserProfile
+from vpplib.photovoltaic import Photovoltaic
 
 
 latitude = 50.941357
@@ -24,44 +24,45 @@ end = '2015-06-07 23:45:00'
 timestamp_int = 48
 timestamp_str = '2015-06-05 12:00:00'
 
-environment = VPPEnvironment(start=start, end=end)
+environment = Environment(start=start, end=end)
 environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
 
-user_profile = VPPUserProfile(identifier=identifier, latitude=latitude,
-                              longitude=longitude)
+user_profile = UserProfile(identifier=identifier, latitude=latitude,
+                           longitude=longitude)
 
-pv = VPPPhotovoltaic(unit="kW", identifier=identifier, environment = environment, 
-                     user_profile = user_profile,
-                     module_lib = 'SandiaMod', 
-                     module = 'Canadian_Solar_CS5P_220M___2009_', 
-                     inverter_lib = 'cecinverter', 
-                     inverter = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
-                     surface_tilt = 20, surface_azimuth = 200,
-                     modules_per_string = 2, strings_per_inverter = 2)
+pv = Photovoltaic(unit="kW", identifier=identifier, environment = environment,
+                  user_profile=user_profile,
+                  module_lib='SandiaMod',
+                  module='Canadian_Solar_CS5P_220M___2009_',
+                  inverter_lib='cecinverter',
+                  inverter='ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
+                  surface_tilt=20, surface_azimuth=200,
+                  modules_per_string=2, strings_per_inverter=2)
 
-def test_prepareTimeSeries(pv):
+
+def test_prepare_time_series(pv):
     
-    pv.prepareTimeSeries()
-    print("prepareTimeSeries:")
+    pv.prepare_time_series()
+    print("prepare_time_series:")
     print(pv.timeseries.head())
     pv.timeseries.plot(figsize=(16,9))
     plt.show()
 
-def test_valueForTimestamp(pv, timestamp):
+def test_value_for_timestamp(pv, timestamp):
     
-    timestepvalue = pv.valueForTimestamp(timestamp)
-    print("\nvalueForTimestamp:\n", timestepvalue)
+    timestepvalue = pv.value_for_timestamp(timestamp)
+    print("\nvalue_for_timestamp:\n", timestepvalue)
     
-def observationsForTimestamp(pv, timestamp):
+def observations_for_timestamp(pv, timestamp):
     
-    print('observationsForTimestamp:')
-    observation = pv.observationsForTimestamp(timestamp)
+    print('observations_for_timestamp:')
+    observation = pv.observations_for_timestamp(timestamp)
     print(observation, '\n')
     
     
-test_prepareTimeSeries(pv)
-test_valueForTimestamp(pv, timestamp_int)
-test_valueForTimestamp(pv, timestamp_str)
+test_prepare_time_series(pv)
+test_value_for_timestamp(pv, timestamp_int)
+test_value_for_timestamp(pv, timestamp_str)
 
-observationsForTimestamp(pv, timestamp_int)
-observationsForTimestamp(pv, timestamp_str)
+observations_for_timestamp(pv, timestamp_int)
+observations_for_timestamp(pv, timestamp_str)

@@ -1,29 +1,30 @@
 """
 Info
 ----
-This file contains the basic functionalities of the VPPWind class.
+This file contains the basic functionalities of the WindPower class.
 
 """
 
-from .VPPComponent import VPPComponent
+from .component import Component
 
 
 # windpowerlib imports
 from windpowerlib import ModelChain
 from windpowerlib import WindTurbine
 
-class VPPWind(VPPComponent):
 
-    def __init__(self, unit = "kW", identifier = None, 
-                 environment = None, user_profile = None, cost = None,
-                 turbine_type = 'E-126/4200', hub_height = 135,
-                 rotor_diameter = 127, fetch_curve = 'power_curve',
-                 data_source = 'oedb', wind_speed_model = 'logarithmic', 
-                 density_model = 'barometric',
-                 temperature_model = 'linear_gradient', 
-                 power_output_model = 'power_curve', 
-                 density_correction = False,
-                 obstacle_height = 0, hellman_exp = None
+class WindPower(Component):
+
+    def __init__(self, unit="kW", identifier=None,
+                 environment=None, user_profile=None, cost=None,
+                 turbine_type='E-126/4200', hub_height=135,
+                 rotor_diameter=127, fetch_curve='power_curve',
+                 data_source='oedb', wind_speed_model='logarithmic',
+                 density_model='barometric',
+                 temperature_model='linear_gradient',
+                 power_output_model='power_curve',
+                 density_correction=False,
+                 obstacle_height=0, hellman_exp=None
                  ):
         """
         Info
@@ -58,14 +59,13 @@ class VPPWind(VPPComponent):
         """
 
         # Call to super class
-        super(VPPWind, self).__init__(unit, environment, user_profile, cost)
-    
-    
+        super(WindPower, self).__init__(unit, environment, user_profile, cost)
+
         # Configure attributes
         self.identifier = identifier
         self.limit = 1.0
         
-        #WindTurbine data
+        # WindTurbine data
         self.turbine_type = turbine_type  # turbine type as in register
         self.hub_height = hub_height  # in m
         self.rotor_diameter = rotor_diameter  # in m
@@ -73,7 +73,7 @@ class VPPWind(VPPComponent):
         self.data_source = data_source  # data source oedb or name of csv file
         self.WindTurbine = None
         
-        #ModelChain data
+        # ModelChain data
         self.wind_speed_model = wind_speed_model  # 'logarithmic' (default),
                                                 # 'hellman' or
                                                 # 'interpolation_extrapolation'
@@ -89,7 +89,6 @@ class VPPWind(VPPComponent):
         self.ModelChain = None
         
         self.timeseries = None
-    
     
     def get_wind_turbine(self):
         r"""
@@ -119,7 +118,6 @@ class VPPWind(VPPComponent):
         self.wind_turbine = WindTurbine(**wind_turbine)
     
         return self.wind_turbine
-    
     
     def calculate_power_output(self):
         r"""
@@ -155,7 +153,7 @@ class VPPWind(VPPComponent):
         
         # initialize ModelChain with own specifications and use run_model method
         # to calculate power output
-        if self.environment.start ==None or self.environment.end == None:
+        if self.environment.start == None or self.environment.end == None:
             self.ModelChain = ModelChain(self.wind_turbine, **modelchain_data
                                          ).run_model(self.environment.wind_data)
             
@@ -165,13 +163,12 @@ class VPPWind(VPPComponent):
                                                  self.environment.start:
                                              self.environment.end])
             
-        # write power output time series to VPPWind.timeseries
-        self.timeseries = self.ModelChain.power_output /1000 #convert to kW
+        # write power output time series to WindPower.timeseries
+        self.timeseries = self.ModelChain.power_output /1000  # convert to kW
     
         return
 
-
-    def prepareTimeSeries(self):
+    def prepare_time_series(self):
     
         if len(self.environment.wind_data) == 0:
             raise ValueError("self.environment.wind_data is empty.")
@@ -181,8 +178,7 @@ class VPPWind(VPPComponent):
         
         return self.timeseries
     
-    
-    def resetTimeSeries(self):
+    def reset_time_series(self):
     
         self.timeseries = None
         
@@ -198,7 +194,7 @@ class VPPWind(VPPComponent):
     # This function limits the power to the given percentage.
     # It cuts the current power production down to the peak power multiplied by
     # the limit (Float [0;1]).
-    def limitPowerTo(self, limit):
+    def limit_power_to(self, limit):
 
         # Validate input parameter
         if limit >= 0 and limit <= 1:
@@ -207,17 +203,17 @@ class VPPWind(VPPComponent):
             self.limit = limit
 
         else:
-            raise ValueError("Paramter is invalid")
-        
-            return
-        
+
+            # Parameter is invalid
+
+            raise ValueError("Limit-parameter is not valid")
 
     # ===================================================================================
     # Balancing Functions
     # ===================================================================================
 
     # Override balancing function from super class.
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
         
         if type(timestamp) == int:
             
@@ -229,9 +225,8 @@ class VPPWind(VPPComponent):
         
         else:
             raise ValueError("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
-            
 
-    def observationsForTimestamp(self, timestamp):
+    def observations_for_timestamp(self, timestamp):
         
         """
         Info
@@ -278,8 +273,7 @@ class VPPWind(VPPComponent):
         else:
             raise ValueError("timestamp needs to be of type int or string. "+
                              "Stringformat: YYYY-MM-DD hh:mm:ss")
-        
-        
+
         observations = {'wind_generation':wind_generation}
         
         return observations
