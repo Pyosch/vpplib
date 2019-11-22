@@ -39,7 +39,7 @@ temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
 identifier = "bus_1"
 latitude = 50.941357
 longitude = 6.958307
-yearly_heat_demand = 12500
+yearly_thermal_energy_demand = 12500
 comfort_factor = None
 daily_vehicle_usage = None
 building_type = 'DE_HEF33'
@@ -51,7 +51,7 @@ weekend_trip_end = []
 
 baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
-baseload.index = pd.date_range(start=year, periods = 35040, freq=time_freq, name ='time')
+baseload.index = pd.date_range(start=year, periods=35040, freq=time_freq, name='time')
 
 unit = "kW"
 
@@ -128,7 +128,7 @@ environment.get_mean_temp_hours(file=temp_hours_file)
 user_profile = UserProfile(identifier=identifier,
                            latitude=latitude,
                            longitude=longitude,
-                           yearly_heat_demand=yearly_heat_demand,
+                           thermal_energy_demand_yearly=yearly_thermal_energy_demand,
                            building_type=building_type,
                            comfort_factor=comfort_factor,
                            t_0=t_0,
@@ -138,7 +138,7 @@ user_profile = UserProfile(identifier=identifier,
                            weekend_trip_start=weekend_trip_start,
                            weekend_trip_end=weekend_trip_end)
 
-user_profile.get_heat_demand()
+user_profile.get_thermal_energy_demand()
 
 #%% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
@@ -312,7 +312,7 @@ for bus in vpp.buses_with_wind:
     
     pp.create_sgen(net, bus=net.bus[net.bus.name == bus].index[0],
                    p_mw=(vpp.components[bus+'_Wind'].wind_turbine.nominal_power/1000000),
-                   name=(bus+'_Wind'), type = 'WindPower')
+                   name=(bus+'_Wind'), type='WindPower')
     
 #%% initialize operator
 
@@ -329,6 +329,6 @@ single_result = operator.extract_single_result(net_dict, res='ext_grid', value='
 
 #%% plot results of powerflow and storage values
 
-single_result.plot(figsize=(16,9), title='ext_grid from single_result function')
+single_result.plot(figsize=(16, 9), title='ext_grid from single_result function')
 operator.plot_results(results)
 operator.plot_storages()

@@ -45,7 +45,7 @@ def test_prepare_time_series(pv):
     pv.prepare_time_series()
     print("prepare_time_series:")
     print(pv.timeseries.head())
-    pv.timeseries.plot(figsize=(16,9))
+    pv.timeseries.plot(figsize=(16, 9))
     plt.show()
 
 def test_value_for_timestamp(pv, timestamp):

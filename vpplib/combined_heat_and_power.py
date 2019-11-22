@@ -69,22 +69,22 @@ class CombinedHeatAndPower(Component):
         self.min_stop_time = min_stop_time
         self.is_running = False
         self.timeseries = pd.DataFrame(
-                columns=["heat_output", "el_demand"], 
+                columns=["thermal_energy_output", "el_demand"],
                 index=pd.date_range(start=self.environment.start, 
                                     end=self.environment.end, 
                                     freq=self.environment.time_freq, 
                                     name="time"))
 
-        self.last_ramp_up = self.user_profile.heat_demand.index[0]
-        self.last_ramp_down = self.user_profile.heat_demand.index[0]
+        self.last_ramp_up = self.user_profile.thermal_energy_demand.index[0]
+        self.last_ramp_down = self.user_profile.thermal_energy_demand.index[0]
         self.limit = 1.0
     
 
     def prepare_time_series(self):
     
         self.timeseries = pd.DataFrame(
-                columns=["heat_output", "el_demand"], 
-                index=self.user_profile.heat_demand.index)
+                columns=["thermal_energy_output", "el_demand"],
+                index=self.user_profile.thermal_energy_demand.index)
         
         return self.timeseries
     
@@ -92,7 +92,7 @@ class CombinedHeatAndPower(Component):
     def reset_time_series(self):
         
         self.timeseries = pd.DataFrame(
-                columns=["heat_output", "el_demand"], 
+                columns=["thermal_energy_output", "el_demand"],
                 index=pd.date_range(start=self.environment.start, 
                                     end=self.environment.end, 
                                     freq=self.environment.time_freq, 
@@ -300,16 +300,16 @@ class CombinedHeatAndPower(Component):
 
         # Return result
         if self.is_running:
-            heat_output = self.th_power
+            thermal_energy_output = self.th_power
             el_demand = self.el_power *-1
             
         else: 
-            heat_output = 0
+            thermal_energy_output = 0
             el_demand = 0
             
         
         return {
-            "heat_output": heat_output, 
+            "thermal_energy_output": thermal_energy_output,
             "el_demand": el_demand,
             "is_running": self.is_running,
             "last_ramp_up": self.last_ramp_up,
@@ -319,7 +319,7 @@ class CombinedHeatAndPower(Component):
         
     def log_observation(self, observation, timestamp):
         
-        self.timeseries.heat_output.loc[timestamp] = observation["heat_output"]
+        self.timeseries.thermal_energy_output.loc[timestamp] = observation["thermal_energy_output"]
         self.timeseries.el_demand.loc[timestamp] = observation["el_demand"]
         
         return self.timeseries

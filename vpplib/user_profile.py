@@ -16,8 +16,8 @@ class UserProfile(object):
     def __init__(self, identifier=None,
                  latitude=None,
                  longitude=None,
-                 yearly_heat_demand=None,
-                 building_type=None, #'DE_HEF33'
+                 thermal_energy_demand_yearly=None,
+                 building_type=None,  #'DE_HEF33'
                  max_connection_power=None,
                  comfort_factor=None,
                  t_0=40,
@@ -79,7 +79,7 @@ class UserProfile(object):
         self.mean_temp_days.index = pd.to_datetime(self.mean_temp_days.index)
         self.year = str(next(iter(self.mean_temp_days.index)))[:4]
         
-        self.heat_demand = None
+        self.thermal_energy_demand = None
         
         # 'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.building_type = building_type
@@ -101,8 +101,8 @@ class UserProfile(object):
                                     decimal=",")
         self.building_parameters = None
         self.h_del = None
-        self.yearly_heat_demand = yearly_heat_demand
-        self.heat_demand_daily = None
+        self.yearly_thermal_energy_demand = thermal_energy_demand_yearly
+        self.thermal_energy_demand_daily = None
         self.consumerfactor = None
         
         
@@ -174,7 +174,7 @@ class UserProfile(object):
         return self.week_trip_start, self.week_trip_end, self.weekend_trip_start, self.weekend_trip_end
     
         
-    def get_heat_demand(self):
+    def get_thermal_energy_demand(self):
         
         """
         Info
@@ -212,19 +212,19 @@ class UserProfile(object):
         
         self.get_h_del()
         
-        self.get_heat_demand_daily()
+        self.get_thermal_energy_demand_daily()
             
         self.get_consumerfactor()
         
-        self.get_hourly_heat_demand()
+        self.get_thermal_energy_demand_hourly()
         
-        self.heat_demand = self.hour_to_qarter()
+        self.thermal_energy_demand = self.hour_to_quarter()
         
-        return self.heat_demand
+        return self.thermal_energy_demand
     
     # %%:
     # =========================================================================
-    # Basic Functions for get_heat_demand
+    # Basic Functions for get_thermal_energy_demand
     # =========================================================================
     
     def get_building_parameters(self):
@@ -334,7 +334,7 @@ class UserProfile(object):
     
     # %%:
         
-    def get_heat_demand_daily(self):
+    def get_thermal_energy_demand_daily(self):
         
         """
         Info
@@ -429,14 +429,14 @@ class UserProfile(object):
             else:
                 traceback.print_exc("df.mean_temp is out of bounds")
             
-        self.heat_demand_daily = pd.DataFrame(
+        self.thermal_energy_demand_daily = pd.DataFrame(
                 demand_daily_lst, 
-                index = pd.date_range(self.year, 
+                index=pd.date_range(self.year,
                                       periods=8760, 
                                       freq="H",
                                       name="time"))
 
-        return self.heat_demand_daily
+        return self.thermal_energy_demand_daily
     
     # %%:
     
@@ -475,12 +475,12 @@ class UserProfile(object):
         """
         
         # consumerfactor (Kundenwert) K_w
-        self.consumerfactor = self.yearly_heat_demand/(sum(self.h_del["h_del"])) 
+        self.consumerfactor = self.yearly_thermal_energy_demand / (sum(self.h_del["h_del"]))
         return self.consumerfactor
     
     # %%:
     
-    def get_hourly_heat_demand(self):
+    def get_thermal_energy_demand_hourly(self):
         
         """
         Info
@@ -514,13 +514,13 @@ class UserProfile(object):
         
         """
         
-        self.hourly_heat_demand = self.heat_demand_daily * self.consumerfactor
+        self.thermal_energy_demand_hourly = self.thermal_energy_demand_daily * self.consumerfactor
         
-        return self.hourly_heat_demand
+        return self.thermal_energy_demand_hourly
 
     # %%:
         
-    def hour_to_qarter(self):
+    def hour_to_quarter(self):
         
         """
         Info
@@ -554,9 +554,9 @@ class UserProfile(object):
         
         """
         
-        self.heat_demand = pd.DataFrame(index=pd.date_range(
+        self.thermal_energy_demand = pd.DataFrame(index=pd.date_range(
                 self.year, periods=35040, freq='15min', name="time"))
-        self.heat_demand["heat_demand"] = self.hourly_heat_demand
-        self.heat_demand.interpolate(inplace=True)
+        self.thermal_energy_demand["thermal_energy_demand"] = self.thermal_energy_demand_hourly
+        self.thermal_energy_demand.interpolate(inplace=True)
         
-        return self.heat_demand
+        return self.thermal_energy_demand

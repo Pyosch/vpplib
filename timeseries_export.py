@@ -44,7 +44,7 @@ latitude = 50.941357
 longitude = 6.958307
 target_temperature = 60 # °C
 t_0 = 40 # °C
-yearly_heat_demand = 12500 # kWh thermal
+yearly_thermal_energy_demand = 12500 # kWh thermal
 
 # Values for pv
 pv_file = "./input/pv/dwd_pv_data_2015.csv"
@@ -111,7 +111,7 @@ environment.get_mean_temp_hours(file=temp_hours_file)
 user_profile = UserProfile(identifier=identifier,
                            latitude=latitude,
                            longitude=longitude,
-                           yearly_heat_demand=yearly_heat_demand,
+                           thermal_energy_demand_yearly=yearly_thermal_energy_demand,
                            building_type=building_type,
                            comfort_factor=None,
                            t_0=t_0,
@@ -119,7 +119,7 @@ user_profile = UserProfile(identifier=identifier,
                            week_trip_start=[], week_trip_end=[],
                            weekend_trip_start=[], weekend_trip_end=[])
 
-user_profile.get_heat_demand()
+user_profile.get_thermal_energy_demand()
 
 #%% baseload
 
@@ -182,7 +182,7 @@ df_component_values["bev_arrival_soc"] = bev.battery_min/bev.battery_max*100
 def get_at_home(bev):
     
     bev.timeseries = pd.DataFrame(index=pd.date_range(start=bev.environment.start, end=bev.environment.end,
-                                                      freq=bev.environment.time_freq, name ='Time'))
+                                                      freq=bev.environment.time_freq, name='Time'))
     bev.split_time() 
     bev.set_weekday()
     bev.set_at_home()
@@ -223,18 +223,18 @@ if scenario == 1:
                   min_runtime=min_runtime_hp,
                   min_stop_time=min_stop_time_hp)
 
-    loadshape = tes_hp.user_profile.heat_demand[0:]["heat_demand"]
+    loadshape = tes_hp.user_profile.thermal_energy_demand[0:]["thermal_energy_demand"]
     outside_temp = tes_hp.user_profile.mean_temp_hours.temperature
     log, log_load, log_cop = [], [],[]
-    hp.last_ramp_up = hp.user_profile.heat_demand.index[0]
-    hp.last_ramp_down = hp.user_profile.heat_demand.index[0]
-    for i in hp.user_profile.heat_demand.index:
-        heat_demand = hp.user_profile.heat_demand.heat_demand.loc[i]
+    hp.last_ramp_up = hp.user_profile.thermal_energy_demand.index[0]
+    hp.last_ramp_down = hp.user_profile.thermal_energy_demand.index[0]
+    for i in hp.user_profile.thermal_energy_demand.index:
+        thermal_energy_demand = hp.user_profile.thermal_energy_demand.thermal_energy_demand.loc[i]
         if tes_hp.get_needs_loading(): 
             hp.ramp_up(i)
         else: 
             hp.ramp_down(i)
-        temp = tes_hp.operate_storage(heat_demand, i, hp)
+        temp = tes_hp.operate_storage(thermal_energy_demand, i, hp)
         if hp.is_running:
             log_load.append(el_power_hp)
         else: 
@@ -246,11 +246,11 @@ if scenario == 1:
     
 elif scenario == 2:
     
-    df_timeseries["heat_demand"] = user_profile.heat_demand
+    df_timeseries["thermal_energy_demand"] = user_profile.thermal_energy_demand
     df_timeseries["cop"] = hp.get_cop()
-    df_timeseries.cop.interpolate(inplace = True)
+    df_timeseries.cop.interpolate(inplace=True)
     
-    df_timeseries.heat_demand.plot(figsize=figsize, label="heat demand[kW-therm]")
+    df_timeseries.thermal_energy_demand.plot(figsize=figsize, label="thermal energy demand[kW-therm]")
     df_timeseries.cop.plot(figsize=figsize, label="cop [-]")
     
 else:
@@ -265,7 +265,7 @@ tes_chp = ThermalEnergyStorage(identifier='th_storage',
                                user_profile = user_profile,
                                hysteresis = hysteresis,
                                target_temperature = target_temperature,
-                               cp = cp, heatloss_per_day=heatloss_per_day)
+                               cp = cp, thermal_energy_loss_per_day=heatloss_per_day)
 
 chp = CombinedHeatAndPower(identifier='chp1',
                            environment=environment,
@@ -280,22 +280,22 @@ chp = CombinedHeatAndPower(identifier='chp1',
 
 #Formula: E = m * cp * T
 df_component_values["therm_storage_capacity"] = tes_chp.mass * tes_chp.cp * (tes_chp.target_temperature + tes_chp.hysteresis + 273.15) #°K
-df_component_values["thermal_storage_efficiency"] = 100 * (1 - tes_chp.heatloss_per_day)
+df_component_values["thermal_storage_efficiency"] = 100 * (1 - tes_chp.thermal_energy_loss_per_day)
 
 if scenario == 1:
     
-    loadshape = tes_chp.user_profile.heat_demand[0:]["heat_demand"]
+    loadshape = tes_chp.user_profile.thermal_energy_demand[0:]["thermal_energy_demand"]
     outside_temp = tes_chp.user_profile.mean_temp_hours.temperature
     log, log_load, log_el = [], [],[]
-    chp.last_ramp_up = chp.user_profile.heat_demand.index[0]
-    chp.last_ramp_down = chp.user_profile.heat_demand.index[0]
-    for i in chp.user_profile.heat_demand.index:
-        heat_demand = chp.user_profile.heat_demand.heat_demand.loc[i]
+    chp.last_ramp_up = chp.user_profile.thermal_energy_demand.index[0]
+    chp.last_ramp_down = chp.user_profile.thermal_energy_demand.index[0]
+    for i in chp.user_profile.thermal_energy_demand.index:
+        thermal_energy_demand = chp.user_profile.thermal_energy_demand.thermal_energy_demand.loc[i]
         if tes_chp.get_needs_loading(): 
             chp.ramp_up(i)
         else: 
             chp.ramp_down(i)
-        temp = tes_chp.operate_storage(heat_demand, i, chp)
+        temp = tes_chp.operate_storage(thermal_energy_demand, i, chp)
         if chp.is_running:
             log_load.append(th_power_chp)
             log_el.append(el_power_chp)

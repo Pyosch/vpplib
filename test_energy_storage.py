@@ -79,7 +79,7 @@ storage = ElectricalEnergyStorage(unit=unit, identifier=(name + '_storage'),
 
 baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
-baseload.set_index(environment.pv_data.index, inplace = True)
+baseload.set_index(environment.pv_data.index, inplace=True)
 
 #combine baseload and pv timeseries to get residual load
 house_loadshape = pd.DataFrame(baseload['0'].loc[start:end]/1000)

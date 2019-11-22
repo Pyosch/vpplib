@@ -24,14 +24,14 @@ timestamp_str = '2015-01-01 12:00:00'
 timebase = 15
 
 #Values for user_profile
-yearly_heat_demand = 12500
+yearly_thermal_energy_demand = 12500
 building_type = 'DE_HEF33'
 t_0 = 40
 
 #Values for Heatpump
 el_power = 5 #kW electric
-rampUpTime = 1/15 #timesteps
-rampDownTime = 1/15 #timesteps
+ramp_up_time = 1 / 15 #timesteps
+ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
 
@@ -41,27 +41,27 @@ environment = Environment(timebase=timebase, start=start, end=end, year=year,
 user_profile = UserProfile(identifier=None,
                            latitude=None,
                            longitude=None,
-                           yearly_heat_demand=yearly_heat_demand,
+                           thermal_energy_demand_yearly=yearly_thermal_energy_demand,
                            building_type=building_type,
                            comfort_factor=None,
                            t_0=t_0)
 
 
-def test_get_heat_demand(user_profile):
+def test_get_thermal_energy_demand(user_profile):
     
-    user_profile.get_heat_demand()
-    user_profile.heat_demand.plot()
+    user_profile.get_thermal_energy_demand()
+    user_profile.thermal_energy_demand.plot()
     plt.show()
 
 
-test_get_heat_demand(user_profile)
+test_get_thermal_energy_demand(user_profile)
 
 hp = HeatPump(identifier='hp1',
-              environment=environment, user_profile = user_profile,
-              el_power = el_power, ramp_up_time= rampUpTime,
-              ramp_down_time= rampDownTime,
-              min_runtime = min_runtime,
-              min_stop_time = min_stop_time)
+              environment=environment, user_profile=user_profile,
+              el_power=el_power, ramp_up_time=ramp_up_time,
+              ramp_down_time=ramp_down_time,
+              min_runtime=min_runtime,
+              min_stop_time=min_stop_time)
 
 
 def test_get_cop(hp):
@@ -83,7 +83,7 @@ def test_value_for_timestamp(hp, timestamp):
     
     print('value_for_timestamp:')
     demand= hp.value_for_timestamp(timestamp)
-    print("El. Demand: ",demand, '\n')
+    print("El. Demand: ", demand, '\n')
     
 def test_observations_for_timestamp(hp, timestamp):
     

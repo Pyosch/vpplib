@@ -15,7 +15,7 @@ class ThermalEnergyStorage(Component):
     def __init__(self, unit="kWh", identifier=None,
                  environment=None, user_profile=None, cost=None,
                  target_temperature=60, hysteresis=3, mass=300, cp=4.2,
-                 heatloss_per_day=0.13):
+                 thermal_energy_loss_per_day=0.13):
         
         """
         Info
@@ -70,37 +70,37 @@ class ThermalEnergyStorage(Component):
         self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
         #Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10% 
         #Bereitschaftsverluste hat (ohne Rohrleitungen!!)
-        self.heatloss_per_day = heatloss_per_day
-        self.heatloss_per_timestep = 1 - (heatloss_per_day / 
-                                          (24 * (60 / self.environment.timebase)))
+        self.thermal_energy_loss_per_day = thermal_energy_loss_per_day
+        self.thermal_energy_loss_per_timestep = 1 - (thermal_energy_loss_per_day /
+                                                     (24 * (60 / self.environment.timebase)))
         self.needs_loading = None
     
-    def operate_storage(self, timestamp, heat_generator_class):
+    def operate_storage(self, timestamp, thermal_energy_generator):
         
         if self.get_needs_loading(): 
-            heat_generator_class.ramp_up(timestamp)
+            thermal_energy_generator.ramp_up(timestamp)
         else: 
-            heat_generator_class.ramp_down(timestamp)
+            thermal_energy_generator.ramp_down(timestamp)
             
-        heat_demand = self.user_profile.heat_demand.heat_demand.loc[timestamp]
-        observation = heat_generator_class.observations_for_timestamp(timestamp)
-        thermal_production = observation["heat_output"]
+        thermal_energy_demand = self.user_profile.thermal_energy_demand.thermal_energy_demand.loc[timestamp]
+        observation = thermal_energy_generator.observations_for_timestamp(timestamp)
+        thermal_production = observation["thermal_energy_output"]
         
         #Formula: E = m * cp * T
         #     <=> T = E / (m * cp)
-        self.state_of_charge -= (heat_demand - thermal_production) * 1000 / (60/self.environment.timebase)
-        self.state_of_charge *= self.heatloss_per_timestep
+        self.state_of_charge -= (thermal_energy_demand - thermal_production) * 1000 / (60/self.environment.timebase)
+        self.state_of_charge *= self.thermal_energy_loss_per_timestep
         self.current_temperature = (self.state_of_charge / (self.mass * self.cp)) - 273.15
         
-        if heat_generator_class.isRunning: 
+        if thermal_energy_generator.is_running:
             el_load = observation["el_demand"]
         else: 
             el_load = 0
         
         self.timeseries.temperature[timestamp] = self.current_temperature
         
-        #log timeseries of heat_generator_class:
-        heat_generator_class.log_observation(observation, timestamp)
+        #log timeseries of thermal_energy_generator_class:
+        thermal_energy_generator.log_observation(observation, timestamp)
         
         return self.current_temperature, el_load
 

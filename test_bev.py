@@ -46,7 +46,7 @@ def test_prepare_time_series(bev):
     bev.prepare_time_series()
     print("prepare_time_series:")
     print(bev.timeseries.head()) 
-    bev.timeseries.plot(figsize=(16,9))
+    bev.timeseries.plot(figsize=(16, 9))
     plt.show()
 
 

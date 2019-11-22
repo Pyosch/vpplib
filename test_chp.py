@@ -19,7 +19,7 @@ periods = None
 time_freq = "15 min"
 
 #Values for user_profile
-yearly_heat_demand = 2500 # kWh
+yearly_thermal_energy_demand = 2500 # kWh
 building_type = 'DE_HEF33'
 t_0 = 40 # °C
 
@@ -32,8 +32,8 @@ mass_of_storage = 500 # kg
 el_power = 4 #kw
 th_power = 6 #kW
 overall_efficiency = 0.8
-rampUpTime = 1/15 #timesteps
-rampDownTime = 1/15 #timesteps
+ramp_up_time = 1 / 15 #timesteps
+ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
 timebase = 15
@@ -43,20 +43,20 @@ environment = Environment(timebase=timebase, start=start, end=end, year=year,
                           time_freq=time_freq)
 
 user_profile = UserProfile(identifier=None,
-                           latitude = None,
-                           longitude = None,
-                           yearly_heat_demand=yearly_heat_demand,
-                           building_type = building_type,
-                           comfort_factor = None,
+                           latitude=None,
+                           longitude=None,
+                           thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+                           building_type=building_type,
+                           comfort_factor=None,
                            t_0=t_0)
 
-def test_get_heat_demand(user_profile):
+def test_get_thermal_energy_demand(user_profile):
     
-    user_profile.get_heat_demand()
-    user_profile.heat_demand.plot()
+    user_profile.get_thermal_energy_demand()
+    user_profile.thermal_energy_demand.plot()
     plt.show()
     
-test_get_heat_demand(user_profile)
+test_get_thermal_energy_demand(user_profile)
 
 tes = ThermalEnergyStorage(environment=environment,
                            user_profile=user_profile,
@@ -70,13 +70,13 @@ chp = CombinedHeatAndPower(unit="kW", identifier='chp1',
                            el_power=el_power,
                            th_power=th_power,
                            overall_efficiency=overall_efficiency,
-                           ramp_up_time=rampUpTime,
-                           ramp_down_time=rampDownTime,
+                           ramp_up_time=ramp_up_time,
+                           ramp_down_time=ramp_down_time,
                            min_runtime=min_runtime,
                            min_stop_time=min_stop_time)
 
 
-for i in tes.user_profile.heat_demand.index:
+for i in tes.user_profile.thermal_energy_demand.index:
     tes.operate_storage(i, chp)
 
 
