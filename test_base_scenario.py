@@ -14,7 +14,7 @@ from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
 from vpplib.battery_electric_vehicle import BatteryElectricVehicle
 from vpplib.heat_pump import HeatPump
-from vpplib.electrical_storage import ElectricalStorage
+from vpplib.electrical_energy_storage import ElectricalEnergyStorage
 from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
@@ -230,14 +230,14 @@ for bus in vpp.buses_with_pv:
     
 for bus in vpp.buses_with_storage:
     
-    vpp.add_component(ElectricalStorage(unit=unit,
-                                        identifier=(bus+'_storage'),
-                                        environment=environment,
-                                        user_profile=user_profile,
-                                        capacity=capacity,
-                                        charge_efficiency=charge_efficiency_storage,
-                                        discharge_efficiency=discharge_efficiency_storage,
-                                        max_power=max_power, max_c=max_c))
+    vpp.add_component(ElectricalEnergyStorage(unit=unit,
+                                              identifier=(bus+'_storage'),
+                                              environment=environment,
+                                              user_profile=user_profile,
+                                              capacity=capacity,
+                                              charge_efficiency=charge_efficiency_storage,
+                                              discharge_efficiency=discharge_efficiency_storage,
+                                              max_power=max_power, max_c=max_c))
     
     vpp.components[
             list(vpp.components.keys())[-1]].timeseries = pd.DataFrame(

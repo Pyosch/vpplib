@@ -1,14 +1,15 @@
 """
 Info
 ----
-This file contains the basic functionalities of the ElectricalStorage class.
+This file contains the basic functionalities of the ElectricalEnergyStorage class.
 
 """
 
 from .component import Component
 import pandas as pd
 
-class ElectricalStorage(Component):
+
+class ElectricalEnergyStorage(Component):
 
     def __init__(self, unit=None, identifier=None, capacity=None, 
                  environment=None, user_profile=None, cost=None,
@@ -18,7 +19,7 @@ class ElectricalStorage(Component):
         """
         Info
         ----
-        The class "ElectricalStorage" adds functionality to implement an
+        The class "ElectricalEnergyStorage" adds functionality to implement an
         electrical energy storage to the virtual power plant.
         
         
@@ -54,7 +55,7 @@ class ElectricalStorage(Component):
         """
 
         # Call to super class
-        super(ElectricalStorage, self).__init__(unit, environment, user_profile, cost)
+        super(ElectricalEnergyStorage, self).__init__(unit, environment, user_profile, cost)
 
 
         # Setup attributes

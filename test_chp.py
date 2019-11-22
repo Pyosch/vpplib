@@ -6,7 +6,7 @@ Created on Thu Aug 22 15:33:53 2019
 """
 from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
-from vpplib.thermal_storage import ThermalEnergyStorage
+from vpplib.thermal_energy_storage import ThermalEnergyStorage
 from vpplib.combined_heat_and_power import CombinedHeatAndPower
 import matplotlib.pyplot as plt
 

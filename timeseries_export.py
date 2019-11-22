@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 
 from vpplib.battery_electric_vehicle import BatteryElectricVehicle
 from vpplib.photovoltaic import Photovoltaic
-from vpplib.electrical_storage import ElectricalStorage
+from vpplib.electrical_energy_storage import ElectricalEnergyStorage
 from vpplib.heat_pump import HeatPump
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
-from vpplib.thermal_storage import ThermalEnergyStorage
+from vpplib.thermal_energy_storage import ThermalEnergyStorage
 from vpplib.combined_heat_and_power import CombinedHeatAndPower
 
 # Values for environment
@@ -152,12 +152,12 @@ df_timeseries.pv.plot(figsize=figsize, label="pv [kW]")
 #%% el storage
 
 #create storage object
-storage = ElectricalStorage(unit="kWh", identifier=(identifier + '_storage'),
-                            environment=environment, user_profile=user_profile,
-                            capacity=capacity,
-                            charge_efficiency=charge_efficiency,
-                            discharge_efficiency=discharge_efficiency,
-                            max_power=max_power, max_c=max_c)
+storage = ElectricalEnergyStorage(unit="kWh", identifier=(identifier + '_storage'),
+                                  environment=environment, user_profile=user_profile,
+                                  capacity=capacity,
+                                  charge_efficiency=charge_efficiency,
+                                  discharge_efficiency=discharge_efficiency,
+                                  max_power=max_power, max_c=max_c)
 
 df_component_values["el_storage_capacity"] = storage.capacity
 df_component_values["el_storage_power"] = storage.max_power

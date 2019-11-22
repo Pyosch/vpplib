@@ -7,7 +7,7 @@ Created on Mon Jul 29 13:25:23 2019
 
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
-from vpplib.electrical_storage import ElectricalStorage
+from vpplib.electrical_energy_storage import ElectricalEnergyStorage
 from vpplib.photovoltaic import Photovoltaic
 
 import pandas as pd
@@ -69,13 +69,13 @@ pv = Photovoltaic(unit=unit, identifier=(name + '_pv'),
 pv.prepare_time_series()
 
 #create storage object
-storage = ElectricalStorage(unit=unit, identifier=(name + '_storage'),
-                            environment=environment,
-                            user_profile=user_profile,
-                            capacity=capacity,
-                            charge_efficiency=charge_efficiency,
-                            discharge_efficiency=discharge_efficiency,
-                            max_power=max_power, max_c=max_c)
+storage = ElectricalEnergyStorage(unit=unit, identifier=(name + '_storage'),
+                                  environment=environment,
+                                  user_profile=user_profile,
+                                  capacity=capacity,
+                                  charge_efficiency=charge_efficiency,
+                                  discharge_efficiency=discharge_efficiency,
+                                  max_power=max_power, max_c=max_c)
 
 baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
