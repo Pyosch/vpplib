@@ -315,7 +315,7 @@ class CombinedHeatAndPower(Component):
             "last_ramp_up": self.last_ramp_up,
             "last_ramp_down": self.last_ramp_down,
             "limit": self.limit
-        }
+            }
         
     def log_observation(self, observation, timestamp):
         

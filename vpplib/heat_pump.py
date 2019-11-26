@@ -65,8 +65,8 @@ class HeatPump(Component):
         self.limit = 1
         
         #Ramp parameters
-        self.rampUpTime = ramp_up_time
-        self.rampDownTime = ramp_down_time
+        self.ramp_up_time = ramp_up_time
+        self.ramp_down_time = ramp_down_time
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
         self.last_ramp_up = self.user_profile.thermal_energy_demand.index[0]

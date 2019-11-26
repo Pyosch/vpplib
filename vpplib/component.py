@@ -8,7 +8,6 @@ This is the mother class of all VPPx classes
 
 class Component(object):
     
-    # 
     def __init__(self, unit, environment, user_profile, cost):
         
         """

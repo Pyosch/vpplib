@@ -86,7 +86,7 @@ class BatteryElectricVehicle(Component):
         self.timeseries['car_charger'] = 0
         self.timeseries.set_index(self.timeseries.Time, inplace=True)
         
-        self.split_time() 
+        self.split_time()
         self.set_weekday()
         self.set_at_home()
         self.charge()

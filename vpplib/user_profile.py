@@ -323,10 +323,6 @@ class UserProfile(object):
                 h_del = ((A/(1+((B/(temp.temperature - self.t_0))**C))) + D) + W
                 h_lst.append(h_del)
     
-#        df_h_del = pd.DataFrame(h_lst)
-#        self.h_del = df_h_del[0]
-#        
-#        return df_h_del[0]
         self.h_del = pd.DataFrame(h_lst, index=self.mean_temp_days.index, 
                                   columns=["h_del"])
         
@@ -370,7 +366,6 @@ class UserProfile(object):
         """
         
         demand_daily_lst = []
-        # df = pd.DataFrame()
         df = self.h_del.copy()
         df["Mean_Temp"] = self.mean_temp_days.temperature
         
