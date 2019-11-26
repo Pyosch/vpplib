@@ -15,17 +15,14 @@ from windpowerlib import WindTurbine
 
 class WindPower(Component):
 
-    def __init__(self, unit="kW", identifier=None,
-                 environment=None, user_profile=None, cost=None,
-                 turbine_type='E-126/4200', hub_height=135,
-                 rotor_diameter=127, fetch_curve='power_curve',
-                 data_source='oedb', wind_speed_model='logarithmic',
-                 density_model='barometric',
-                 temperature_model='linear_gradient',
-                 power_output_model='power_curve',
-                 density_correction=False,
-                 obstacle_height=0, hellman_exp=None
-                 ):
+    def __init__(self, turbine_type, hub_height,
+                 rotor_diameter, fetch_curve,
+                 data_source, wind_speed_model,
+                 density_model, temperature_model,
+                 power_output_model, density_correction,
+                 obstacle_height, hellman_exp,
+                 unit, identifier=None,
+                 environment=None, user_profile=None, cost=None):
         """
         Info
         ----

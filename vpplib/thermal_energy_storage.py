@@ -9,13 +9,12 @@ This is the mother class of all VPPx classes
 import pandas as pd
 from .component import Component
 
+
 class ThermalEnergyStorage(Component):
-    
-    # 
-    def __init__(self, unit="kWh", identifier=None,
-                 environment=None, user_profile=None, cost=None,
-                 target_temperature=60, hysteresis=3, mass=300, cp=4.2,
-                 thermal_energy_loss_per_day=0.13):
+    def __init__(self, target_temperature, hysteresis, mass, cp,
+                 thermal_energy_loss_per_day,
+                 unit, identifier=None,
+                 environment=None, user_profile=None, cost=None):
         
         """
         Info

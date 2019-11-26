@@ -89,12 +89,18 @@ battery_min = 0
 battery_usage = 1
 charging_power = 11
 charge_efficiency_bev = 0.98
+load_degradation_begin = 0.8
 
 #heat pump data
 heatpump_type="Air"
 heat_sys_temp=60
 el_power=5
 building_type = 'DE_HEF33'
+th_power = 3
+ramp_up_time = 0
+ramp_down_time = 0
+min_runtime = 0
+min_stop_time = 0
 
 #storage
 charge_efficiency_storage = 0.98
@@ -252,7 +258,8 @@ for bus in vpp.buses_with_bev:
                                              battery_max=battery_max, battery_min=battery_min,
                                              battery_usage=battery_usage,
                                              charging_power=charging_power,
-                                             charge_efficiency=charge_efficiency_bev))
+                                             charge_efficiency=charge_efficiency_bev,
+                                             load_degradation_begin=load_degradation_begin))
     
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
     
@@ -264,7 +271,12 @@ for bus in vpp.buses_with_hp:
                                user_profile=user_profile,
                                heat_pump_type=heatpump_type,
                                heat_sys_temp=heat_sys_temp,
-                               el_power=el_power))
+                               el_power=el_power,
+                               th_power=th_power,
+                               ramp_up_time=ramp_up_time,
+                               ramp_down_time=ramp_down_time,
+                               min_runtime=min_runtime,
+                               min_stop_time=min_stop_time))
     
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
     

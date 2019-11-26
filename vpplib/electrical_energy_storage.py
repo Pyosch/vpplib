@@ -11,10 +11,10 @@ import pandas as pd
 
 class ElectricalEnergyStorage(Component):
 
-    def __init__(self, unit=None, identifier=None, capacity=None, 
-                 environment=None, user_profile=None, cost=None,
-                 charge_efficiency=0.98, discharge_efficiency=0.98, 
-                 max_power=None, max_c=None):
+    def __init__(self,  capacity, charge_efficiency,
+                 discharge_efficiency, max_power, max_c,
+                 unit, identifier=None,
+                 environment=None, user_profile=None, cost=None):
         
         """
         Info
@@ -334,6 +334,3 @@ class ElectricalEnergyStorage(Component):
         
         else:
             raise ValueError("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
-        
-    
-    
