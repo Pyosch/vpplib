@@ -261,29 +261,6 @@ class ElectricalEnergyStorage(Component):
 
         return self.state_of_charge, charge
 
-        # # Check if power exceeds max power
-        # power = energy / (self.environment.timebase/60)
-        #
-        # if power > self.max_power * self.max_c:
-        #     energy = (self.max_power * self.max_c) * (self.environment.timebase/60)
-        #
-        #
-        # # Check if charge exceeds capacity
-        # if self.state_of_charge + energy * self.charge_efficiency > self.capacity:
-        #     energy = (self.capacity - self.state_of_charge) * (1 / self.charge_efficiency)
-        #
-        #
-        # # Update state of charge
-        # self.state_of_charge += energy * self.charge_efficiency
-        #
-        #
-        # # Check if data already exists
-        # if self.timeseries[timestamp] == None:
-        #     self.append(energy)
-        # else:
-        #     self.timeseries[timestamp] = energy
-
-
     def discharge(self, charge):
         
         """
@@ -339,32 +316,6 @@ class ElectricalEnergyStorage(Component):
                 charge = 0
 
         return self.state_of_charge, charge
-
-        # # Check if power exceeds max power
-        # power = energy / ((self.environment.timebase/60))
-        #
-        # if power > self.max_power * self.max_c:
-        #     energy = (self.capacity - self.state_of_charge) * (1 / self.charge_efficiency)
-        #
-        #
-        # # Check if discharge exceeds state of charge
-        # if self.state_of_charge - energy * (1 / self.discharge_efficiency) < 0:
-        #     energy = self.state_of_charge * self.discharge_efficiency
-        #
-        #
-        # # Update state of charge
-        # self.state_of_charge -= energy * (1 / self.discharge_efficiency)
-        #
-        #
-        # # Check if data already exists
-        # if self.timeseries[timestamp] == None:
-        #     self.append(energy)
-        # else:
-        #     self.timeseries[timestamp] = energy
-
-
-
-
 
     # ===================================================================================
     # Balancing Functions
