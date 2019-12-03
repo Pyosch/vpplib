@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .battery_electric_vehicle import BatteryElectricVehicle
 from .combined_heat_and_power import CombinedHeatAndPower
 from .component import Component
