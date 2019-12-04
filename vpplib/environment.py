@@ -135,7 +135,6 @@ class Environment(object):
         l0 = [_[0] for _ in df.columns]
         l1 = [int(_[1]) for _ in df.columns]
         df.columns = [l0, l1]
-        
         self.wind_data = df
         
         return self.wind_data
