@@ -2,9 +2,10 @@
 """
 Info
 ----
-In this testfile the basic functionalities of the BatteryElectricVehicle class are tested.
+In this testfile the basic functionalities of the BatteryElectricVehicle class
+are tested.
 Run each time you make changes on an existing function.
-Adjust if a new function is added or 
+Adjust if a new function is added or
 parameters in an existing function are changed.
 
 """
@@ -33,7 +34,8 @@ user_profile = UserProfile(identifier=identifier)
 
 
 bev = BatteryElectricVehicle(unit="kW", identifier=None,
-                             environment=environment, user_profile=user_profile,
+                             environment=environment,
+                             user_profile=user_profile,
                              battery_max=battery_max, battery_min=battery_min,
                              battery_usage=battery_usage,
                              charging_power=charging_power,
@@ -42,22 +44,22 @@ bev = BatteryElectricVehicle(unit="kW", identifier=None,
 
 
 def test_prepare_time_series(bev):
-    
+
     bev.prepare_time_series()
     print("prepare_time_series:")
-    print(bev.timeseries.head()) 
+    print(bev.timeseries.head())
     bev.timeseries.plot(figsize=(16, 9))
     plt.show()
 
 
 def test_value_for_timestamp(bev, timestamp):
-    
+
     timestepvalue = bev.value_for_timestamp(timestamp)
     print("\nvalue_for_timestamp:\n", timestepvalue)
 
 
 def test_observations_for_timestamp(bev, timestamp):
-    
+
     print('observations_for_timestamp:')
     observation = bev.observations_for_timestamp(timestamp)
     print(observation, '\n')
