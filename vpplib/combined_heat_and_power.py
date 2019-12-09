@@ -12,12 +12,12 @@ import pandas as pd
 
 class CombinedHeatAndPower(Component):
 
-    def __init__(self, unit="kW", identifier=None,
-                 environment=None, user_profile=None, cost = None,
-                 el_power=None, th_power=None,
-                 overall_efficiency=None,
-                 ramp_up_time=0, ramp_down_time=0,
-                 min_runtime=0, min_stop_time=0):
+    def __init__(self, el_power, th_power,
+                 ramp_up_time, ramp_down_time,
+                 min_runtime, min_stop_time,
+                 overall_efficiency,
+                 unit, identifier=None,
+                 environment=None, user_profile=None, cost=None):
         
         """
         Info

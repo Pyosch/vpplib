@@ -19,14 +19,13 @@ from pvlib.modelchain import ModelChain
 
 class Photovoltaic(Component):
 
-    def __init__(self, unit, identifier, environment=None,
-                 user_profile=None, cost=None,
-                 module_lib='SandiaMod',
-                 module='Canadian_Solar_CS5P_220M___2009_',
-                 inverter_lib='cecinverter',
-                 inverter='ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_',
-                 surface_tilt=20, surface_azimuth=200,
-                 modules_per_string=1, strings_per_inverter=1):
+    def __init__(self,
+                 module_lib, module, inverter_lib,
+                 inverter, surface_tilt, surface_azimuth,
+                 modules_per_string, strings_per_inverter,
+                 unit, identifier=None,
+                 environment=None, user_profile=None, cost=None):
+
         """
         Info
         ----

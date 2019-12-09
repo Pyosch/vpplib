@@ -12,10 +12,10 @@ import pandas as pd
 
 class ElectricalEnergyStorage(Component):
 
-    def __init__(self, unit=None, identifier=None, capacity=None, 
-                 environment=None, user_profile=None, cost=None,
-                 charge_efficiency=0.98, discharge_efficiency=0.98, 
-                 max_power=None, max_c=None):
+    def __init__(self,  capacity, charge_efficiency,
+                 discharge_efficiency, max_power, max_c,
+                 unit, identifier=None,
+                 environment=None, user_profile=None, cost=None):
         
         """
         Info
@@ -132,49 +132,12 @@ class ElectricalEnergyStorage(Component):
         ...
         
         """
-        
-        if residual_load > 0:
-            #Energy demand --> discharge storage if state_of_charge > 0
-            
-            if self.state_of_charge > 0:
-                #storage is not empty
 
-                self.state_of_charge -= residual_load * self.discharge_efficiency * (self.environment.timebase/60)
-                
-                #do not discharge below 0 kWh
-                if self.state_of_charge < 0:
-                    residual_load = self.state_of_charge / self.discharge_efficiency / (self.environment.timebase/60) * -1
-                    self.state_of_charge = 0
-                    
-                else:
-                    residual_load = 0
-                    
-            else:
-                return self.state_of_charge, residual_load
+        if residual_load >= 0:
+            return self.discharge(residual_load)
                 
         elif residual_load < 0:
-            
-            #Energy surplus --> charge storage if state_of_charge < capacity 
-            
-            if self.state_of_charge < self.capacity:
-                #storage has not reached its max capacity
-                
-                self.state_of_charge += residual_load * self.charge_efficiency * (self.environment.timebase/60) * -1
-                
-                #do not overcharge the storage
-                if self.state_of_charge > self.capacity:
-                    residual_load = (self.capacity - 
-                                     self.state_of_charge) / self.charge_efficiency / (self.environment.timebase/60)
-                    self.state_of_charge = self.capacity
-                    
-                else:
-                    residual_load = 0
-                    
-            else:
-                #storage has reached its max capacity
-                return self.state_of_charge, residual_load
-        
-        return self.state_of_charge, residual_load
+            return self.charge(residual_load)
 
 
     # ===================================================================================
@@ -243,7 +206,7 @@ class ElectricalEnergyStorage(Component):
     # Controlling functions
     # ===================================================================================
 
-    def charge(self, energy, timestamp):
+    def charge(self, charge):
         
         """
         Info
@@ -278,31 +241,28 @@ class ElectricalEnergyStorage(Component):
         ...
         
         """
-
-        # Check if power exceeds max power
-        power = energy / (self.environment.timebase/60)
+        power = charge / (self.environment.timebase/60)
 
         if power > self.max_power * self.max_c:
-            energy = (self.max_power * self.max_c) * (self.environment.timebase/60)
+            charge = (self.max_power * self.max_c) * (self.environment.timebase/60)
 
+        if self.state_of_charge < self.capacity:
+            # storage has not reached its max capacity
 
-        # Check if charge exceeds capacity
-        if self.state_of_charge + energy * self.charge_efficiency > self.capacity:
-            energy = (self.capacity - self.state_of_charge) * (1 / self.charge_efficiency)
+            self.state_of_charge += charge * self.charge_efficiency * (self.environment.timebase / 60) * -1
 
+            # do not overcharge the storage
+            if self.state_of_charge > self.capacity:
+                charge = (self.capacity -
+                                 self.state_of_charge) / self.charge_efficiency / (self.environment.timebase / 60)
+                self.state_of_charge = self.capacity
 
-        # Update state of charge
-        self.state_of_charge += energy * self.charge_efficiency
-        
-        
-        # Check if data already exists
-        if self.timeseries[timestamp] == None:
-            self.append(energy)
-        else:
-            self.timeseries[timestamp] = energy
+            else:
+                charge = 0
 
+        return self.state_of_charge, charge
 
-    def discharge(self, energy, timestamp):
+    def discharge(self, charge):
         
         """
         Info
@@ -338,31 +298,25 @@ class ElectricalEnergyStorage(Component):
         
         """
 
-        # Check if power exceeds max power
-        power = energy / ((self.environment.timebase/60))
+        power = charge / (self.environment.timebase / 60)
 
         if power > self.max_power * self.max_c:
-            energy = (self.capacity - self.state_of_charge) * (1 / self.charge_efficiency)
+            charge = (self.max_power * self.max_c) * (self.environment.timebase / 60)
 
+        if self.state_of_charge > 0:
+            # storage is not empty
 
-        # Check if discharge exceeds state of charge
-        if self.state_of_charge - energy * (1 / self.discharge_efficiency) < 0:
-            energy = self.state_of_charge * self.discharge_efficiency
+            self.state_of_charge -= charge * self.discharge_efficiency * (self.environment.timebase / 60)
 
+            # do not discharge below 0 kWh
+            if self.state_of_charge < 0:
+                charge = self.state_of_charge / self.discharge_efficiency / (self.environment.timebase / 60) * -1
+                self.state_of_charge = 0
 
-        # Update state of charge
-        self.state_of_charge -= energy * (1 / self.discharge_efficiency)
-        
-        
-        # Check if data already exists
-        if self.timeseries[timestamp] == None:
-            self.append(energy)
-        else:
-            self.timeseries[timestamp] = energy
+            else:
+                charge = 0
 
-
-
-
+        return self.state_of_charge, charge
 
     # ===================================================================================
     # Balancing Functions
@@ -381,6 +335,3 @@ class ElectricalEnergyStorage(Component):
         
         else:
             raise ValueError("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
-        
-    
-    

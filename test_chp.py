@@ -10,7 +10,7 @@ from vpplib.thermal_energy_storage import ThermalEnergyStorage
 from vpplib.combined_heat_and_power import CombinedHeatAndPower
 import matplotlib.pyplot as plt
 
-figsize = (10,6)
+figsize = (10, 6)
 
 start = '2015-01-01 00:00:00'
 end = '2015-12-31 23:45:00'
@@ -55,7 +55,8 @@ def test_get_thermal_energy_demand(user_profile):
     user_profile.get_thermal_energy_demand()
     user_profile.thermal_energy_demand.plot()
     plt.show()
-    
+
+
 test_get_thermal_energy_demand(user_profile)
 
 tes = ThermalEnergyStorage(environment=environment,
