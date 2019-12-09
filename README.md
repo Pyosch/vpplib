@@ -1,5 +1,5 @@
-# Documentation of the VPP Model structure
-For the simulation of the virtual power plant a basic data structure is developed. This structure is designed in such a way that there are three superordinate elements.
+# Introdction to the VPPlib structure
+For the simulation of the virtual power plant a basic data structure is developed. It consists of multiple classes to design a virtual power plant, build models of the components and operate it in a distribution grid. **Graph 1 gives an overview of the libraries structure.** The “Environment” class describes the overall environment, in which the vpp is being operated. It contains all time- and weather-related information and data. The class “UserProfile” contains information, which is specific for a certain house or housing unit, like heat demand or usage times of an electric vehicle. The “Component” classes, can then compose the Environment and UserProfile, to access their information for simulating the single components. To aggregate the components, the “VirtualPowerPlant” class composes the components. To be able to mirror the behavior of the components to the distribution grid, a pandapower net object is created, containing loads, storages and generation units, which correspond to the components in the VirtualPowerPlant. The net object along with the VirtualPowerPlant are then passed on to the “Operator” class. In this class, operation strategies as well as optimizations can be implemented, considering restrictions which arise from the components as well as the grid. Besides the technical issues, time series from markets can also be included to analyze the financial aspects of the virtual power plant at hand. 
 
 ## Component
 The Component class represents a component within the virtual power plant. This can be, for example, a photovoltaik system or a combined heat and power plant. In addition to the generators, consumers and electrical storage devices can also be stored in this way.
@@ -19,10 +19,13 @@ This function gets called in each iteration of the simulation to sum up the gene
 ## Virtual power plant
 The second superordinate element is the VirtualPowerPlant object. This represents a combination of different components. Individual components can be added and removed for the simulation. By this encapsulation of the individual components, different topologies of the virtual power plant can be simulated.
 ## Operator
-The last element to be named is the Operator object. This object receives a reference to a VirtualPowerPlant object and controls this according to the stored logic. This element can also be used as a basis to achieve different goals. By deriving this class one Operator can, for example, aim to maximize the share of renewable energies. Another Operator could maximize the monetary profit.
+The Operator object receives a reference to a VirtualPowerPlant object and controls this according to the implemented logic. This element can also be used as a basis to achieve different goals. By deriving this class one Operator can, for example, aim to maximize the share of renewable energies. Another Operator could maximize the monetary profit.
 ## Environment
-The Environment class is an encapsulation of every environmental impact on the system. In addition to basic weather data, it is also possible to store regulatory framework conditions for the operation of a virtual power plant.
+The Environment class is an encapsulation of every environmental impact on the system. In addition to basic weather and time related data, it is also possible to store regulatory framework conditions for the operation of a virtual power plant.
 The Environment can be passed to any Component in the constructor. Depending on the component, individual data is accessed.
 ## UserProfile
 The UserProfile class is similar to the Environment class. However, this contains information on the respective usage of different types of users. For example, it can be stored how many kilometers per day an electric vehicle covers. This information is used, for example, in the model of the electric vehicle to calculate the state of charge at arrival in the evening.
 Further parameters which describe the user behavior can also be stored.
+
+# Components of the VPPlib
+The following chapter will give an insight on the 

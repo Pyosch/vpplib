@@ -239,7 +239,6 @@ class BatteryElectricVehicle(Component):
         self.timeseries['car_capacity'] = lst_battery
         self.timeseries.car_charger = lst_charger
 
-
     # In[Separate date and hours]:
 
     def split_time(self):
