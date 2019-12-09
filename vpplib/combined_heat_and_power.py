@@ -11,14 +11,22 @@ import pandas as pd
 
 
 class CombinedHeatAndPower(Component):
+    def __init__(
+        self,
+        el_power,
+        th_power,
+        ramp_up_time,
+        ramp_down_time,
+        min_runtime,
+        min_stop_time,
+        overall_efficiency,
+        unit,
+        identifier=None,
+        environment=None,
+        user_profile=None,
+        cost=None,
+    ):
 
-    def __init__(self, el_power, th_power,
-                 ramp_up_time, ramp_down_time,
-                 min_runtime, min_stop_time,
-                 overall_efficiency,
-                 unit, identifier=None,
-                 environment=None, user_profile=None, cost=None):
-        
         """
         Info
         ----
@@ -56,9 +64,10 @@ class CombinedHeatAndPower(Component):
         """
 
         # Call to super class
-        super(CombinedHeatAndPower, self).__init__(unit, environment, user_profile, cost)
-    
-    
+        super(CombinedHeatAndPower, self).__init__(
+            unit, environment, user_profile, cost
+        )
+
         # Configure attributes
         self.identifier = identifier
         self.el_power = el_power
@@ -70,43 +79,47 @@ class CombinedHeatAndPower(Component):
         self.min_stop_time = min_stop_time
         self.is_running = False
         self.timeseries = pd.DataFrame(
-                columns=["thermal_energy_output", "el_demand"],
-                index=pd.date_range(start=self.environment.start, 
-                                    end=self.environment.end, 
-                                    freq=self.environment.time_freq, 
-                                    name="time"))
+            columns=["thermal_energy_output", "el_demand"],
+            index=pd.date_range(
+                start=self.environment.start,
+                end=self.environment.end,
+                freq=self.environment.time_freq,
+                name="time",
+            ),
+        )
 
         self.last_ramp_up = self.user_profile.thermal_energy_demand.index[0]
         self.last_ramp_down = self.user_profile.thermal_energy_demand.index[0]
         self.limit = 1.0
-    
 
     def prepare_time_series(self):
-    
+
         self.timeseries = pd.DataFrame(
-                columns=["thermal_energy_output", "el_demand"],
-                index=self.user_profile.thermal_energy_demand.index)
-        
-        return self.timeseries
-    
-    
-    def reset_time_series(self):
-        
-        self.timeseries = pd.DataFrame(
-                columns=["thermal_energy_output", "el_demand"],
-                index=pd.date_range(start=self.environment.start, 
-                                    end=self.environment.end, 
-                                    freq=self.environment.time_freq, 
-                                    name="time"))
+            columns=["thermal_energy_output", "el_demand"],
+            index=self.user_profile.thermal_energy_demand.index,
+        )
+
         return self.timeseries
 
+    def reset_time_series(self):
+
+        self.timeseries = pd.DataFrame(
+            columns=["thermal_energy_output", "el_demand"],
+            index=pd.date_range(
+                start=self.environment.start,
+                end=self.environment.end,
+                freq=self.environment.time_freq,
+                name="time",
+            ),
+        )
+        return self.timeseries
 
     # =========================================================================
     # Controlling functions
     # =========================================================================
 
     def limit_power_to(self, limit):
-        
+
         """
         Info
         ----
@@ -152,29 +165,33 @@ class CombinedHeatAndPower(Component):
             # Parameter is invalid
             raise ValueError("Limit-parameter is not valid")
 
-
     #%% ramping functions
-    
+
     def is_valid_ramp_up(self, timestamp):
-        
+
         if type(timestamp) == int:
             if timestamp - self.last_ramp_down > self.min_stop_time:
                 self.is_running = True
             else:
                 self.is_running = False
-        
+
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            if self.last_ramp_down + self.min_stop_time * timestamp.freq < timestamp:
+            if (
+                self.last_ramp_down + self.min_stop_time * timestamp.freq
+                < timestamp
+            ):
                 self.is_running = True
             else:
                 self.is_running = False
-            
+
         else:
-            raise ValueError("timestamp needs to be of type int or " +
-                             "pandas._libs.tslibs.timestamps.Timestamp")
-        
+            raise ValueError(
+                "timestamp needs to be of type int or "
+                + "pandas._libs.tslibs.timestamps.Timestamp"
+            )
+
     def is_valid_ramp_down(self, timestamp):
-        
+
         if type(timestamp) == int:
             if timestamp - self.last_ramp_up > self.min_runtime:
                 self.is_running = False
@@ -182,17 +199,22 @@ class CombinedHeatAndPower(Component):
                 self.is_running = True
 
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            if self.last_ramp_up + self.min_runtime * timestamp.freq < timestamp:
+            if (
+                self.last_ramp_up + self.min_runtime * timestamp.freq
+                < timestamp
+            ):
                 self.is_running = False
             else:
                 self.is_running = True
-            
+
         else:
-            raise ValueError("timestamp needs to be of type int or " +
-                             "pandas._libs.tslibs.timestamps.Timestamp")
-        
+            raise ValueError(
+                "timestamp needs to be of type int or "
+                + "pandas._libs.tslibs.timestamps.Timestamp"
+            )
+
     def ramp_up(self, timestamp):
-        
+
         """
         Info
         ----
@@ -238,12 +260,11 @@ class CombinedHeatAndPower(Component):
             if self.is_valid_ramp_up(timestamp):
                 self.is_running = True
                 return True
-            else: 
+            else:
                 return False
 
-
     def ramp_down(self, timestamp):
-        
+
         """
         Info
         ----
@@ -280,7 +301,6 @@ class CombinedHeatAndPower(Component):
         ...
         
         """
-    
 
         if not self.is_running:
             return None
@@ -288,11 +308,9 @@ class CombinedHeatAndPower(Component):
             if self.is_valid_ramp_down(timestamp):
                 self.is_running = False
                 return True
-            else: 
+            else:
                 return False
 
-
-    
     # =========================================================================
     # Balancing Functions
     # =========================================================================
@@ -302,30 +320,29 @@ class CombinedHeatAndPower(Component):
         # Return result
         if self.is_running:
             thermal_energy_output = self.th_power
-            el_demand = self.el_power *-1
-            
-        else: 
+            el_demand = self.el_power * -1
+
+        else:
             thermal_energy_output = 0
             el_demand = 0
-            
-        
+
         return {
             "thermal_energy_output": thermal_energy_output,
             "el_demand": el_demand,
             "is_running": self.is_running,
             "last_ramp_up": self.last_ramp_up,
             "last_ramp_down": self.last_ramp_down,
-            "limit": self.limit
-            }
-        
+            "limit": self.limit,
+        }
+
     def log_observation(self, observation, timestamp):
-        
-        self.timeseries.thermal_energy_output.loc[timestamp] = observation["thermal_energy_output"]
+
+        self.timeseries.thermal_energy_output.loc[timestamp] = observation[
+            "thermal_energy_output"
+        ]
         self.timeseries.el_demand.loc[timestamp] = observation["el_demand"]
-        
+
         return self.timeseries
-
-
 
     # =========================================================================
     # Balancing Functions
@@ -333,14 +350,14 @@ class CombinedHeatAndPower(Component):
 
     # Override balancing function from super class.
     def value_for_timestamp(self, timestamp):
-    
+
         # Check if the power plant is running
         if self.is_running():
-        
+
             # Return current value
             return self.el_power * self.limit
-        
+
         else:
-        
+
             # Return zero
             return 0.0
