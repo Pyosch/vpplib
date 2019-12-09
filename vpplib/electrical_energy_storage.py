@@ -11,12 +11,20 @@ import pandas as pd
 
 
 class ElectricalEnergyStorage(Component):
+    def __init__(
+        self,
+        capacity,
+        charge_efficiency,
+        discharge_efficiency,
+        max_power,
+        max_c,
+        unit,
+        identifier=None,
+        environment=None,
+        user_profile=None,
+        cost=None,
+    ):
 
-    def __init__(self,  capacity, charge_efficiency,
-                 discharge_efficiency, max_power, max_c,
-                 unit, identifier=None,
-                 environment=None, user_profile=None, cost=None):
-        
         """
         Info
         ----
@@ -56,8 +64,9 @@ class ElectricalEnergyStorage(Component):
         """
 
         # Call to super class
-        super(ElectricalEnergyStorage, self).__init__(unit, environment, user_profile, cost)
-
+        super(ElectricalEnergyStorage, self).__init__(
+            unit, environment, user_profile, cost
+        )
 
         # Setup attributes
         self.identifier = identifier
@@ -65,41 +74,40 @@ class ElectricalEnergyStorage(Component):
         self.charge_efficiency = charge_efficiency
         self.discharge_efficiency = discharge_efficiency
         self.max_power = max_power
-        self.max_c = max_c #factor between 0.5 and 1.2
+        self.max_c = max_c  # factor between 0.5 and 1.2
 
         self.state_of_charge = 0
         self.residual_load = None
         self.timeseries = None
 
-
     def prepare_time_series(self):
-        
+
         soc_lst = []
         res_load_lst = []
         for residual_load in self.residual_load:
-            
+
             soc, res_load = self.operate_storage(residual_load=residual_load)
             soc_lst.append(soc)
             res_load_lst.append(res_load)
-        
-        #save state of charge and residual load
-        self.timeseries = pd.DataFrame(data=soc_lst, columns=["state_of_charge"])
-        self.timeseries['residual_load'] = pd.DataFrame(data=res_load_lst)
-    
+
+        # save state of charge and residual load
+        self.timeseries = pd.DataFrame(
+            data=soc_lst, columns=["state_of_charge"]
+        )
+        self.timeseries["residual_load"] = pd.DataFrame(data=res_load_lst)
+
         self.timeseries.index = self.residual_load.index
-        
-        return self.timeseries
-    
-    
-    def reset_time_series(self):
-        
-        self.timeseries = None
-        
+
         return self.timeseries
 
-    
+    def reset_time_series(self):
+
+        self.timeseries = None
+
+        return self.timeseries
+
     def operate_storage(self, residual_load):
-        
+
         """
         Info
         ----
@@ -135,17 +143,16 @@ class ElectricalEnergyStorage(Component):
 
         if residual_load >= 0:
             return self.discharge(residual_load)
-                
+
         elif residual_load < 0:
             return self.charge(residual_load)
-
 
     # ===================================================================================
     # Observation Functions
     # ===================================================================================
 
     def observations_for_timestamp(self, timestamp):
-        
+
         """
         Info
         ----
@@ -185,21 +192,25 @@ class ElectricalEnergyStorage(Component):
         
         """
         if type(timestamp) == int:
-            
+
             state_of_charge, residual_load = self.timeseries.iloc[timestamp]
-        
+
         elif type(timestamp) == str:
-            
+
             state_of_charge, residual_load = self.timeseries.loc[timestamp]
-        
+
         else:
-            raise ValueError("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
-        
-        observations = {'state_of_charge':state_of_charge, 
-                        'residual_load':residual_load, 
-                        'max_power':self.max_power, 
-                        'max_c':self.max_c}
-        
+            raise ValueError(
+                "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
+            )
+
+        observations = {
+            "state_of_charge": state_of_charge,
+            "residual_load": residual_load,
+            "max_power": self.max_power,
+            "max_c": self.max_c,
+        }
+
         return observations
 
     # ===================================================================================
@@ -207,7 +218,7 @@ class ElectricalEnergyStorage(Component):
     # ===================================================================================
 
     def charge(self, charge):
-        
+
         """
         Info
         ----
@@ -241,20 +252,30 @@ class ElectricalEnergyStorage(Component):
         ...
         
         """
-        power = charge / (self.environment.timebase/60)
+        power = charge / (self.environment.timebase / 60)
 
         if power > self.max_power * self.max_c:
-            charge = (self.max_power * self.max_c) * (self.environment.timebase/60)
+            charge = (self.max_power * self.max_c) * (
+                self.environment.timebase / 60
+            )
 
         if self.state_of_charge < self.capacity:
             # storage has not reached its max capacity
 
-            self.state_of_charge += charge * self.charge_efficiency * (self.environment.timebase / 60) * -1
+            self.state_of_charge += (
+                charge
+                * self.charge_efficiency
+                * (self.environment.timebase / 60)
+                * -1
+            )
 
             # do not overcharge the storage
             if self.state_of_charge > self.capacity:
-                charge = (self.capacity -
-                                 self.state_of_charge) / self.charge_efficiency / (self.environment.timebase / 60)
+                charge = (
+                    (self.capacity - self.state_of_charge)
+                    / self.charge_efficiency
+                    / (self.environment.timebase / 60)
+                )
                 self.state_of_charge = self.capacity
 
             else:
@@ -263,7 +284,7 @@ class ElectricalEnergyStorage(Component):
         return self.state_of_charge, charge
 
     def discharge(self, charge):
-        
+
         """
         Info
         ----
@@ -301,16 +322,27 @@ class ElectricalEnergyStorage(Component):
         power = charge / (self.environment.timebase / 60)
 
         if power > self.max_power * self.max_c:
-            charge = (self.max_power * self.max_c) * (self.environment.timebase / 60)
+            charge = (self.max_power * self.max_c) * (
+                self.environment.timebase / 60
+            )
 
         if self.state_of_charge > 0:
             # storage is not empty
 
-            self.state_of_charge -= charge * self.discharge_efficiency * (self.environment.timebase / 60)
+            self.state_of_charge -= (
+                charge
+                * self.discharge_efficiency
+                * (self.environment.timebase / 60)
+            )
 
             # do not discharge below 0 kWh
             if self.state_of_charge < 0:
-                charge = self.state_of_charge / self.discharge_efficiency / (self.environment.timebase / 60) * -1
+                charge = (
+                    self.state_of_charge
+                    / self.discharge_efficiency
+                    / (self.environment.timebase / 60)
+                    * -1
+                )
                 self.state_of_charge = 0
 
             else:
@@ -324,14 +356,16 @@ class ElectricalEnergyStorage(Component):
 
     # Override balancing function from super class.
     def value_for_timestamp(self, timestamp):
-        
+
         if type(timestamp) == int:
-            
-            return self.timeseries['residual_load'].iloc[timestamp]
-        
+
+            return self.timeseries["residual_load"].iloc[timestamp]
+
         elif type(timestamp) == str:
-            
-            return self.timeseries['residual_load'].loc[timestamp]
-        
+
+            return self.timeseries["residual_load"].loc[timestamp]
+
         else:
-            raise ValueError("timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError(
+                "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
+            )
