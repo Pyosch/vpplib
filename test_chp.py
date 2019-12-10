@@ -27,6 +27,8 @@ t_0 = 40 # °C
 target_temperature = 60 # °C
 hysteresis = 5 # °K
 mass_of_storage = 500 # kg
+cp = 4.2
+thermal_energy_loss_per_day=0.13
 
 #Values for chp
 el_power = 4 #kw
@@ -61,9 +63,12 @@ test_get_thermal_energy_demand(user_profile)
 
 tes = ThermalEnergyStorage(environment=environment,
                            user_profile=user_profile,
+                           unit="kWh",
                            mass=mass_of_storage,
                            hysteresis=hysteresis,
-                           target_temperature=target_temperature)
+                           target_temperature=target_temperature,
+                           cp=cp,
+                           thermal_energy_loss_per_day=thermal_energy_loss_per_day)
 
 chp = CombinedHeatAndPower(unit="kW", identifier='chp1',
                            environment=environment,
