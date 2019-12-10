@@ -15,6 +15,7 @@ figsize = (10, 6)
 start = '2015-01-01 00:00:00'
 end = '2015-01-31 23:45:00'
 year = '2015'
+timebase = 15
 
 #Values for user_profile
 yearly_thermal_energy_demand = 2500 # kWh
@@ -25,14 +26,18 @@ t_0 = 40  # °C
 target_temperature = 60  # °C
 hysteresis = 5  # °K
 mass_of_storage = 500  # kg
+cp = 4.2
+thermal_energy_loss_per_day=0.13
 
 #Values for Heatpump
 el_power = 5 #kW electric
+th_power = 8  # kW thermal
 ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
-timebase = 15
+heat_pump_type = "Air"
+heat_sys_temp = 60
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year)
 
@@ -55,16 +60,23 @@ def test_get_thermal_energy_demand(user_profile):
 test_get_thermal_energy_demand(user_profile)
 
 tes = ThermalEnergyStorage(environment=environment, user_profile=user_profile,
+                           unit="kWh",
+                           cp=cp,
                            mass=mass_of_storage,
                            hysteresis=hysteresis,
-                           target_temperature=target_temperature)
+                           target_temperature=target_temperature,
+                           thermal_energy_loss_per_day=thermal_energy_loss_per_day)
 
-hp = HeatPump(identifier='hp1',
+hp = HeatPump(identifier='hp1', unit="kW",
               environment=environment, user_profile=user_profile,
-              el_power=el_power, ramp_up_time=ramp_up_time,
+              el_power=el_power, 
+              th_power=th_power,
+              ramp_up_time=ramp_up_time,
               ramp_down_time=ramp_down_time,
               min_runtime=min_runtime,
-              min_stop_time=min_stop_time)
+              min_stop_time=min_stop_time,
+              heat_pump_type=heat_pump_type,
+              heat_sys_temp=heat_sys_temp)
 
 
 for i in tes.user_profile.thermal_energy_demand.loc[start:end].index:
