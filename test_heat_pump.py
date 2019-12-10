@@ -4,7 +4,7 @@ Info
 ----
 In this testfile the basic functionalities of the HeatPump class are tested.
 Run each time you make changes on an existing function.
-Adjust if a new function is added or 
+Adjust if a new function is added or
 parameters in an existing function are changed.
 
 """
@@ -30,6 +30,9 @@ t_0 = 40
 
 # Values for Heatpump
 el_power = 5  # kW electric
+th_power = 8  # kW thermal
+heat_pump_type = "Air"
+heat_sys_temp = 60
 ramp_up_time = 1 / 15  # timesteps
 ramp_down_time = 1 / 15  # timesteps
 min_runtime = 1  # timesteps
@@ -61,9 +64,13 @@ test_get_thermal_energy_demand(user_profile)
 
 hp = HeatPump(
     identifier="hp1",
+    unit="kW",
     environment=environment,
     user_profile=user_profile,
     el_power=el_power,
+    th_power=th_power,
+    heat_pump_type=heat_pump_type,
+    heat_sys_temp=heat_sys_temp,
     ramp_up_time=ramp_up_time,
     ramp_down_time=ramp_down_time,
     min_runtime=min_runtime,
