@@ -11,9 +11,8 @@ import random
 
 
 class VirtualPowerPlant(object):
-
     def __init__(self, name):
-        
+
         """
         Info
         ----
@@ -48,9 +47,9 @@ class VirtualPowerPlant(object):
 
         # Configure attributes
         self.name = name
-    
+
         self.components = {}
-        
+
         self.buses_with_pv = []
         self.buses_with_hp = []
         self.buses_with_bev = []
@@ -58,7 +57,7 @@ class VirtualPowerPlant(object):
         self.buses_with_storage = []
 
     def add_component(self, component):
-        
+
         """
         Info
         ----
@@ -95,11 +94,11 @@ class VirtualPowerPlant(object):
         """
 
         # Append component
-        #self.components.append(component)
+        # self.components.append(component)
         self.components[component.identifier] = component
 
     def remove_component(self, component):
-        
+
         """
         Info
         ----
@@ -135,10 +134,17 @@ class VirtualPowerPlant(object):
 
         # Remove component
         self.components.pop(component)
-        
-    def get_buses_with_components(self, net, method='random', pv_percentage=0, 
-                                  hp_percentage=0, bev_percentage=0,
-                                  wind_percentage=0, storage_percentage=0):
+
+    def get_buses_with_components(
+        self,
+        net,
+        method="random",
+        pv_percentage=0,
+        hp_percentage=0,
+        bev_percentage=0,
+        wind_percentage=0,
+        storage_percentage=0,
+    ):
         """
         Info
         ----
@@ -171,59 +177,123 @@ class VirtualPowerPlant(object):
         ...
         
         """
-        
-        if method == 'random':
-            
-            pv_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (pv_percentage/100)), 0))
-            self.buses_with_pv = random.sample(list(net.bus.name[net.bus.type == 'b']), pv_amount)
 
-            hp_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (hp_percentage/100)), 0))
-            self.buses_with_hp = random.sample(list(net.bus.name[net.bus.type == 'b']), hp_amount)
+        if method == "random":
 
-            bev_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (bev_percentage/100)), 0))
-            self.buses_with_bev = random.sample(list(net.bus.name[net.bus.type == 'b']), bev_amount)
-            
-            wind_amount = int(round((len(net.bus.name[net.bus.type == 'b']) * (wind_percentage/100)), 0))
-            self.buses_with_wind = random.sample(list(net.bus.name[net.bus.type == 'b']), wind_amount)
+            pv_amount = int(
+                round(
+                    (
+                        len(net.bus.name[net.bus.type == "b"])
+                        * (pv_percentage / 100)
+                    ),
+                    0,
+                )
+            )
+            self.buses_with_pv = random.sample(
+                list(net.bus.name[net.bus.type == "b"]), pv_amount
+            )
+
+            hp_amount = int(
+                round(
+                    (
+                        len(net.bus.name[net.bus.type == "b"])
+                        * (hp_percentage / 100)
+                    ),
+                    0,
+                )
+            )
+            self.buses_with_hp = random.sample(
+                list(net.bus.name[net.bus.type == "b"]), hp_amount
+            )
+
+            bev_amount = int(
+                round(
+                    (
+                        len(net.bus.name[net.bus.type == "b"])
+                        * (bev_percentage / 100)
+                    ),
+                    0,
+                )
+            )
+            self.buses_with_bev = random.sample(
+                list(net.bus.name[net.bus.type == "b"]), bev_amount
+            )
+
+            wind_amount = int(
+                round(
+                    (
+                        len(net.bus.name[net.bus.type == "b"])
+                        * (wind_percentage / 100)
+                    ),
+                    0,
+                )
+            )
+            self.buses_with_wind = random.sample(
+                list(net.bus.name[net.bus.type == "b"]), wind_amount
+            )
 
             # Distribution of el storage is only done for houses with pv
-            storage_amount = int(round((len(self.buses_with_pv) * (storage_percentage/100)), 0))
-            self.buses_with_storage = random.sample(self.buses_with_pv, storage_amount)
-            
-            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev,\
-                   self.buses_with_wind, self.buses_with_storage
-        
-        elif method == 'random_loadbus':
+            storage_amount = int(
+                round(
+                    (len(self.buses_with_pv) * (storage_percentage / 100)), 0
+                )
+            )
+            self.buses_with_storage = random.sample(
+                self.buses_with_pv, storage_amount
+            )
+
+            return (
+                self.buses_with_pv,
+                self.buses_with_hp,
+                self.buses_with_bev,
+                self.buses_with_wind,
+                self.buses_with_storage,
+            )
+
+        elif method == "random_loadbus":
 
             bus_lst = []
             for bus in net.bus.index:
                 if bus in list(net.load.bus):
                     bus_lst.append(net.bus.name[bus])
-                    
-            pv_amount = int(round((len(bus_lst) * (pv_percentage/100)), 0))
+
+            pv_amount = int(round((len(bus_lst) * (pv_percentage / 100)), 0))
             self.buses_with_pv = random.sample(bus_lst, pv_amount)
-            
-            hp_amount = int(round((len(bus_lst) * (hp_percentage/100)), 0))
+
+            hp_amount = int(round((len(bus_lst) * (hp_percentage / 100)), 0))
             self.buses_with_hp = random.sample(bus_lst, hp_amount)
-            
-            bev_amount = int(round((len(bus_lst) * (bev_percentage/100)), 0))
+
+            bev_amount = int(round((len(bus_lst) * (bev_percentage / 100)), 0))
             self.buses_with_bev = random.sample(bus_lst, bev_amount)
-            
-            wind_amount = int(round((len(bus_lst) * (wind_percentage/100)), 0))
+
+            wind_amount = int(
+                round((len(bus_lst) * (wind_percentage / 100)), 0)
+            )
             self.buses_with_wind = random.sample(bus_lst, wind_amount)
-            
+
             # Distribution of el storage is only done for houses with pv
-            storage_amount = int(round((len(self.buses_with_pv) * (storage_percentage/100)), 0))
-            self.buses_with_storage = random.sample(self.buses_with_pv, storage_amount)
-            
-            return self.buses_with_pv, self.buses_with_hp, self.buses_with_bev,\
-                   self.buses_with_wind, self.buses_with_storage
-        
+            storage_amount = int(
+                round(
+                    (len(self.buses_with_pv) * (storage_percentage / 100)), 0
+                )
+            )
+            self.buses_with_storage = random.sample(
+                self.buses_with_pv, storage_amount
+            )
+
+            return (
+                self.buses_with_pv,
+                self.buses_with_hp,
+                self.buses_with_bev,
+                self.buses_with_wind,
+                self.buses_with_storage,
+            )
+
         else:
             raise ValueError("method ", method, " is invalid")
 
     def balance_at_timestamp(self, timestamp):
-        
+
         """
         Info
         ----
