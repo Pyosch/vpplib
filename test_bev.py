@@ -14,12 +14,12 @@ from vpplib.environment import Environment
 from vpplib.battery_electric_vehicle import BatteryElectricVehicle
 import matplotlib.pyplot as plt
 
-identifier = 'bev_1'
-start = '2015-06-01 00:00:00'
-end = '2015-06-01 23:45:00'
+identifier = "bev_1"
+start = "2015-06-01 00:00:00"
+end = "2015-06-01 23:45:00"
 timebase = 15
 timestamp_int = 48
-timestamp_str = '2015-06-01 12:00:00'
+timestamp_str = "2015-06-01 12:00:00"
 
 charging_power = 11
 battery_max = 16
@@ -33,14 +33,18 @@ environment = Environment(start=start, end=end, timebase=timebase)
 user_profile = UserProfile(identifier=identifier)
 
 
-bev = BatteryElectricVehicle(unit="kW", identifier=None,
-                             environment=environment,
-                             user_profile=user_profile,
-                             battery_max=battery_max, battery_min=battery_min,
-                             battery_usage=battery_usage,
-                             charging_power=charging_power,
-                             load_degradation_begin=load_degradiation_begin,
-                             charge_efficiency=charge_efficiency)
+bev = BatteryElectricVehicle(
+    unit="kW",
+    identifier=None,
+    environment=environment,
+    user_profile=user_profile,
+    battery_max=battery_max,
+    battery_min=battery_min,
+    battery_usage=battery_usage,
+    charging_power=charging_power,
+    load_degradation_begin=load_degradiation_begin,
+    charge_efficiency=charge_efficiency,
+)
 
 
 def test_prepare_time_series(bev):
@@ -60,9 +64,9 @@ def test_value_for_timestamp(bev, timestamp):
 
 def test_observations_for_timestamp(bev, timestamp):
 
-    print('observations_for_timestamp:')
+    print("observations_for_timestamp:")
     observation = bev.observations_for_timestamp(timestamp)
-    print(observation, '\n')
+    print(observation, "\n")
 
 
 test_prepare_time_series(bev)
