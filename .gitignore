@@ -11,6 +11,10 @@
 __pycache__/
 Results/
 vpplib/__pycache__/
+.ipynb_checkpoints/
+dist/
+vpplib.egg-info/
+
 
 # Icon must end with two \r
 Icon
