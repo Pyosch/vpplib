@@ -30,37 +30,72 @@ class CombinedHeatAndPower(Component):
         """
         Info
         ----
-        The constructor takes an identifier (String) for referencing the current
-        combined heat and power plant. The parameters nominal power (Float) determines the
-        nominal power both electrical and thermal.
-        The parameters ramp up time and ramp down time (Int [s]) as well as the minimum running
-        time and minimum stop time (Int [s]) are given for controlling the combined heat and power plant.
-        
+        The constructor takes an identifier (String) for referencing the
+        current combined heat and power plant. The parameters nominal power
+        (Float) determines the nominal power both electrical and thermal.
+        The parameters ramp up time and ramp down time as well as the minimum
+        running time and minimum stop time are given for controlling the
+        combined heat and power plant.
+
         Parameters
         ----------
-        
-        ...
-        	
+        el_power: float
+            nominal electrical power output of the chp
+
+        th_power: float
+            nominal thermal power output of the chp
+
+        ramp_up_time: float
+            number of timesteps needed for the chp to reach the nominal power
+
+        ramp_down_time: float
+            number of timesteps needed for the chp to reduce the nominal power
+            to zero
+
+        min_runtime: float
+            number of timesteps the chp needs to be running to prevent damage
+
+        min_stop_time: float
+            number of timesteps the chp needs to be shut down after running to
+            prevent damage
+
+        overall_efficiency: float
+            the efficiency to calculate the demand for primary resources
+            (e.g. oil, gas)
+
+        unit: string
+            unit used for the power values of the chp
+
+        identifier: string
+            name of the component
+
+        environment: vpplib.environment.Environment
+            object containing time and weather related data
+
+        user_profile: vpplib.user_profile.UserProfile
+            object containing user specific data like heat demand
+
+        cost: float
+            financial cost of one unit of the component
+
         Attributes
         ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
+        timeseries: pandas.core.frame.DataFrame
+            DataFrame containing the generation of electrival and thermal
+            energy over a given period of time
+
+        is_running: boolean
+            True if the chp is running, False if turned off
+
+        last_ramp_up: datetime64[ns]
+            timestamp of the last ramp up
+
+        last_ramp_down: datetime64[ns]
+            timestamp of the last ramp down
+
+        limit: float
+            value between 0 and 1 to limit the nominal power
+
         """
 
         # Call to super class
@@ -94,6 +129,19 @@ class CombinedHeatAndPower(Component):
 
     def prepare_time_series(self):
 
+        """
+        Info
+        ----
+        This is the standard function to create a time series for the
+        CombinedHeatAndPower class. For this time series no specific operation
+        stategy is implemented.
+
+        Returns
+        -------
+        self.timeseries
+
+        """
+
         self.timeseries = pd.DataFrame(
             columns=["thermal_energy_output", "el_demand"],
             index=self.user_profile.thermal_energy_demand.index,
@@ -123,36 +171,14 @@ class CombinedHeatAndPower(Component):
         """
         Info
         ----
-        This function limits the power of the combined heat and power plant to 
-        the given percentage.
-        It cuts the current power production down to the peak power multiplied 
-        by the limit (Float [0;1])
-        
+        Limit the power of the combined heat and power plant to the given
+        percentage.
+
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
+        limit: float
+            value between 0 and 1 to limit the nominal power
+
         """
 
         # Validate input parameter
@@ -165,9 +191,28 @@ class CombinedHeatAndPower(Component):
             # Parameter is invalid
             raise ValueError("Limit-parameter is not valid")
 
-    #%% ramping functions
+    # %% ramping functions
 
     def is_valid_ramp_up(self, timestamp):
+
+        """
+        Info
+        ----
+        Check if a ramp up is valid by comparing the current timestamp,
+        the timestamp of the last ramp down and the minimum stop time of the
+        chp.
+
+        Parameters
+        ----------
+        timestamp: datetime64[ns]
+            value of the time of ramp up
+
+        Returns
+        -------
+        self.is_running = True, if ramp up is valid
+        self.is_running = False, if ramp up is not valid
+
+        """
 
         if type(timestamp) == int:
             if timestamp - self.last_ramp_down > self.min_stop_time:
@@ -190,7 +235,28 @@ class CombinedHeatAndPower(Component):
                 + "pandas._libs.tslibs.timestamps.Timestamp"
             )
 
+        return self.is_running
+
     def is_valid_ramp_down(self, timestamp):
+
+        """
+        Info
+        ----
+        Check if a ramp down is valid by comparing the current timestamp,
+        the timestamp of the last ramp up and the minimum stop time of the
+        chp.
+
+        Parameters
+        ----------
+        timestamp: datetime64[ns]
+            value of the time of ramp down
+
+        Returns
+        -------
+        self.is_running = False, if ramp down is valid
+        self.is_running = True, if ramp down is not valid
+
+        """
 
         if type(timestamp) == int:
             if timestamp - self.last_ramp_up > self.min_runtime:
@@ -213,47 +279,31 @@ class CombinedHeatAndPower(Component):
                 + "pandas._libs.tslibs.timestamps.Timestamp"
             )
 
+        return self.is_running
+
     def ramp_up(self, timestamp):
 
         """
         Info
         ----
-        This function ramps up the combined heat and power plant. 
-        The timestamp is neccessary to calculate if the combined heat and 
-        power plant is running in later iterations of balancing. The possible
-        return values are:
-            - None:       Ramp up has no effect since the combined heat and 
-                          power plant is already running
-            - True:       Ramp up was successful
-            - False:      Ramp up was not successful (due to constraints for 
-                          minimum running and stop times)
-        
+        This function ramps up the combined heat and power plant.
+        The timestamp is neccessary to calculate if the chp is running in
+        later iterations of balancing.
+
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
+        timestamp: datetime64[ns]
+            value of the time of ramp up
+
         Returns
         -------
-        
-        ...
-        
+        None: Ramp up has no effect since the chp is already running
+        True: Ramp up was successful
+        False: Ramp up was not successful
+               (due to constraints for minimum running and stop times).
+
         """
+
         if self.is_running:
             return None
         else:
@@ -268,38 +318,22 @@ class CombinedHeatAndPower(Component):
         """
         Info
         ----
-        This function ramps down the combined heat and power plant. The timestamp is neccessary to calculate
-        if the combined heat and power plant is running in later iterations of balancing. The possible
-        return values are:
-            - None:       Ramp down has no effect since the combined heat and power plant is not running
-            - True:       Ramp down was successful
-            - False:      Ramp down was not successful (due to constraints for minimum running and stop times)
-        
+        This function ramps down the combined heat and power plant.
+        The timestamp is neccessary to calculate if the chp is running in
+        later iterations of balancing.
+
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
+        timestamp: datetime64[ns]
+            value of the time of ramp down
+
         Returns
         -------
-        
-        ...
-        
+        None: Ramp down has no effect since the chp is not running
+        True: Ramp down was successful
+        False: Ramp down was not successful
+               (due to constraints for minimum running and stop times)
+
         """
 
         if not self.is_running:
@@ -315,9 +349,32 @@ class CombinedHeatAndPower(Component):
     # Balancing Functions
     # =========================================================================
 
+    # Override balancing function from super class.
     def observations_for_timestamp(self, timestamp):
 
-        # Return result
+        """
+        Info
+        ----
+        This function takes a timestamp as the parameter and returns a
+        dictionary with key (String) value (Any) pairs.
+
+        Parameters
+        ----------
+        timestamp: datetime64[ns]
+            value of the time of ramp down
+
+        Returns
+        -------
+        dict with:
+            thermal power generation: float
+            electrical power generation: float
+            is_running: boolean
+            last_ramp_up: datetime64[ns]
+            last_ramp_down: datetime64[ns]
+            limit: float
+
+        """
+
         if self.is_running:
             thermal_energy_output = self.th_power
             el_demand = self.el_power * -1
@@ -337,6 +394,29 @@ class CombinedHeatAndPower(Component):
 
     def log_observation(self, observation, timestamp):
 
+        """
+        Info
+        ----
+        This function logs the values from the dictionary, returned by the
+        function observations_for_timestamp to the corresponding timestamp
+        in self.timeseries. This allows to create a timeseries, depending on an
+        operation strategy, e.g. in combination with a electrical and/or
+        thermal storage.
+
+        Parameters
+        ----------
+        observation: dict
+            dictionary returned by the function observations_for_timestamp
+
+        timestamp: datetime64[ns]
+            value of the time of ramp down
+
+        Returns
+        -------
+        self.timeseries
+
+        """
+
         self.timeseries.thermal_energy_output.loc[timestamp] = observation[
             "thermal_energy_output"
         ]
@@ -344,14 +424,27 @@ class CombinedHeatAndPower(Component):
 
         return self.timeseries
 
-    # =========================================================================
-    # Balancing Functions
-    # =========================================================================
-
-    # Override balancing function from super class.
     def value_for_timestamp(self, timestamp):
 
-        # Check if the power plant is running
+        """
+        Info
+        ----
+        This function takes a timestamp as the parameter and returns the
+        corresponding power demand for that timestamp.
+        A positiv result represents a load.
+        A negative result represents a generation.
+
+        Parameters
+        ----------
+        timestamp: datetime64[ns]
+            value of the time of ramp down
+
+        Returns
+        -------
+        power value for timestamp: float
+
+        """
+
         if self.is_running():
 
             # Return current value

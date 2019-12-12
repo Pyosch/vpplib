@@ -41,9 +41,6 @@ class BatteryElectricVehicle(Component):
 
         Parameters
         ----------
-        identifier: str
-            name of the component
-
         battery_max: int/float
             maximal battery charge in kWh
 
@@ -65,6 +62,21 @@ class BatteryElectricVehicle(Component):
             state of charge, at which the charging_power decreases to reduce
             the stress on the battery storage
 
+        unit: string
+            unit used for the power values of the chp
+
+        identifier: string
+            name of the component
+
+        environment: vpplib.environment.Environment
+            object containing time and weather related data
+
+        user_profile: vpplib.user_profile.UserProfile
+            object containing user specific data like heat demand
+
+        cost: float
+            financial cost of one unit of the component
+
         Attributes
         ----------
         date: pandas.core.series.Series
@@ -82,6 +94,9 @@ class BatteryElectricVehicle(Component):
         timeseries: pandas.core.frame.DataFrame
             DataFrame containing car_capacity, charger_power and at_home over
             a given period of time
+
+        limit: float
+            value between 0 and 1 to limit the nominal power
 
         """
 
@@ -290,9 +305,6 @@ class BatteryElectricVehicle(Component):
     def set_weekday(self):
 
         """
-
-        """
-        """
         Info
         ----
         Determine the weekday, depending on the index. 0 = Monday, 6 = Sunday.
@@ -402,9 +414,14 @@ class BatteryElectricVehicle(Component):
         A positiv result represents a load.
         A negative result represents a generation.
 
+        Parameters
+        ----------
+        timestamp: datetime64[ns]
+            value of the time of ramp down
+
         Returns
         -------
-        value of power for timestamp
+        power value for timestamp
 
         """
 
@@ -429,6 +446,11 @@ class BatteryElectricVehicle(Component):
         ----
         This function takes a timestamp as the parameter and returns a
         dictionary with key (String) value (Any) pairs.
+
+        Parameters
+        ----------
+        timestamp: datetime64[ns]
+            value of the time of ramp down
 
         Returns
         -------
