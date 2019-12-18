@@ -154,18 +154,18 @@ user_profile = UserProfile(
 
 user_profile.get_thermal_energy_demand()
 
-#%% create instance of VirtualPowerPlant and the designated grid
+# %% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
 
 net = pn.panda_four_load_branch()
 
-#%% assign names and types to baseloads for later p and q assignment
+# %% assign names and types to baseloads for later p and q assignment
 for bus in net.bus.index:
 
     net.load.name[net.load.bus == bus] = net.bus.name[bus] + "_baseload"
     net.load.type[net.load.bus == bus] = "baseload"
 
-#%% assign components to random bus names
+# %% assign components to random bus names
 
 
 def test_get_buses_with_components(vpp):
@@ -180,7 +180,7 @@ def test_get_buses_with_components(vpp):
     )
 
 
-#%% assign components to the bus names for testing purposes
+# %% assign components to the bus names for testing purposes
 
 
 def test_get_assigned_buses_with_components(
@@ -204,7 +204,7 @@ def test_get_assigned_buses_with_components(
     vpp.buses_with_storage = buses_with_storage
 
 
-#%% assign components to the loadbuses
+# %% assign components to the loadbuses
 
 
 def test_get_loadbuses_with_components(vpp):
@@ -220,7 +220,7 @@ def test_get_loadbuses_with_components(vpp):
     )
 
 
-#%% Choose assignment methode for component distribution
+# %% Choose assignment methode for component distribution
 
 # test_get_buses_with_components(vpp)
 
@@ -235,7 +235,7 @@ test_get_assigned_buses_with_components(
 
 # test_get_loadbuses_with_components(vpp)
 
-#%% create components and assign components to the Virtual Powerplant
+# %% create components and assign components to the Virtual Powerplant
 
 for bus in vpp.buses_with_pv:
 
@@ -347,7 +347,7 @@ for bus in vpp.buses_with_wind:
 
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
-#%% create elements in the pandapower.net
+# %% create elements in the pandapower.net
 
 for bus in vpp.buses_with_pv:
 
@@ -406,22 +406,22 @@ for bus in vpp.buses_with_wind:
         type="WindPower",
     )
 
-#%% initialize operator
+# %% initialize operator
 
 operator = Operator(virtual_power_plant=vpp, net=net, target_data=None)
 
-#%% run base_scenario without operation strategies
+# %% run base_scenario without operation strategies
 
 net_dict = operator.run_base_scenario(baseload)
 
-#%% extract results from powerflow
+# %% extract results from powerflow
 
 results = operator.extract_results(net_dict)
 single_result = operator.extract_single_result(
     net_dict, res="ext_grid", value="p_mw"
 )
 
-#%% plot results of powerflow and storage values
+# %% plot results of powerflow and storage values
 
 single_result.plot(
     figsize=(16, 9), title="ext_grid from single_result function"
