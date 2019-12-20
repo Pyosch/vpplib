@@ -24,7 +24,7 @@ timestamp_str = '2015-01-01 12:00:00'
 timebase = 15
 
 #Values for user_profile
-yearly_thermal_energy_demand = 12500
+thermal_energy_demand_yearly = 12500
 building_type = 'DE_HEF33'
 t_0 = 40
 
@@ -41,7 +41,7 @@ environment = Environment(timebase=timebase, start=start, end=end, year=year,
 user_profile = UserProfile(identifier=None,
                            latitude=None,
                            longitude=None,
-                           thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+                           thermal_energy_demand_yearly=thermal_energy_demand_yearly,
                            building_type=building_type,
                            comfort_factor=None,
                            t_0=t_0)
