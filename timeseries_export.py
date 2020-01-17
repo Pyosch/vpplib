@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from vpplib.battery_electric_vehicle import BatteryElectricVehicle
 from vpplib.photovoltaic import Photovoltaic
+from vpplib.wind_power import WindPower
 from vpplib.electrical_energy_storage import ElectricalEnergyStorage
 from vpplib.heat_pump import HeatPump
 from vpplib.environment import Environment
@@ -18,18 +19,19 @@ from vpplib.thermal_energy_storage import ThermalEnergyStorage
 from vpplib.combined_heat_and_power import CombinedHeatAndPower
 
 # Values for environment
-start = "2015-06-01 00:00:00"
-end = "2015-06-07 23:45:00"
+start = "2015-03-01 00:00:00"
+end = "2015-03-07 23:45:00"
 year = "2015"
 time_freq = "15 min"
 index_year = pd.date_range(
     start=year, periods=35040, freq=time_freq, name="time"
 )
+index_hours = pd.date_range(start=start, end=end, freq="h", name="time")
 timebase = 15  # for calculations from kW to kWh
 temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
 temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
 
-scenario = 2
+scenario = 1
 
 # plot
 figsize = (14, 7)
@@ -60,6 +62,25 @@ surface_azimuth = 200
 modules_per_string = 10
 strings_per_inverter = 2
 
+# WindTurbine data
+wind_file = "./input/wind/dwd_wind_data_2015.csv"
+turbine_type = "E-126/4200"
+hub_height = 135
+rotor_diameter = 127
+fetch_curve = "power_curve"
+data_source = "oedb"
+
+# Wind ModelChain data
+# possible wind_speed_model: 'logarithmic', 'hellman',
+# 'interpolation_extrapolation', 'log_interpolation_extrapolation'
+wind_speed_model = "logarithmic"
+density_model = "ideal_gas"
+temperature_model = "linear_gradient"
+power_output_model = "power_coefficient_curve"  # alt.: 'power_curve'
+density_correction = True
+obstacle_height = 0
+hellman_exp = None
+
 # Values for el storage
 charge_efficiency = 0.98
 discharge_efficiency = 0.98
@@ -73,13 +94,16 @@ battery_min = 4
 battery_usage = 1
 charging_power = 11
 bev_charge_efficiency = 0.98
+load_degradation_begin = 0.8
 
 # Values for heat pump
-heatpump_type = "Air"
+heat_pump_type = "Air"
 heat_sys_temp = 60
 el_power_hp = 5
 th_power_hp = None
 building_type = "DE_HEF33"
+ramp_up_time_hp = 1 / 15  # timesteps
+ramp_down_time_hp = 1 / 15  # timesteps
 min_runtime_hp = 1  # timesteps
 min_stop_time_hp = 2  # timesteps
 
@@ -88,7 +112,7 @@ min_stop_time_hp = 2  # timesteps
 hysteresis = 5  # °K
 mass_of_storage = 500  # kg
 cp = 4.2
-heatloss_per_day = 0.13
+thermal_energy_loss_per_day = 0.13
 
 # Values for chp
 el_power_chp = 6  # kW
@@ -99,7 +123,7 @@ ramp_down_time = 1 / 15  # timesteps
 min_runtime_chp = 1  # timesteps
 min_stop_time_chp = 2  # timesteps
 
-#%% environment
+# %% environment
 
 environment = Environment(
     timebase=timebase,
@@ -111,10 +135,11 @@ environment = Environment(
 )
 
 environment.get_pv_data(file=pv_file)
+environment.get_wind_data(file=wind_file, utc=False)
 environment.get_mean_temp_days(file=temp_days_file)
 environment.get_mean_temp_hours(file=temp_hours_file)
 
-#%% user profile
+# %% user profile
 
 user_profile = UserProfile(
     identifier=identifier,
@@ -133,7 +158,7 @@ user_profile = UserProfile(
 
 user_profile.get_thermal_energy_demand()
 
-#%% baseload
+# %% baseload
 
 # input data
 baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
@@ -146,7 +171,7 @@ df_timeseries["baseload"] = pd.DataFrame(baseload["0"].loc[start:end] / 1000)
 
 df_timeseries.baseload.plot(figsize=figsize, label="baseload [kW]")
 
-#%% PV
+# %% PV
 
 pv = Photovoltaic(
     unit="kW",
@@ -174,7 +199,34 @@ df_component_values["pv_kWp"] = (
 )
 df_timeseries.pv.plot(figsize=figsize, label="pv [kW]")
 
-#%% el storage
+# %% Wind
+
+wind = WindPower(
+    unit="kW",
+    identifier=None,
+    environment=environment,
+    user_profile=None,
+    turbine_type=turbine_type,
+    hub_height=hub_height,
+    rotor_diameter=rotor_diameter,
+    fetch_curve=fetch_curve,
+    data_source=data_source,
+    wind_speed_model=wind_speed_model,
+    density_model=density_model,
+    temperature_model=temperature_model,
+    power_output_model=power_output_model,
+    density_correction=density_correction,
+    obstacle_height=obstacle_height,
+    hellman_exp=hellman_exp,
+)
+
+df_timeseries["wind"] = wind.prepare_time_series() * -1
+
+df_component_values["wind_kw"] = (
+    wind.ModelChain.power_plant.nominal_power / 1000
+)
+
+# %% el storage
 
 # create storage object
 storage = ElectricalEnergyStorage(
@@ -197,9 +249,10 @@ df_component_values[
 ] = storage.discharge_efficiency
 
 
-#%% BEV
+# %% BEV
 
 bev = BatteryElectricVehicle(
+    unit="kW",
     identifier=(identifier + "_bev"),
     battery_max=battery_max,
     battery_min=battery_min,
@@ -208,6 +261,7 @@ bev = BatteryElectricVehicle(
     charge_efficiency=bev_charge_efficiency,
     environment=environment,
     user_profile=user_profile,
+    load_degradation_begin=load_degradation_begin,
 )
 
 df_component_values["bev_power"] = bev.charging_power
@@ -238,16 +292,21 @@ df_timeseries["at_home"] = get_at_home(bev)
 
 df_timeseries.at_home.plot(figsize=figsize, label="at home [0/1]")
 
-#%% heat_pump
+# %% heat_pump
 
 hp = HeatPump(
+    unit="kW",
     identifier=(identifier + "_hp"),
     environment=environment,
     user_profile=user_profile,
-    heat_pump_type=heatpump_type,
+    heat_pump_type=heat_pump_type,
     heat_sys_temp=heat_sys_temp,
     el_power=el_power_hp,
     th_power=th_power_hp,
+    ramp_up_time=ramp_up_time_hp,
+    ramp_down_time=ramp_down_time_hp,
+    min_runtime=min_runtime_hp,
+    min_stop_time=min_stop_time_hp,
 )
 
 df_component_values["heat_pump_power_therm"] = hp.el_power
@@ -256,21 +315,29 @@ if scenario == 1:
 
     # For heat pump without thermal storage
     #    df_timeseries["heat_pump"] = hp.prepare_time_series().el_demand
-    #    df_timeseries.heat_pump.plot(figsize=figsize, label="heat pump [kW-el]")
+    #    df_timeseries.heat_pump.plot(figsize=figsize,
+    #                                   label="heat pump [kW-el]")
 
     tes_hp = ThermalEnergyStorage(
+        unit="kWh",
         mass=mass_of_storage,
+        cp=cp,
         hysteresis=hysteresis,
         target_temperature=target_temperature,
+        thermal_energy_loss_per_day=thermal_energy_loss_per_day,
         environment=environment,
         user_profile=user_profile,
     )
 
     hp = HeatPump(
+        unit="kW",
         identifier="hp1",
+        heat_pump_type=heat_pump_type,
+        heat_sys_temp=heat_sys_temp,
         environment=environment,
         user_profile=user_profile,
         el_power=el_power_hp,
+        th_power=th_power_hp,
         ramp_up_time=ramp_up_time,
         ramp_down_time=ramp_down_time,
         min_runtime=min_runtime_hp,
@@ -281,28 +348,17 @@ if scenario == 1:
         "thermal_energy_demand"
     ]
     outside_temp = tes_hp.user_profile.mean_temp_hours.temperature
-    log, log_load, log_cop = [], [], []
     hp.last_ramp_up = hp.user_profile.thermal_energy_demand.index[0]
     hp.last_ramp_down = hp.user_profile.thermal_energy_demand.index[0]
-    for i in hp.user_profile.thermal_energy_demand.index:
-        thermal_energy_demand = hp.user_profile.thermal_energy_demand.thermal_energy_demand.loc[
-            i
-        ]
-        if tes_hp.get_needs_loading():
-            hp.ramp_up(i)
-        else:
-            hp.ramp_down(i)
-        temp = tes_hp.operate_storage(thermal_energy_demand, i, hp)
-        if hp.is_running:
-            log_load.append(el_power_hp)
-        else:
-            log_load.append(0)
-        log.append(temp)
 
-    df_timeseries["heat_pump"] = pd.DataFrame(log_load, index=index_year).loc[
-        start:end
-    ]
-    df_timeseries.heat_pump.plot(figsize=figsize, label="heat pump [kW-el]")
+    for i in df_timeseries.index:
+
+        temp = tes_hp.operate_storage(i, hp)
+
+    df_timeseries["heat_pump_el"] = hp.timeseries["el_demand"]  # log_load
+    df_timeseries["heat_pump_th"] = hp.timeseries["thermal_energy_output"]
+    df_timeseries.heat_pump_el.plot(figsize=figsize, label="heat pump [kW-el]")
+    df_timeseries.heat_pump_th.plot(figsize=figsize, label="heat pump [kW-th]")
 
 elif scenario == 2:
 
@@ -319,9 +375,10 @@ else:
     print("Heat pump scenario ", scenario, " is not defined!")
 
 
-#%% chp
+# %% chp
 
 tes_chp = ThermalEnergyStorage(
+    unit="kW",
     identifier="th_storage",
     mass=mass_of_storage,
     environment=environment,
@@ -329,10 +386,11 @@ tes_chp = ThermalEnergyStorage(
     hysteresis=hysteresis,
     target_temperature=target_temperature,
     cp=cp,
-    thermal_energy_loss_per_day=heatloss_per_day,
+    thermal_energy_loss_per_day=thermal_energy_loss_per_day,
 )
 
 chp = CombinedHeatAndPower(
+    unit="kW",
     identifier="chp1",
     environment=environment,
     user_profile=user_profile,
@@ -350,6 +408,7 @@ df_component_values["therm_storage_capacity"] = (
     tes_chp.mass
     * tes_chp.cp
     * (tes_chp.target_temperature + tes_chp.hysteresis + 273.15)
+    / 1000  # convert W to kW
 )  # °K
 df_component_values["thermal_storage_efficiency"] = 100 * (
     1 - tes_chp.thermal_energy_loss_per_day
@@ -361,32 +420,18 @@ if scenario == 1:
         "thermal_energy_demand"
     ]
     outside_temp = tes_chp.user_profile.mean_temp_hours.temperature
-    log, log_load, log_el = [], [], []
     chp.last_ramp_up = chp.user_profile.thermal_energy_demand.index[0]
     chp.last_ramp_down = chp.user_profile.thermal_energy_demand.index[0]
-    for i in chp.user_profile.thermal_energy_demand.index:
-        thermal_energy_demand = chp.user_profile.thermal_energy_demand.thermal_energy_demand.loc[
-            i
-        ]
-        if tes_chp.get_needs_loading():
-            chp.ramp_up(i)
-        else:
-            chp.ramp_down(i)
-        temp = tes_chp.operate_storage(thermal_energy_demand, i, chp)
-        if chp.is_running:
-            log_load.append(th_power_chp)
-            log_el.append(el_power_chp)
-        else:
-            log_load.append(0)
-            log_el.append(0)
-        log.append(temp)
+    for i in df_timeseries.index:
+
+        temp = tes_chp.operate_storage(i, chp)
 
     df_timeseries["chp_heat"] = (
-        pd.DataFrame(log_load, index=index_year).loc[start:end] * -1
-    )
+        chp.timeseries["thermal_energy_output"] * -1
+    )  # log_load[0] * -1
     df_timeseries["chp_el"] = (
-        pd.DataFrame(log_el, index=index_year).loc[start:end] * -1
-    )
+        chp.timeseries["el_demand"] * -1
+    )  # log_el[0] * -1
 
     df_timeseries.chp_heat.plot(figsize=figsize, label="chp gen[kW-therm]")
     df_timeseries.chp_el.plot(figsize=figsize, label="chp gen[kW-el]")
@@ -400,9 +445,15 @@ elif scenario == 2:
 else:
     print("chp scenario ", scenario, " is not defined!")
 
-
-plt.legend()
 print(df_component_values)
+plt.legend()
+plt.savefig("./Results/timeseries.png")
+plt.show()
+
+df_timeseries.wind.plot(figsize=figsize, label="wind [kW]")
+plt.legend()
+plt.savefig("./Results/timeseries_wind.png")
+plt.show()
 
 # df_timeseries.to_csv("./Results/df_timeseries.csv")
 # df_component_values.to_csv("./Results/df_component_values.csv")
