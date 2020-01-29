@@ -9,10 +9,15 @@ import pandas as pd
 
 from vpplib import VirtualPowerPlant, Operator, UserProfile, Environment
 from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
+from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
+from vpplib import CombinedHeatAndPower
 
 pv_number = 20
 wind_number = 20
 bev_number = 20
+hp_number = 20  # always includes thermal energy storage
+ees_number = 20
+chp_number = 20  # always includes thermal energy storage
 
 
 # Values for environment
@@ -25,8 +30,6 @@ index_year = pd.date_range(
 )
 index_hours = pd.date_range(start=start, end=end, freq="h", name="time")
 timebase = 15  # for calculations from kW to kWh
-temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
-temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
 
 # Values for user profile
 identifier = "bus_1"
@@ -37,7 +40,6 @@ t_0 = 40  # °C
 yearly_thermal_energy_demand = None  # kWh thermal; redifined in line 119
 
 # Values for pv
-pv_file = "./input/pv/dwd_pv_data_2015.csv"
 module_lib = "SandiaMod"
 module = "Canadian_Solar_CS5P_220M___2009_"
 inverter_lib = "cecinverter"
@@ -48,7 +50,6 @@ modules_per_string = 10
 strings_per_inverter = 2
 
 # WindTurbine data
-wind_file = "./input/wind/dwd_wind_data_2015.csv"
 turbine_type = "E-126/4200"
 hub_height = 135
 rotor_diameter = 127
@@ -66,6 +67,13 @@ density_correction = True
 obstacle_height = 0
 hellman_exp = None
 
+# Values for el storage
+charge_efficiency = 0.98
+discharge_efficiency = 0.98
+max_power = 4  # kW
+capacity = 4  # kWh
+max_c = 1  # factor between 0.5 and 1.2
+
 # Values for bev
 battery_max = 16
 battery_min = 4
@@ -73,6 +81,32 @@ battery_usage = 1
 charging_power = 11
 bev_charge_efficiency = 0.98
 load_degradation_begin = 0.8
+
+# Values for heat pump
+heat_pump_type = "Air"
+heat_sys_temp = 60
+el_power_hp = 5
+th_power_hp = None
+building_type = "DE_HEF33"
+ramp_up_time_hp = 1 / 15  # timesteps
+ramp_down_time_hp = 1 / 15  # timesteps
+min_runtime_hp = 1  # timesteps
+min_stop_time_hp = 2  # timesteps
+
+# Values for Thermal Storage
+hysteresis = 5  # °K
+mass_of_storage = 500  # kg
+cp = 4.2
+thermal_energy_loss_per_day = 0.13
+
+# Values for chp
+el_power_chp = 6  # kW
+th_power_chp = 10  # kW
+overall_efficiency = 0.8
+ramp_up_time = 1 / 15  # timesteps
+ramp_down_time = 1 / 15  # timesteps
+min_runtime_chp = 1  # timesteps
+min_stop_time_chp = 2  # timesteps
 
 # %% environment
 
@@ -85,25 +119,10 @@ environment = Environment(
     time_freq=time_freq,
 )
 
-environment.get_pv_data(file=pv_file)
-environment.get_wind_data(file=wind_file, utc=False)
-
-# %% user profile
-
-user_profile = UserProfile(
-    identifier=identifier,
-    latitude=latitude,
-    longitude=longitude,
-    thermal_energy_demand_yearly=yearly_thermal_energy_demand,
-    building_type=None,
-    comfort_factor=None,
-    t_0=t_0,
-    daily_vehicle_usage=None,
-    week_trip_start=[],
-    week_trip_end=[],
-    weekend_trip_start=[],
-    weekend_trip_end=[],
-)
+environment.get_mean_temp_days()
+environment.get_mean_temp_hours()
+environment.get_pv_data()
+environment.get_wind_data()
 
 # %% baseload
 
@@ -114,10 +133,27 @@ baseload.index = pd.date_range(
     start=year, periods=35040, freq=time_freq, name="time"
 )
 
+# %% user profile
+
+user_profile = UserProfile(
+    identifier=identifier,
+    latitude=latitude,
+    longitude=longitude,
+    thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+    building_type=building_type,
+    comfort_factor=None,
+    t_0=t_0,
+    daily_vehicle_usage=None,
+    week_trip_start=[],
+    week_trip_end=[],
+    weekend_trip_start=[],
+    weekend_trip_end=[],
+)
+
 user_profile.baseload = pd.DataFrame(baseload["0"].loc[start:end] / 1000)
 # thermal energy demand equals two times the electrical energy demand:
-user_profile.thermal_energy_demand_yearly = pd.DataFrame(baseload["0"]
-                                                         / 1000).sum()/2
+user_profile.thermal_energy_demand_yearly = baseload["0"].sum()/ 1000 /2
+user_profile.get_thermal_energy_demand()
 
 # %% virtual power plant
 
@@ -143,7 +179,26 @@ while count < pv_number:
     new_component.prepare_time_series()
     vpp.add_component(new_component)
     count += 1
-    
+
+# %% generate ees
+count = 0
+while count < ees_number:
+    new_ees = ElectricalEnergyStorage(
+    unit="kWh",
+    identifier=(identifier + "_ees" + "_" + str(count)),
+    environment=environment,
+    user_profile=user_profile,
+    capacity=capacity,
+    charge_efficiency=charge_efficiency,
+    discharge_efficiency=discharge_efficiency,
+    max_power=max_power,
+    max_c=max_c,
+)
+
+    # new_ees.prepare_time_series()
+    vpp.add_component(new_ees)
+    count += 1
+
 # %% generate wea
 count = 0
 while count < wind_number:
@@ -168,7 +223,7 @@ while count < wind_number:
     new_component.prepare_time_series()
     vpp.add_component(new_component)
     count += 1
-    
+
 # %% generate bev
 count = 0
 while count < bev_number:
@@ -187,4 +242,76 @@ while count < bev_number:
     new_component.prepare_time_series()
     vpp.add_component(new_component)
     count += 1
-    
+
+# %% generate hp and tes
+count = 0
+while count < hp_number:
+    new_storage = ThermalEnergyStorage(
+        unit="kWh",
+        identifier=(identifier + "_hp_tes" + "_" + str(count)),
+        mass=mass_of_storage,
+        cp=cp,
+        hysteresis=hysteresis,
+        target_temperature=target_temperature,
+        thermal_energy_loss_per_day=thermal_energy_loss_per_day,
+        environment=environment,
+        user_profile=user_profile,
+    )
+
+    new_heat_pump = HeatPump(
+        unit="kW",
+        identifier=(identifier + "_hp" + "_" + str(count)),
+        heat_pump_type=heat_pump_type,
+        heat_sys_temp=heat_sys_temp,
+        environment=environment,
+        user_profile=user_profile,
+        el_power=el_power_hp,
+        th_power=th_power_hp,
+        ramp_up_time=ramp_up_time,
+        ramp_down_time=ramp_down_time,
+        min_runtime=min_runtime_hp,
+        min_stop_time=min_stop_time_hp,
+    )
+
+    for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
+        new_storage.operate_storage(i, new_heat_pump)
+        
+    vpp.add_component(new_storage)
+    vpp.add_component(new_heat_pump)
+    count += 1
+
+# %% generate chp and tes
+count = 0
+while count < chp_number:
+    new_storage = ThermalEnergyStorage(
+        unit="kWh",
+        identifier=(identifier + "_chp_tes" + "_" + str(count)),
+        mass=mass_of_storage,
+        cp=cp,
+        hysteresis=hysteresis,
+        target_temperature=target_temperature,
+        thermal_energy_loss_per_day=thermal_energy_loss_per_day,
+        environment=environment,
+        user_profile=user_profile,
+    )
+
+    new_chp = CombinedHeatAndPower(
+    unit="kW",
+    identifier=(identifier + "_chp" + "_" + str(count)),
+    environment=environment,
+    user_profile=user_profile,
+    el_power=el_power_chp,
+    th_power=th_power_chp,
+    overall_efficiency=overall_efficiency,
+    ramp_up_time=ramp_up_time,
+    ramp_down_time=ramp_down_time,
+    min_runtime=min_runtime_chp,
+    min_stop_time=min_stop_time_chp,
+)
+
+    for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
+        new_storage.operate_storage(i, new_chp)
+        
+    vpp.add_component(new_storage)
+    vpp.add_component(new_chp)
+    count += 1
