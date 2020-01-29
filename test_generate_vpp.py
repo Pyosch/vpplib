@@ -12,6 +12,8 @@ from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
+bus_number = 20
+
 pv_number = 20
 wind_number = 20
 bev_number = 20
@@ -32,7 +34,7 @@ index_hours = pd.date_range(start=start, end=end, freq="h", name="time")
 timebase = 15  # for calculations from kW to kWh
 
 # Values for user profile
-identifier = "bus_1"
+identifier = "bus"
 latitude = 50.941357
 longitude = 6.958307
 target_temperature = 60  # °C
@@ -108,6 +110,15 @@ ramp_down_time = 1 / 15  # timesteps
 min_runtime_chp = 1  # timesteps
 min_stop_time_chp = 2  # timesteps
 
+# %% export
+
+# dataframes for exporting timeseries and component values
+df_timeseries = pd.DataFrame(
+    index=pd.date_range(start=start, end=end, freq=time_freq, name="time")
+)
+
+df_component_values = pd.DataFrame(index=[0])
+
 # %% environment
 
 environment = Environment(
@@ -135,25 +146,34 @@ baseload.index = pd.date_range(
 
 # %% user profile
 
-user_profile = UserProfile(
-    identifier=identifier,
-    latitude=latitude,
-    longitude=longitude,
-    thermal_energy_demand_yearly=yearly_thermal_energy_demand,
-    building_type=building_type,
-    comfort_factor=None,
-    t_0=t_0,
-    daily_vehicle_usage=None,
-    week_trip_start=[],
-    week_trip_end=[],
-    weekend_trip_start=[],
-    weekend_trip_end=[],
-)
+up_dict = {}
+count = 0
+while count < bus_number:
+    
+    user_profile = UserProfile(
+        identifier=(identifier + str(count)),
+        latitude=latitude,
+        longitude=longitude,
+        thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+        building_type=building_type,
+        comfort_factor=None,
+        t_0=t_0,
+        daily_vehicle_usage=None,
+        week_trip_start=[],
+        week_trip_end=[],
+        weekend_trip_start=[],
+        weekend_trip_end=[],
+    )
+    
+    user_profile.baseload = pd.DataFrame(baseload[str(count)].loc[start:end] / 1000)
+    # thermal energy demand equals two times the electrical energy demand:
+    user_profile.thermal_energy_demand_yearly = baseload[str(count)].sum()/ 1000 /2
+    user_profile.get_thermal_energy_demand()
 
-user_profile.baseload = pd.DataFrame(baseload["0"].loc[start:end] / 1000)
-# thermal energy demand equals two times the electrical energy demand:
-user_profile.thermal_energy_demand_yearly = baseload["0"].sum()/ 1000 /2
-user_profile.get_thermal_energy_demand()
+    up_dict[user_profile.identifier] = user_profile
+    count += 1
+
+
 
 # %% virtual power plant
 
@@ -239,7 +259,19 @@ while count < bev_number:
     user_profile=user_profile,
     load_degradation_begin=load_degradation_begin,
 )
-    new_component.prepare_time_series()
+    new_component.timeseries = pd.DataFrame(
+        index=pd.date_range(
+            start=new_component.environment.start,
+            end=new_component.environment.end,
+            freq=new_component.environment.time_freq,
+            name="Time",
+        )
+    )
+    new_component.split_time()
+    new_component.set_weekday()
+    new_component.set_at_home()
+    new_component.timeseries = new_component.at_home
+
     vpp.add_component(new_component)
     count += 1
 
