@@ -111,7 +111,7 @@ class UserProfile(object):
         )
         self.building_parameters = None
         self.h_del = None
-        self.yearly_thermal_energy_demand = thermal_energy_demand_yearly
+        self.thermal_energy_demand_yearly = thermal_energy_demand_yearly
         self.thermal_energy_demand_daily = None
         self.consumerfactor = None
 
@@ -557,7 +557,7 @@ class UserProfile(object):
         """
 
         # consumerfactor (Kundenwert) K_w
-        self.consumerfactor = self.yearly_thermal_energy_demand / (
+        self.consumerfactor = self.thermal_energy_demand_yearly / (
             sum(self.h_del["h_del"])
         )
         return self.consumerfactor
