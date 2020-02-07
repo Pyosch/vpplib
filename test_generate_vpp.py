@@ -6,6 +6,7 @@ Created on Tue Jan 28 15:35:09 2020
 """
 
 import pandas as pd
+import random
 
 from vpplib import VirtualPowerPlant, Operator, UserProfile, Environment
 from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
@@ -15,7 +16,7 @@ from vpplib import CombinedHeatAndPower
 bus_number = 20
 
 pv_number = 20
-wind_number = 20
+wind_number = 2
 bev_number = 20
 hp_number = 20  # always includes thermal energy storage
 ees_number = 20
@@ -144,7 +145,7 @@ baseload.index = pd.date_range(
     start=year, periods=35040, freq=time_freq, name="time"
 )
 
-# %% user profile
+# %% generate user profiles
 
 up_dict = {}
 count = 0
@@ -165,28 +166,55 @@ while count < bus_number:
         weekend_trip_end=[],
     )
     
-    user_profile.baseload = pd.DataFrame(baseload[str(count)].loc[start:end] / 1000)
+    user_profile.baseload = pd.DataFrame(
+        baseload[
+            str(random.randint(0, (len(baseload.columns) -1)))].loc[start:end]
+        / 1000)
     # thermal energy demand equals two times the electrical energy demand:
-    user_profile.thermal_energy_demand_yearly = baseload[str(count)].sum()/ 1000 /2
+    user_profile.thermal_energy_demand_yearly = (user_profile.baseload.sum()
+                                                 / 1000
+                                                 / 2).item()
     user_profile.get_thermal_energy_demand()
 
     up_dict[user_profile.identifier] = user_profile
     count += 1
 
+# create a list of all user profiles and shuffle that list to obtain a random
+# assignment of components to the bus
+up_list = list(up_dict.keys())
+random.shuffle(up_list)
 
+# %% pick buses with components
+
+#pv_amount = int(round((len(up_dict.keys()) * (pv_percentage/100)), 0))
+up_with_pv = random.sample(list(up_dict.keys()), pv_number)
+
+#hp_amount = int(round((len(up_dict.keys()) * (hp_percentage/100)), 0))
+up_with_hp = random.sample(list(up_dict.keys()), hp_number)
+
+#bev_amount = int(round((len(up_dict.keys()) * (bev_percentage/100)), 0))
+up_with_bev = random.sample(list(up_dict.keys()), bev_number)
+
+#wind_amount = int(round((len(up_dict.keys()) * (wind_percentage/100)), 0))
+up_with_wind = random.sample(list(up_dict.keys()), wind_number)
+
+# Distribution of el storage is only done for houses with pv
+#storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
+up_with_ees = random.sample(up_with_pv, ees_number)
 
 # %% virtual power plant
 
 vpp = VirtualPowerPlant("vpp")
 
 # %% generate pv
-count = 0
-while count < pv_number:
+
+for up in up_with_pv:
+
     new_component = Photovoltaic(
     unit="kW",
-    identifier=(identifier + "_pv" + "_" + str(count)),
+    identifier=(up_dict[up].identifier + "_pv"),
     environment=environment,
-    user_profile=user_profile,
+    user_profile=up_dict[up],
     module_lib=module_lib,
     module=module,
     inverter_lib=inverter_lib,
@@ -198,7 +226,6 @@ while count < pv_number:
 )
     new_component.prepare_time_series()
     vpp.add_component(new_component)
-    count += 1
 
 # %% generate ees
 count = 0
