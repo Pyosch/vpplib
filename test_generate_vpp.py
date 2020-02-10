@@ -13,7 +13,7 @@ from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
-bus_number = 20
+bus_number = 50
 
 pv_number = 20
 wind_number = 2
@@ -172,8 +172,7 @@ while count < bus_number:
         / 1000)
     # thermal energy demand equals two times the electrical energy demand:
     user_profile.thermal_energy_demand_yearly = (user_profile.baseload.sum()
-                                                 / 1000
-                                                 / 2).item()
+                                                 / 2).item()  # /4 *2= /2
     user_profile.get_thermal_energy_demand()
 
     up_dict[user_profile.identifier] = user_profile
@@ -191,6 +190,9 @@ up_with_pv = random.sample(list(up_dict.keys()), pv_number)
 
 #hp_amount = int(round((len(up_dict.keys()) * (hp_percentage/100)), 0))
 up_with_hp = random.sample(list(up_dict.keys()), hp_number)
+
+#chp_amount = int(round((len(up_dict.keys()) * (chp_percentage/100)), 0))
+up_with_chp = random.sample(list(up_dict.keys()), chp_number)
 
 #bev_amount = int(round((len(up_dict.keys()) * (bev_percentage/100)), 0))
 up_with_bev = random.sample(list(up_dict.keys()), bev_number)
@@ -228,13 +230,14 @@ for up in up_with_pv:
     vpp.add_component(new_component)
 
 # %% generate ees
-count = 0
-while count < ees_number:
+
+for up in up_with_pv:
+
     new_ees = ElectricalEnergyStorage(
     unit="kWh",
-    identifier=(identifier + "_ees" + "_" + str(count)),
+    identifier=(up_dict[up].identifier + "_ees"),
     environment=environment,
-    user_profile=user_profile,
+    user_profile=up_dict[up],
     capacity=capacity,
     charge_efficiency=charge_efficiency,
     discharge_efficiency=discharge_efficiency,
@@ -244,14 +247,14 @@ while count < ees_number:
 
     # new_ees.prepare_time_series()
     vpp.add_component(new_ees)
-    count += 1
 
 # %% generate wea
-count = 0
-while count < wind_number:
+
+for up in up_with_wind:
+
     new_component = WindPower(
     unit="kW",
-    identifier=(identifier + "_wea" + "_" + str(count)),
+    identifier=(up_dict[up].identifier + "_wea"),
     environment=environment,
     user_profile=None,
     turbine_type=turbine_type,
@@ -269,21 +272,21 @@ while count < wind_number:
 )
     new_component.prepare_time_series()
     vpp.add_component(new_component)
-    count += 1
 
 # %% generate bev
-count = 0
-while count < bev_number:
+
+for up in up_with_bev:
+
     new_component = BatteryElectricVehicle(
     unit="kW",
-    identifier=(identifier + "_bev" + "_" + str(count)),
+    identifier=(up_dict[up].identifier + "_bev"),
     battery_max=battery_max,
     battery_min=battery_min,
     battery_usage=battery_usage,
     charging_power=charging_power,
     charge_efficiency=bev_charge_efficiency,
     environment=environment,
-    user_profile=user_profile,
+    user_profile=up_dict[up],
     load_degradation_begin=load_degradation_begin,
 )
     new_component.timeseries = pd.DataFrame(
@@ -300,30 +303,30 @@ while count < bev_number:
     new_component.timeseries = new_component.at_home
 
     vpp.add_component(new_component)
-    count += 1
 
 # %% generate hp and tes
-count = 0
-while count < hp_number:
+
+for up in up_with_hp:
+
     new_storage = ThermalEnergyStorage(
         unit="kWh",
-        identifier=(identifier + "_hp_tes" + "_" + str(count)),
+        identifier=(up_dict[up].identifier + "_hp_tes"),
         mass=mass_of_storage,
         cp=cp,
         hysteresis=hysteresis,
         target_temperature=target_temperature,
         thermal_energy_loss_per_day=thermal_energy_loss_per_day,
         environment=environment,
-        user_profile=user_profile,
+        user_profile=up_dict[up],
     )
 
     new_heat_pump = HeatPump(
         unit="kW",
-        identifier=(identifier + "_hp" + "_" + str(count)),
+        identifier=(up_dict[up].identifier + "_hp"),
         heat_pump_type=heat_pump_type,
         heat_sys_temp=heat_sys_temp,
         environment=environment,
-        user_profile=user_profile,
+        user_profile=up_dict[up],
         el_power=el_power_hp,
         th_power=th_power_hp,
         ramp_up_time=ramp_up_time,
@@ -337,28 +340,28 @@ while count < hp_number:
         
     vpp.add_component(new_storage)
     vpp.add_component(new_heat_pump)
-    count += 1
 
 # %% generate chp and tes
-count = 0
-while count < chp_number:
+
+for up in up_with_chp:
+
     new_storage = ThermalEnergyStorage(
         unit="kWh",
-        identifier=(identifier + "_chp_tes" + "_" + str(count)),
+        identifier=(up_dict[up].identifier + "_chp_tes"),
         mass=mass_of_storage,
         cp=cp,
         hysteresis=hysteresis,
         target_temperature=target_temperature,
         thermal_energy_loss_per_day=thermal_energy_loss_per_day,
         environment=environment,
-        user_profile=user_profile,
+        user_profile=up_dict[up],
     )
 
     new_chp = CombinedHeatAndPower(
     unit="kW",
-    identifier=(identifier + "_chp" + "_" + str(count)),
+    identifier=(up_dict[up].identifier + "_chp"),
     environment=environment,
-    user_profile=user_profile,
+    user_profile=up_dict[up],
     el_power=el_power_chp,
     th_power=th_power_chp,
     overall_efficiency=overall_efficiency,
@@ -373,4 +376,7 @@ while count < chp_number:
         
     vpp.add_component(new_storage)
     vpp.add_component(new_chp)
-    count += 1
+
+
+#%% Export vpp information and timeseries
+
