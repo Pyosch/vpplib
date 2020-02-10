@@ -13,14 +13,14 @@ from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
-bus_number = 50
+bus_number = 100
 
-pv_number = 20
-wind_number = 2
+pv_number = 80
+wind_number = 10
 bev_number = 20
-hp_number = 20  # always includes thermal energy storage
-ees_number = 20
-chp_number = 20  # always includes thermal energy storage
+hp_number = 50  # always includes thermal energy storage
+ees_number = 60
+chp_number = 0  # always includes thermal energy storage
 
 
 # Values for environment
@@ -185,20 +185,24 @@ random.shuffle(up_list)
 
 # %% pick buses with components
 
-#pv_amount = int(round((len(up_dict.keys()) * (pv_percentage/100)), 0))
-up_with_pv = random.sample(list(up_dict.keys()), pv_number)
-
-#hp_amount = int(round((len(up_dict.keys()) * (hp_percentage/100)), 0))
-up_with_hp = random.sample(list(up_dict.keys()), hp_number)
-
-#chp_amount = int(round((len(up_dict.keys()) * (chp_percentage/100)), 0))
-up_with_chp = random.sample(list(up_dict.keys()), chp_number)
-
-#bev_amount = int(round((len(up_dict.keys()) * (bev_percentage/100)), 0))
-up_with_bev = random.sample(list(up_dict.keys()), bev_number)
-
 #wind_amount = int(round((len(up_dict.keys()) * (wind_percentage/100)), 0))
 up_with_wind = random.sample(list(up_dict.keys()), wind_number)
+
+#pv_amount = int(round((len(up_dict.keys()) * (pv_percentage/100)), 0))
+up_with_pv = random.sample(
+    [x for x in list(up_dict.keys()) if x not in up_with_wind], pv_number)
+
+#hp_amount = int(round((len(up_dict.keys()) * (hp_percentage/100)), 0))
+up_with_hp = random.sample(
+    [x for x in list(up_dict.keys()) if x not in up_with_wind], hp_number)
+
+#chp_amount = int(round((len(up_dict.keys()) * (chp_percentage/100)), 0))
+up_with_chp = random.sample(
+    [x for x in list(up_dict.keys()) if x not in up_with_wind], chp_number)
+
+#bev_amount = int(round((len(up_dict.keys()) * (bev_percentage/100)), 0))
+up_with_bev = random.sample(
+    [x for x in list(up_dict.keys()) if x not in up_with_wind], bev_number)
 
 # Distribution of el storage is only done for houses with pv
 #storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
@@ -387,7 +391,8 @@ for up in up_with_hp:
         min_stop_time=min_stop_time_hp,
     )
 
-    for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
+    for i in new_storage.user_profile.thermal_energy_demand.loc[
+            start:end].index:
         new_storage.operate_storage(i, new_heat_pump)
         
     vpp.add_component(new_storage)
@@ -409,51 +414,53 @@ for up in up_with_hp:
     df_component_values["thermal_storage_efficiency"] =(
         new_storage.thermal_energy_loss_per_day
         )
-    df_timeseries[new_heat_pump.identifier + "_thermal_energy_demand"] = user_profile.thermal_energy_demand
+    df_timeseries[
+        new_heat_pump.identifier + "_thermal_energy_demand"
+        ] = user_profile.thermal_energy_demand
     df_timeseries[new_heat_pump.identifier + "_cop"] = new_heat_pump.get_cop()
     df_timeseries[new_heat_pump.identifier + "_cop"].interpolate(inplace=True)
 
 # %% generate chp and tes
 
-for up in up_with_chp:
+# for up in up_with_chp:
 
-    new_storage = ThermalEnergyStorage(
-        unit="kWh",
-        identifier=(up_dict[up].identifier + "_chp_tes"),
-        mass=mass_of_storage,
-        cp=cp,
-        hysteresis=hysteresis,
-        target_temperature=target_temperature,
-        thermal_energy_loss_per_day=thermal_energy_loss_per_day,
-        environment=environment,
-        user_profile=up_dict[up],
-    )
+#     new_storage = ThermalEnergyStorage(
+#         unit="kWh",
+#         identifier=(up_dict[up].identifier + "_chp_tes"),
+#         mass=mass_of_storage,
+#         cp=cp,
+#         hysteresis=hysteresis,
+#         target_temperature=target_temperature,
+#         thermal_energy_loss_per_day=thermal_energy_loss_per_day,
+#         environment=environment,
+#         user_profile=up_dict[up],
+#     )
 
-    new_chp = CombinedHeatAndPower(
-    unit="kW",
-    identifier=(up_dict[up].identifier + "_chp"),
-    environment=environment,
-    user_profile=up_dict[up],
-    el_power=el_power_chp,
-    th_power=th_power_chp,
-    overall_efficiency=overall_efficiency,
-    ramp_up_time=ramp_up_time,
-    ramp_down_time=ramp_down_time,
-    min_runtime=min_runtime_chp,
-    min_stop_time=min_stop_time_chp,
-)
+#     new_chp = CombinedHeatAndPower(
+#     unit="kW",
+#     identifier=(up_dict[up].identifier + "_chp"),
+#     environment=environment,
+#     user_profile=up_dict[up],
+#     el_power=el_power_chp,
+#     th_power=th_power_chp,
+#     overall_efficiency=overall_efficiency,
+#     ramp_up_time=ramp_up_time,
+#     ramp_down_time=ramp_down_time,
+#     min_runtime=min_runtime_chp,
+#     min_stop_time=min_stop_time_chp,
+# )
 
-    for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
-        new_storage.operate_storage(i, new_chp)
-        
-    vpp.add_component(new_storage)
-    vpp.add_component(new_chp)
-    
-    # export
-    
-    df_component_values[new_chp.identifier + "_power_therm"] = new_chp.th_power
-    df_component_values[new_chp.identifier + "_power_el"] = new_chp.el_power
-    df_component_values[new_chp.identifier + "_efficiency"] = new_chp.overall_efficiency
+#     for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
+#         new_storage.operate_storage(i, new_chp)
+
+#     vpp.add_component(new_storage)
+#     vpp.add_component(new_chp)
+
+#     # export
+
+#     df_component_values[new_chp.identifier + "_power_therm"] = new_chp.th_power
+#     df_component_values[new_chp.identifier + "_power_el"] = new_chp.el_power
+#     df_component_values[new_chp.identifier + "_efficiency"] = new_chp.overall_efficiency
 
 
 #%% Export vpp information and timeseries
