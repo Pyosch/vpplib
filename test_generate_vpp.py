@@ -53,7 +53,12 @@ modules_per_string = 10
 strings_per_inverter = 2
 
 # WindTurbine data
-turbine_type = "E-126/4200"
+wea_list = [
+        "E-53/800",
+        "E48/800",
+        "V100/1800",
+        "E-82/2000",
+        "V90/2000"]
 hub_height = 135
 rotor_diameter = 127
 fetch_curve = "power_curve"
@@ -288,7 +293,7 @@ for up in up_with_wind:
     identifier=(up_dict[up].identifier + "_wea"),
     environment=environment,
     user_profile=None,
-    turbine_type=turbine_type,
+    turbine_type=wea_list[random.randint(0, (len(wea_list) -1))],
     hub_height=hub_height,
     rotor_diameter=rotor_diameter,
     fetch_curve=fetch_curve,
