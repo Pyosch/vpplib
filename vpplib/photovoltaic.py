@@ -9,6 +9,7 @@ This file contains the basic functionalities of the Photovoltaic class.
 from .component import Component
 
 import pandas as pd
+import random
 
 # pvlib imports
 import pvlib
@@ -21,15 +22,15 @@ from pvlib.modelchain import ModelChain
 class Photovoltaic(Component):
     def __init__(
         self,
+        unit,
         module_lib,
-        module,
         inverter_lib,
-        inverter,
         surface_tilt,
         surface_azimuth,
-        modules_per_string,
-        strings_per_inverter,
-        unit,
+        module=None,
+        inverter=None,
+        modules_per_string=None,
+        strings_per_inverter=None,
         identifier=None,
         environment=None,
         user_profile=None,
@@ -79,37 +80,52 @@ class Photovoltaic(Component):
         self.limit = 1.0
 
         # load some module and inverter specifications
-        sandia_modules = pvlib.pvsystem.retrieve_sam(module_lib)
-        cec_inverters = pvlib.pvsystem.retrieve_sam(inverter_lib)
+        self.module_lib = pvlib.pvsystem.retrieve_sam(module_lib)
+        self.inverter_lib = pvlib.pvsystem.retrieve_sam(inverter_lib)
 
-        self.module = sandia_modules[module]
-        self.inverter = cec_inverters[inverter]
+        if module:
+            self.module = self.module_lib[module]
+
+        if inverter:
+            self.inverter = self.inverter_lib[inverter]
 
         self.location = Location(
             latitude=self.user_profile.latitude,
             longitude=self.user_profile.longitude,
         )
 
-        self.system = PVSystem(
-            surface_tilt=surface_tilt,
-            surface_azimuth=surface_azimuth,
-            module_parameters=self.module,
-            inverter_parameters=self.inverter,
-            modules_per_string=modules_per_string,
-            strings_per_inverter=strings_per_inverter,
-        )
+        self.surface_azimuth = surface_azimuth
+        self.surface_tilt = surface_tilt
 
-        self.modelchain = ModelChain(
-            self.system, self.location, name=identifier
-        )
+        if module and inverter and modules_per_string and strings_per_inverter:
 
-        self.peak_power = (
-            self.module.Impo
-            * self.module.Vmpo
-            / 1000
-            * self.system.modules_per_string
-            * self.system.strings_per_inverter
-        )
+            self.modules_per_string = modules_per_string
+            self.strings_per_inverter = strings_per_inverter
+
+            self.system = PVSystem(
+                surface_tilt=self.surface_tilt,
+                surface_azimuth=self.surface_azimuth,
+                module_parameters=self.module,
+                inverter_parameters=self.inverter,
+                modules_per_string=self.modules_per_string,
+                strings_per_inverter=self.strings_per_inverter,
+            )
+
+            self.modelchain = ModelChain(
+                self.system, self.location, name=identifier
+            )
+
+            self.peak_power = (
+                self.module.Impo
+                * self.module.Vmpo
+                / 1000
+                * self.modules_per_string
+                * self.strings_per_inverter
+            )
+            # calculate area of pv modules
+            self.modules_area = (self.module.Area
+              * self.modules_per_string
+              * self.strings_per_inverter)
 
         self.timeseries = None
 
@@ -243,3 +259,94 @@ class Photovoltaic(Component):
         observations = {"el_generation": el_generation}
 
         return observations
+
+    def pick_pvsystem(self, min_module_power = 220,
+                  pv_power = 8000,
+                  inverter_power_range = 100):
+
+        power_lst = []
+        # choose modules depending on maximum power
+        for module in self.module_lib.columns:
+            if (self.module_lib[module].Impo
+                * self.module_lib[module].Vmpo
+                > min_module_power):
+                power_lst.append(module)
+
+        # pick random module from list
+        module = power_lst[random.randint(0, (len(power_lst) -1))]
+
+        # calculate amount of modules needed to reach power
+        n_modules = (pv_power
+                     / (self.module_lib[module].Impo
+                        * self.module_lib[module].Vmpo))
+
+        # calculate modules per string and strings per inverter
+        if round(n_modules, 0) % 3 == 0:
+            self.modules_per_string = round(n_modules, 0) / 3
+            self.strings_per_inverter = 3
+
+        elif round(n_modules, 0) % 4 == 0:
+            self.modules_per_string = round(n_modules, 0) / 4
+            self.strings_per_inverter = 4
+
+        else:
+            self.modules_per_string = round(n_modules, 0) / 2
+            self.strings_per_inverter = 2
+
+        # pick inverter according to peak power of modules
+        inverter_lst =[]
+        # sandia_inverters = pvsystem.retrieve_sam(name=inverter_lib)
+
+        while len(inverter_lst) == 0:
+            for inverter in self.inverter_lib.columns:
+                if (self.inverter_lib[inverter].Paco
+                    > (self.module_lib[module].Impo
+                       * self.module_lib[module].Vmpo
+                       * self.modules_per_string
+                       * self.strings_per_inverter)) and (
+                           self.inverter_lib[inverter].Paco
+                           < (self.module_lib[module].Impo
+                       * self.module_lib[module].Vmpo
+                       * self.modules_per_string
+                       * self.strings_per_inverter) + inverter_power_range):
+                    inverter_lst.append(inverter)
+
+            # increase power range of inverter if no inverter was found
+            inverter_power_range += 100
+
+        inverter = inverter_lst[
+            random.randint(0, (len(inverter_lst) -1))]
+
+        self.module = self.module_lib[module]
+        self.inverter = self.inverter_lib[inverter]
+
+        self.system = PVSystem(
+            surface_tilt=self.surface_tilt,
+            surface_azimuth=self.surface_azimuth,
+            module_parameters=self.module,
+            inverter_parameters=self.inverter,
+            modules_per_string=self.modules_per_string,
+            strings_per_inverter=self.strings_per_inverter,
+        )
+
+        self.modelchain = ModelChain(
+            self.system, self.location, name=self.identifier
+        )
+    
+        self.peak_power = (
+            self.module.Impo
+            * self.module.Vmpo
+            / 1000
+            * self.system.modules_per_string
+            * self.system.strings_per_inverter
+        )
+        
+        # calculate area of pv modules
+        self.modules_area = (self.module.Area
+          * self.modules_per_string
+          * self.strings_per_inverter)
+
+        return (self.modules_per_string,
+                self.strings_per_inverter,
+                self.module,
+                self.inverter)
