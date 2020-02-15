@@ -260,14 +260,16 @@ class Photovoltaic(Component):
 
         return observations
 
-    def pick_pvsystem(self, min_module_power = 220,
-                  pv_power = 8000,
-                  inverter_power_range = 100):
+    def pick_pvsystem(self, min_module_power,
+                      max_module_power,
+                      pv_power,
+                      inverter_power_range):
 
         power_lst = []
-        # choose modules depending on maximum power
+        # choose modules depending on module power
         for module in self.module_lib.columns:
-            if (self.module_lib[module].Impo
+            if (max_module_power
+                > self.module_lib[module].Impo
                 * self.module_lib[module].Vmpo
                 > min_module_power):
                 power_lst.append(module)
