@@ -13,13 +13,13 @@ from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
-bus_number = 100
+bus_number = 20
 
-pv_number = 80
-wind_number = 10
-bev_number = 20
-hp_number = 50  # always includes thermal energy storage
-ees_number = 60
+pv_number = 5
+wind_number = 2#2
+bev_number = 5
+hp_number = 5  # always includes thermal energy storage
+ees_number = 5
 chp_number = 0  # always includes thermal energy storage
 
 
@@ -40,17 +40,21 @@ latitude = 50.941357
 longitude = 6.958307
 target_temperature = 60  # °C
 t_0 = 40  # °C
-yearly_thermal_energy_demand = None  # kWh thermal; redifined in line 119
+yearly_thermal_energy_demand = None  # kWh thermal; redifined depending on el baseload
 
 # Values for pv
 module_lib = "SandiaMod"
-module = "Canadian_Solar_CS5P_220M___2009_"
-inverter_lib = "cecinverter"
-inverter = "ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_"
+# module = "Canadian_Solar_CS5P_220M___2009_"
+inverter_lib = "SandiaInverter"
+# inverter = "ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_"
 surface_tilt = 20
 surface_azimuth = 200
-modules_per_string = 10
-strings_per_inverter = 2
+# modules_per_string = 10
+# strings_per_inverter = 2
+min_module_power = 220
+max_module_power = 250
+#  pv_power will be choosen during function call
+inverter_power_range = 100
 
 # WindTurbine data
 wea_list = [
@@ -58,7 +62,7 @@ wea_list = [
         "E48/800",
         "V100/1800",
         "E-82/2000",
-        "V90/2000"]
+        "V90/2000"]  # randomly choose windturbine
 hub_height = 135
 rotor_diameter = 127
 fetch_curve = "power_curve"
@@ -78,22 +82,25 @@ hellman_exp = None
 # Values for el storage
 charge_efficiency = 0.98
 discharge_efficiency = 0.98
-max_power = 4  # kW
-capacity = 4  # kWh
+#  power and capacity will be randomly assigned during component generation
+# max_power = 4  # kW
+# capacity = 4  # kWh
 max_c = 1  # factor between 0.5 and 1.2
 
 # Values for bev
-battery_max = 16
+#  power and capacity will be randomly assigned during component generation
+# battery_max = 16
 battery_min = 4
 battery_usage = 1
-charging_power = 11
+# charging_power = 11
 bev_charge_efficiency = 0.98
 load_degradation_begin = 0.8
 
 # Values for heat pump
 heat_pump_type = "Air"
 heat_sys_temp = 60
-el_power_hp = 5
+el_power_hp_min = 5
+el_power_hp_max = 11
 th_power_hp = None
 building_type = "DE_HEF33"
 ramp_up_time_hp = 1 / 15  # timesteps
@@ -103,7 +110,9 @@ min_stop_time_hp = 2  # timesteps
 
 # Values for Thermal Storage
 hysteresis = 5  # °K
-mass_of_storage = 500  # kg
+#  radomly assigned during component generation
+mass_of_storage_min = 400  # kg
+mass_of_storage_max = 800  # kg
 cp = 4.2
 thermal_energy_loss_per_day = 0.13
 
@@ -170,7 +179,7 @@ while count < bus_number:
         weekend_trip_start=[],
         weekend_trip_end=[],
     )
-    
+
     user_profile.baseload = pd.DataFrame(
         baseload[
             str(random.randint(0, (len(baseload.columns) -1)))].loc[start:end]
@@ -221,27 +230,36 @@ vpp = VirtualPowerPlant("vpp")
 
 for up in up_with_pv:
 
+    pv_power = random.randrange(start=6000, stop=9000, step=100)
+    surface_tilt = random.randrange(start=20, stop=40, step=5)
+    surface_azimuth = random.randrange(start=160, stop=220, step=10)
+
     new_component = Photovoltaic(
     unit="kW",
     identifier=(up_dict[up].identifier + "_pv"),
     environment=environment,
     user_profile=up_dict[up],
     module_lib=module_lib,
-    module=module,
+    module=None,
     inverter_lib=inverter_lib,
-    inverter=inverter,
+    inverter=None,
     surface_tilt=surface_tilt,
     surface_azimuth=surface_azimuth,
-    modules_per_string=modules_per_string,
-    strings_per_inverter=strings_per_inverter,
+    modules_per_string=None,
+    strings_per_inverter=None,
     )
+
+    new_component.pick_pvsystem(min_module_power,
+                                max_module_power,
+                                pv_power,
+                                inverter_power_range)
+
     new_component.prepare_time_series()
     vpp.add_component(new_component)
 
     # export
-    
     df_timeseries[new_component.identifier] = new_component.timeseries * -1
-    
+
     df_component_values[new_component.identifier + "_kWp"] = (
         new_component.module.Impo
         * new_component.module.Vmpo
@@ -253,15 +271,17 @@ for up in up_with_pv:
 
 for up in up_with_ees:
 
+    cap_power = random.randrange(start=5, stop=9, step=1)
+
     new_component = ElectricalEnergyStorage(
     unit="kWh",
     identifier=(up_dict[up].identifier + "_ees"),
     environment=environment,
     user_profile=up_dict[up],
-    capacity=capacity,
+    capacity=cap_power,
     charge_efficiency=charge_efficiency,
     discharge_efficiency=discharge_efficiency,
-    max_power=max_power,
+    max_power=cap_power,
     max_c=max_c,
     )
 
@@ -324,10 +344,11 @@ for up in up_with_bev:
     new_component = BatteryElectricVehicle(
     unit="kW",
     identifier=(up_dict[up].identifier + "_bev"),
-    battery_max=battery_max,
+    battery_max=random.sample([50, 60, 17.6, 64, 33.5, 38.3,75, 20, 27.2, 6.1]
+                              , 1)[0],
     battery_min=battery_min,
     battery_usage=battery_usage,
-    charging_power=charging_power,
+    charging_power=random.sample([3.6, 11, 22], 1)[0],
     charge_efficiency=bev_charge_efficiency,
     environment=environment,
     user_profile=up_dict[up],
@@ -361,7 +382,8 @@ for up in up_with_bev:
         ] = new_component.charge_efficiency
     df_component_values[
         new_component.identifier + "_arrival_soc"
-        ] = (new_component.battery_min + new_component.battery_max /4)
+        ] = random.uniform(new_component.battery_min,
+                           new_component.battery_max)
 
     df_timeseries[new_component.identifier] = new_component.timeseries
 
@@ -372,7 +394,9 @@ for up in up_with_hp:
     new_storage = ThermalEnergyStorage(
         unit="kWh",
         identifier=(up_dict[up].identifier + "_hp_tes"),
-        mass=mass_of_storage,
+        mass=random.randrange(start=mass_of_storage_min,
+                              stop=mass_of_storage_max,
+                              step=100),
         cp=cp,
         hysteresis=hysteresis,
         target_temperature=target_temperature,
@@ -388,7 +412,9 @@ for up in up_with_hp:
         heat_sys_temp=heat_sys_temp,
         environment=environment,
         user_profile=up_dict[up],
-        el_power=el_power_hp,
+        el_power=random.randrange(start=el_power_hp_min,
+                                  stop=el_power_hp_max,
+                                  step=1),
         th_power=th_power_hp,
         ramp_up_time=ramp_up_time,
         ramp_down_time=ramp_down_time,
@@ -396,10 +422,10 @@ for up in up_with_hp:
         min_stop_time=min_stop_time_hp,
     )
 
-    for i in new_storage.user_profile.thermal_energy_demand.loc[
-            start:end].index:
-        new_storage.operate_storage(i, new_heat_pump)
-        
+    # for i in new_storage.user_profile.thermal_energy_demand.loc[
+    #         start:end].index:
+    #     new_storage.operate_storage(i, new_heat_pump)
+
     vpp.add_component(new_storage)
     vpp.add_component(new_heat_pump)
 
@@ -408,20 +434,20 @@ for up in up_with_hp:
     df_component_values[
         new_heat_pump.identifier + "_power"
         ] = new_heat_pump.el_power
-    
-    # Formula: E = m * cp * T
-    df_component_values["therm_storage_capacity"] = (
+
+    # Formula: E = m * cp * dT
+    df_component_values[new_storage.identifier + "therm_storage_capacity"] = (
         new_storage.mass
         * new_storage.cp
-        * new_storage.hysteresis  #ToDo: correct?
-        / 1000  # convert W to kW
-    )  # °K
+        * (new_storage.hysteresis * 2)  #dT
+        / 3600  # convert KJ to kW
+    )
     df_component_values["thermal_storage_efficiency"] =(
         new_storage.thermal_energy_loss_per_day
         )
     df_timeseries[
         new_heat_pump.identifier + "_thermal_energy_demand"
-        ] = user_profile.thermal_energy_demand
+        ] = up_dict[up].thermal_energy_demand
     df_timeseries[new_heat_pump.identifier + "_cop"] = new_heat_pump.get_cop()
     df_timeseries[new_heat_pump.identifier + "_cop"].interpolate(inplace=True)
 
