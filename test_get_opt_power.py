@@ -65,9 +65,9 @@ hp = HeatPump(identifier='hp1',
 
 hr = HeatingRod(identifier='hr1', 
                  environment=environment, user_profile = user_profile,
-                 el_power = el_power, rampUpTime = rampUpTime, 
-                 rampDownTime = rampDownTime, 
+                 el_power = el_power, rampUpTime = ramp_up_time, 
+                 rampDownTime = ramp_down_time, 
                  min_runtime = min_runtime, 
                  min_stop_time = min_stop_time)
 
-gop.get_opt_power(1000, user_profile, environment, hp, hr)
+gop.get_opt_power(2000, user_profile, environment, hp, hr)
