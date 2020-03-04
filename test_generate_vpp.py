@@ -2,17 +2,23 @@
 """
 Created on Tue Jan 28 15:35:09 2020
 
-@author: sbirk
+Generate a virtual power plant based on predefined numbers of buses and
+components.
+
+Export timeseries and component values to csv-files at the end
+
+@author: pyosch
 """
 
 import pandas as pd
 import random
 
-from vpplib import VirtualPowerPlant, Operator, UserProfile, Environment
+from vpplib import VirtualPowerPlant, UserProfile, Environment
 from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
+# define virtual power plant
 bus_number = 20
 
 pv_number = 5
@@ -20,7 +26,7 @@ wind_number = 2#2
 bev_number = 5
 hp_number = 5  # always includes thermal energy storage
 ees_number = 5
-chp_number = 0  # always includes thermal energy storage
+chp_number = 2  # always includes thermal energy storage
 
 
 # Values for environment
@@ -44,13 +50,13 @@ yearly_thermal_energy_demand = None  # kWh thermal; redifined depending on el ba
 
 # Values for pv
 module_lib = "SandiaMod"
-# module = "Canadian_Solar_CS5P_220M___2009_"
+# module will be choosen during function call
 inverter_lib = "SandiaInverter"
-# inverter = "ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_"
+# inverter will be choosen during function call
 surface_tilt = 20
 surface_azimuth = 200
-# modules_per_string = 10
-# strings_per_inverter = 2
+# modules_per_string will be choosen during function call
+# strings_per_inverter will be choosen during function call
 min_module_power = 220
 max_module_power = 250
 #  pv_power will be choosen during function call
@@ -82,17 +88,13 @@ hellman_exp = None
 # Values for el storage
 charge_efficiency = 0.98
 discharge_efficiency = 0.98
-#  power and capacity will be randomly assigned during component generation
-# max_power = 4  # kW
-# capacity = 4  # kWh
+# power and capacity will be randomly assigned during component generation
 max_c = 1  # factor between 0.5 and 1.2
 
 # Values for bev
-#  power and capacity will be randomly assigned during component generation
-# battery_max = 16
+# power and capacity will be randomly assigned during component generation
 battery_min = 4
 battery_usage = 1
-# charging_power = 11
 bev_charge_efficiency = 0.98
 load_degradation_begin = 0.8
 
@@ -125,14 +127,6 @@ ramp_down_time = 1 / 15  # timesteps
 min_runtime_chp = 1  # timesteps
 min_stop_time_chp = 2  # timesteps
 
-# %% export
-
-# dataframes for exporting timeseries and component values
-df_timeseries = pd.DataFrame(
-    index=pd.date_range(start=start, end=end, freq=time_freq, name="time")
-)
-
-df_component_values = pd.DataFrame(index=[0])
 
 # %% environment
 
@@ -257,16 +251,6 @@ for up in up_with_pv:
     new_component.prepare_time_series()
     vpp.add_component(new_component)
 
-    # export
-    # df_timeseries[new_component.identifier] = new_component.timeseries * -1
-
-    # df_component_values[new_component.identifier + "_kWp"] = (
-    #     new_component.module.Impo
-    #     * new_component.module.Vmpo
-    #     / 1000
-    #     * new_component.system.modules_per_string
-    #     * new_component.system.strings_per_inverter
-    # )
 # %% generate ees
 
 for up in up_with_ees:
@@ -285,24 +269,7 @@ for up in up_with_ees:
     max_c=max_c,
     )
 
-    # new_component.prepare_time_series()
     vpp.add_component(new_component)
-    
-    # export
-    
-    # df_component_values[
-    #     new_component.identifier + "_capacity"
-    #     ] = new_component.capacity
-    # df_component_values[
-    #     new_component.identifier + "_power"
-    #     ] = new_component.max_power
-    # df_component_values[
-    #     new_component.identifier + "_charge_efficiency"
-    #     ] = new_component.charge_efficiency
-    # df_component_values[
-    #     new_component.identifier + "_discharge_efficiency"
-    # ] = new_component.discharge_efficiency
-
 
 # %% generate wea
 
@@ -328,14 +295,6 @@ for up in up_with_wind:
     )
     new_component.prepare_time_series()
     vpp.add_component(new_component)
-    
-    # export
-    
-    # df_timeseries[new_component.identifier] = new_component.timeseries * -1
-    
-    # df_component_values[new_component.identifier + "_kw"] = (
-    #     new_component.ModelChain.power_plant.nominal_power / 1000
-    # )
 
 # %% generate bev
 
@@ -368,24 +327,6 @@ for up in up_with_bev:
     new_component.timeseries = new_component.at_home
 
     vpp.add_component(new_component)
-
-    # export
-
-    # df_component_values[
-    #     new_component.identifier + "_power"
-    #     ] = new_component.charging_power
-    # df_component_values[
-    #     new_component.identifier + "_battery_max"
-    #     ] = new_component.battery_max
-    # df_component_values[
-    #     new_component.identifier + "_efficiency"
-    #     ] = new_component.charge_efficiency
-    # df_component_values[
-    #     new_component.identifier + "_arrival_soc"
-    #     ] = random.uniform(new_component.battery_min,
-    #                        new_component.battery_max)
-
-    # df_timeseries[new_component.identifier] = new_component.timeseries
 
 # %% generate hp and tes
 
@@ -422,203 +363,55 @@ for up in up_with_hp:
         min_stop_time=min_stop_time_hp,
     )
 
-    # for i in new_storage.user_profile.thermal_energy_demand.loc[
-    #         start:end].index:
-    #     new_storage.operate_storage(i, new_heat_pump)
-
     vpp.add_component(new_storage)
     vpp.add_component(new_heat_pump)
 
-    # export
-
-    # df_component_values[
-    #     new_heat_pump.identifier + "_power"
-    #     ] = new_heat_pump.el_power
-
-    # # Formula: E = m * cp * dT
-    # df_component_values[new_storage.identifier + "therm_storage_capacity"] = (
-    #     new_storage.mass
-    #     * new_storage.cp
-    #     * (new_storage.hysteresis * 2)  #dT
-    #     / 3600  # convert KJ to kW
-    # )
-    # df_component_values[new_storage.identifier + "thermal_storage_efficiency"] = (
-    #     new_storage.thermal_energy_loss_per_day
-    #     )
-    # df_timeseries[
-    #     new_heat_pump.identifier + "_thermal_energy_demand"
-    #     ] = up_dict[up].thermal_energy_demand
-    # df_timeseries[new_heat_pump.identifier + "_cop"] = new_heat_pump.get_cop()
-    # df_timeseries[new_heat_pump.identifier + "_cop"].interpolate(inplace=True)
 
 # %% generate chp and tes
 
-# for up in up_with_chp:
+for up in up_with_chp:
 
-#     new_storage = ThermalEnergyStorage(
-#         unit="kWh",
-#         identifier=(up_dict[up].identifier + "_chp_tes"),
-#         mass=mass_of_storage,
-#         cp=cp,
-#         hysteresis=hysteresis,
-#         target_temperature=target_temperature,
-#         thermal_energy_loss_per_day=thermal_energy_loss_per_day,
-#         environment=environment,
-#         user_profile=up_dict[up],
-#     )
+    new_storage = ThermalEnergyStorage(
+        unit="kWh",
+        identifier=(up_dict[up].identifier + "_chp_tes"),
+        mass=random.randrange(start=mass_of_storage_min,
+                              stop=mass_of_storage_max,
+                              step=100),
+        cp=cp,
+        hysteresis=hysteresis,
+        target_temperature=target_temperature,
+        thermal_energy_loss_per_day=thermal_energy_loss_per_day,
+        environment=environment,
+        user_profile=up_dict[up],
+    )
 
-#     new_chp = CombinedHeatAndPower(
-#     unit="kW",
-#     identifier=(up_dict[up].identifier + "_chp"),
-#     environment=environment,
-#     user_profile=up_dict[up],
-#     el_power=el_power_chp,
-#     th_power=th_power_chp,
-#     overall_efficiency=overall_efficiency,
-#     ramp_up_time=ramp_up_time,
-#     ramp_down_time=ramp_down_time,
-#     min_runtime=min_runtime_chp,
-#     min_stop_time=min_stop_time_chp,
-# )
+    new_chp = CombinedHeatAndPower(
+    unit="kW",
+    identifier=(up_dict[up].identifier + "_chp"),
+    environment=environment,
+    user_profile=up_dict[up],
+    el_power=el_power_chp,
+    th_power=th_power_chp,
+    overall_efficiency=overall_efficiency,
+    ramp_up_time=ramp_up_time,
+    ramp_down_time=ramp_down_time,
+    min_runtime=min_runtime_chp,
+    min_stop_time=min_stop_time_chp,
+)
 
-#     for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
-#         new_storage.operate_storage(i, new_chp)
+    for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
+        new_storage.operate_storage(i, new_chp)
 
-#     vpp.add_component(new_storage)
-#     vpp.add_component(new_chp)
-
-#     # export
-
-#     df_component_values[new_chp.identifier + "_power_therm"] = new_chp.th_power
-#     df_component_values[new_chp.identifier + "_power_el"] = new_chp.el_power
-#     df_component_values[new_chp.identifier + "_efficiency"] = new_chp.overall_efficiency
+    vpp.add_component(new_storage)
+    vpp.add_component(new_chp)
 
 
-#%% Develop export function for VirtualPowerPlant class
+#%% Export function for components in VirtualPowerPlant class
 
-for component in vpp.components.keys():
-    if '_pv' in component:
-        df_component_values[vpp.components[component].identifier + "_kWp"] = (
-            vpp.components[component].module.Impo
-            * vpp.components[component].module.Vmpo
-            / 1000
-            * vpp.components[component].system.modules_per_string
-            * vpp.components[component].system.strings_per_inverter
-        )
-        df_timeseries[vpp.components[component].identifier] = vpp.components[component].timeseries * -1
-
-    elif '_ees' in component:
-        df_component_values[
-        vpp.components[component].identifier + "_capacity"
-        ] = vpp.components[component].capacity
-
-        df_component_values[
-            vpp.components[component].identifier + "_power"
-            ] = vpp.components[component].max_power
-
-        df_component_values[
-            vpp.components[component].identifier + "_charge_efficiency"
-            ] = vpp.components[component].charge_efficiency
-
-        df_component_values[
-            vpp.components[component].identifier + "_discharge_efficiency"
-        ] = vpp.components[component].discharge_efficiency
-
-    elif '_wea' in component:
-        df_timeseries[
-            vpp.components[component].identifier] = vpp.components[
-                component].timeseries * -1
-    
-        df_component_values[vpp.components[component].identifier + "_kw"] = (
-            vpp.components[component].ModelChain.power_plant.nominal_power
-            / 1000
-        )
-
-    elif '_bev' in component:
-        df_component_values[
-            vpp.components[component].identifier + "_power"
-            ] = vpp.components[component].charging_power
-        df_component_values[
-            vpp.components[component].identifier + "_battery_max"
-            ] = vpp.components[component].battery_max
-        df_component_values[
-            vpp.components[component].identifier + "_efficiency"
-            ] = vpp.components[component].charge_efficiency
-        df_component_values[
-            vpp.components[component].identifier + "_arrival_soc"
-            ] = random.uniform(vpp.components[component].battery_min,
-                               vpp.components[component].battery_max)
-
-        df_timeseries[vpp.components[component].identifier] = vpp.components[
-            component].timeseries
-
-    elif '_hp' in component:
-        if '_tes' in component:
-            # Formula: E = m * cp * dT
-            df_component_values[
-                vpp.components[component].identifier
-                + "therm_storage_capacity"] = (
-                vpp.components[component].mass
-                * vpp.components[component].cp
-                * (vpp.components[component].hysteresis * 2)  #dT
-                / 3600  # convert KJ to kW
-                )
-
-            df_component_values[
-                vpp.components[component].identifier
-                + "thermal_storage_efficiency"] =(
-                vpp.components[component].thermal_energy_loss_per_day
-                )
-        else:
-            df_component_values[
-                vpp.components[component].identifier + "_power"
-                ] = vpp.components[component].el_power
-
-            df_timeseries[
-                vpp.components[component].identifier + "_thermal_energy_demand"
-                ] = up_dict[up].thermal_energy_demand
-
-            df_timeseries[
-                vpp.components[component].identifier
-                + "_cop"] = vpp.components[component].get_cop()
-
-            df_timeseries[vpp.components[component].identifier
-                          + "_cop"].interpolate(inplace=True)
-            
-    elif '_chp' in component:
-        if '_tes' in component:
-            # Formula: E = m * cp * dT
-            df_component_values[
-                vpp.components[component].identifier
-                + "therm_storage_capacity"] = (
-                vpp.components[component].mass
-                * vpp.components[component].cp
-                * (vpp.components[component].hysteresis * 2)  #dT
-                / 3600  # convert KJ to kW
-                )
-
-            df_component_values[
-                vpp.components[component].identifier
-                + "thermal_storage_efficiency"] =(
-                vpp.components[component].thermal_energy_loss_per_day
-                )
-                    
-        else:
-            df_component_values[vpp.components[component].identifier
-                                + "_power_therm"] = vpp.components[
-                                    component].th_power
-
-            df_component_values[vpp.components[component].identifier
-                                + "_power_el"] = vpp.components[
-                                    component].el_power
-
-            df_component_values[vpp.components[component].identifier
-                                + "_efficiency"] = vpp.components[
-                                    component].overall_efficiency
-
+df_component_values, df_timeseries = vpp.export_components(environment)
 
 #%% Export vpp information and timeseries
 
-# df_timeseries.to_csv("df_timeseries.csv")
+df_timeseries.to_csv("df_timeseries.csv")
 
-# df_component_values.to_csv("df_component_values.csv")
+df_component_values.to_csv("df_component_values.csv")
