@@ -8,7 +8,7 @@ This is the overall aggregator of the technologies used.
 """
 
 import random
-
+import pandas as pd
 
 class VirtualPowerPlant(object):
     def __init__(self, name):
@@ -134,6 +134,144 @@ class VirtualPowerPlant(object):
 
         # Remove component
         self.components.pop(component)
+
+    def export_components(self, environment):
+
+        # dataframes for exporting timeseries and component values
+        df_timeseries = pd.DataFrame(
+            index=pd.date_range(start=environment.start,
+                                end=environment.end,
+                                freq=environment.time_freq,
+                                name="time")
+        )
+
+        df_component_values = pd.DataFrame(index=[0])
+
+        for component in self.components.keys():
+            if '_pv' in component:
+                df_component_values[self.components[component].identifier + "_kWp"] = (
+                    self.components[component].module.Impo
+                    * self.components[component].module.Vmpo
+                    / 1000
+                    * self.components[component].system.modules_per_string
+                    * self.components[component].system.strings_per_inverter
+                )
+                df_timeseries[self.components[component].identifier] = self.components[component].timeseries * -1
+
+            elif '_ees' in component:
+                df_component_values[
+                self.components[component].identifier + "_capacity"
+                ] = self.components[component].capacity
+
+                df_component_values[
+                    self.components[component].identifier + "_power"
+                    ] = self.components[component].max_power
+
+                df_component_values[
+                    self.components[component].identifier + "_charge_efficiency"
+                    ] = self.components[component].charge_efficiency
+
+                df_component_values[
+                    self.components[component].identifier + "_discharge_efficiency"
+                ] = self.components[component].discharge_efficiency
+
+            elif '_wea' in component:
+                df_timeseries[
+                    self.components[component].identifier] = self.components[
+                        component].timeseries * -1
+
+                df_component_values[self.components[component].identifier + "_kW"] = (
+                    self.components[component].ModelChain.power_plant.nominal_power
+                    / 1000
+                )
+
+            elif '_bev' in component:
+                df_component_values[
+                    self.components[component].identifier + "_charger_kW"
+                    ] = self.components[component].charging_power
+                df_component_values[
+                    self.components[component].identifier + "_battery_max"
+                    ] = self.components[component].battery_max
+                df_component_values[
+                    self.components[component].identifier + "_efficiency"
+                    ] = self.components[component].charge_efficiency
+                df_component_values[
+                    self.components[component].identifier + "_arrival_soc"
+                    ] = random.uniform(self.components[component].battery_min,
+                                       self.components[component].battery_max)
+
+                df_timeseries[self.components[component].identifier] = self.components[
+                    component].timeseries
+
+            elif '_hp' in component:
+                if '_tes' in component:
+                    # Formula: E = m * cp * dT
+                    df_component_values[
+                        self.components[component].identifier
+                        + "_therm_storage_capacity"] = (
+                        self.components[component].mass
+                        * self.components[component].cp
+                        * (self.components[component].hysteresis * 2)  #dT
+                        / 3600  # convert KJ to kW
+                        )
+
+                    df_component_values[
+                        self.components[component].identifier
+                        + "_efficiency_per_timestep"] =(
+                        self.components[component].efficiency_per_timestep
+                        )
+                else:
+                    df_component_values[
+                        self.components[component].identifier + "_kW_el"
+                        ] = self.components[component].el_power
+
+                    df_timeseries[
+                        self.components[component].identifier + "_thermal_energy_demand"
+                        ] = self.components[component].user_profile.thermal_energy_demand
+
+                    df_timeseries[
+                        self.components[component].identifier
+                        + "_cop"] = self.components[component].get_cop()
+
+                    df_timeseries[self.components[component].identifier
+                                  + "_cop"].interpolate(inplace=True)
+
+            elif '_chp' in component:
+                if '_tes' in component:
+                    # Formula: E = m * cp * dT
+                    df_component_values[
+                        self.components[component].identifier
+                        + "_therm_storage_capacity"] = (
+                        self.components[component].mass
+                        * self.components[component].cp
+                        * (self.components[component].hysteresis * 2)  #dT
+                        / 3600  # convert KJ to kW
+                        )
+
+                    df_component_values[
+                        self.components[component].identifier
+                        + "_efficiency_per_timestep"] =(
+                        self.components[component].efficiency_per_timestep
+                        )
+
+                else:
+                    df_timeseries[
+                        self.components[component].identifier + "_thermal_energy_demand"
+                        ] = self.components[component].user_profile.thermal_energy_demand
+
+                    df_component_values[self.components[component].identifier
+                                        + "_power_therm"] = self.components[
+                                            component].th_power
+
+                    df_component_values[self.components[component].identifier
+                                        + "_kW_el"] = self.components[
+                                            component].el_power
+
+                    df_component_values[self.components[component].identifier
+                                        + "_efficiency"] = self.components[
+                                            component].overall_efficiency
+
+        return df_component_values, df_timeseries
 
     def get_buses_with_components(
         self,
