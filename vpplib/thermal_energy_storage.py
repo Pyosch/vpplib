@@ -85,7 +85,7 @@ class ThermalEnergyStorage(Component):
         # Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10%
         # Bereitschaftsverluste hat (ohne Rohrleitungen!!)
         self.thermal_energy_loss_per_day = thermal_energy_loss_per_day
-        self.thermal_energy_loss_per_timestep = 1 - (
+        self.efficiency_per_timestep = 1 - (
             thermal_energy_loss_per_day
             / (24 * (60 / self.environment.timebase))
         )
@@ -113,7 +113,7 @@ class ThermalEnergyStorage(Component):
             * 1000
             / (60 / self.environment.timebase)
         )
-        self.state_of_charge *= self.thermal_energy_loss_per_timestep
+        self.state_of_charge *= self.efficiency_per_timestep
         self.current_temperature = (
             self.state_of_charge / (self.mass * self.cp)
         ) - 273.15
