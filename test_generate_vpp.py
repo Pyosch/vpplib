@@ -13,13 +13,16 @@ Export timeseries and component values to csv-files at the end
 import pandas as pd
 import random
 
+import simbench as sb
+import pandapower as pp
+
 from vpplib import VirtualPowerPlant, UserProfile, Environment
 from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
 # define virtual power plant
-bus_number = 20
+# bus_number = 20
 
 pv_number = 5
 wind_number = 2#2
@@ -28,6 +31,10 @@ hp_number = 5  # always includes thermal energy storage
 ees_number = 5
 chp_number = 2  # always includes thermal energy storage
 
+bus_number = pv_number + wind_number + bev_number + hp_number + chp_number
+
+# Simbench Network parameters
+sb_code = "1-MVLV-semiurb-5.220-0-sw"
 
 # Values for environment
 start = "2015-07-01 00:00:00"
@@ -152,6 +159,27 @@ baseload.drop(columns=["Time"], inplace=True)
 baseload.index = pd.date_range(
     start=year, periods=35040, freq=time_freq, name="time"
 )
+
+# %% Simbench network
+
+net = sb.get_simbench_net(sb_code)
+
+# plot the grid to show the open ring systems
+pp.plotting.simple_plot(net)
+
+# check that all needed profiles existent
+assert not sb.profiles_are_missing(net)
+
+# calculate absolute profiles
+profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
+
+# define a function to apply absolute values
+def apply_absolute_values(net, absolute_values_dict, case_or_time_step):
+    for elm_param in absolute_values_dict.keys():
+        if absolute_values_dict[elm_param].shape[1]:
+            elm = elm_param[0]
+            param = elm_param[1]
+            net[elm].loc[:, param] = absolute_values_dict[elm_param].loc[case_or_time_step]
 
 # %% generate user profiles
 
