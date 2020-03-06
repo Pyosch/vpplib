@@ -22,16 +22,16 @@ from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
 # define virtual power plant
-# bus_number = 20
+bus_number = 20
 
 pv_number = 5
-wind_number = 2#2
+wind_number = 2
 bev_number = 5
 hp_number = 5  # always includes thermal energy storage
 ees_number = 5
 chp_number = 2  # always includes thermal energy storage
 
-bus_number = pv_number + wind_number + bev_number + hp_number + chp_number
+lv_bus_number = pv_number + bev_number + hp_number + chp_number
 
 # Simbench Network parameters
 sb_code = "1-MVLV-semiurb-5.220-0-sw"
@@ -180,6 +180,110 @@ def apply_absolute_values(net, absolute_values_dict, case_or_time_step):
             elm = elm_param[0]
             param = elm_param[1]
             net[elm].loc[:, param] = absolute_values_dict[elm_param].loc[case_or_time_step]
+
+# get buses with H0 loadprofiles
+# household_lst = []
+# for idx in net.load.index:
+#     if "H0" in net.load.profile.iloc[idx]:
+#         household_lst.append(net.bus.name.iloc[net.load.bus.iloc[idx]])
+
+lv_buses = []
+for bus in net.bus.name:
+    if "LV" in bus:
+        lv_buses.append(bus)
+
+# %% generate user profiles based on grid buses
+
+up_dict = {}
+count = 0
+while count < lv_bus_number:
+
+    # Get a bus with a load to add the loadprofile to the user_profile.
+    # This the equivalent to a do-while-loop
+    while True:
+        simbus = random.sample(lv_buses, 1)[0]
+        if len(net.load[net.load.bus == net.bus[
+                net.bus.name == simbus].index.item()]) > 0:
+            break
+
+    user_profile = UserProfile(
+        identifier=simbus,
+        latitude=latitude,
+        longitude=longitude,
+        thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+        building_type=building_type,
+        comfort_factor=None,
+        t_0=t_0,
+        daily_vehicle_usage=None,
+        week_trip_start=[],
+        week_trip_end=[],
+        weekend_trip_start=[],
+        weekend_trip_end=[],
+    )
+
+    user_profile.baseload = pd.DataFrame(
+        profiles['load', 'p_mw'][
+            net.load[net.load.bus == net.bus[
+                net.bus.name == simbus].index.item()].index.item()
+            ].loc[start:end]
+        * 1000)
+    # thermal energy demand equals two times the electrical energy demand:
+    user_profile.thermal_energy_demand_yearly = (user_profile.baseload.sum()
+                                                 / 2).item()  # /4 *2= /2
+    user_profile.get_thermal_energy_demand()
+
+    up_dict[user_profile.identifier] = user_profile
+    count += 1
+
+if wind_number > 0:
+    mv_buses = []
+
+    for bus in net.bus.name:
+        if "MV" in bus:
+            mv_buses.append(bus)
+
+count = 0
+while count < wind_number:
+
+    simbus = random.sample(mv_buses, 1)[0]
+
+    user_profile = UserProfile(
+        identifier=simbus,
+        latitude=latitude,
+        longitude=longitude,
+        thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+        building_type=building_type,
+        comfort_factor=None,
+        t_0=t_0,
+        daily_vehicle_usage=None,
+        week_trip_start=[],
+        week_trip_end=[],
+        weekend_trip_start=[],
+        weekend_trip_end=[],
+    )
+
+    # Uncomment if loadprofile in user_profile is needed
+    # Keep in mind to include check for loadprofile when choosing "simbus"
+    # like done for lv_buses.
+    #
+    # user_profile.baseload = pd.DataFrame(
+    #     profiles['load', 'p_mw'][
+    #         net.load[net.load.bus == net.bus[
+    #             net.bus.name == simbus].index.item()].iloc[0].name
+    #         ].loc[start:end]
+    #     * 1000)
+    # # thermal energy demand equals two times the electrical energy demand:
+    # user_profile.thermal_energy_demand_yearly = (user_profile.baseload.sum()
+    #                                              / 2).item()  # /4 *2= /2
+    # user_profile.get_thermal_energy_demand()
+
+    up_dict[user_profile.identifier] = user_profile
+    count += 1
+
+# create a list of all user profiles and shuffle that list to obtain a random
+# assignment of components to the bus
+up_list = list(up_dict.keys())
+random.shuffle(up_list)
 
 # %% generate user profiles
 
