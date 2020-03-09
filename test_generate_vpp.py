@@ -160,6 +160,10 @@ baseload.index = pd.date_range(
     start=year, periods=35040, freq=time_freq, name="time"
 )
 
+# %% virtual power plant
+
+vpp = VirtualPowerPlant("vpp")
+
 # %% Simbench network
 
 net = sb.get_simbench_net(sb_code)
@@ -172,6 +176,12 @@ assert not sb.profiles_are_missing(net)
 
 # calculate absolute profiles
 profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
+
+# get datetime index for profiles
+profiles['load', 'p_mw'].index = pd.date_range(
+    start=start[:4],
+    periods=len(profiles['load', 'p_mw'].index),
+    freq=time_freq)
 
 # define a function to apply absolute values
 def apply_absolute_values(net, absolute_values_dict, case_or_time_step):
@@ -192,7 +202,7 @@ for bus in net.bus.name:
     if "LV" in bus:
         lv_buses.append(bus)
 
-# %% generate user profiles based on grid buses
+# %% generate user profiles based on grid buses for lv
 
 up_dict = {}
 count = 0
@@ -235,6 +245,8 @@ while count < lv_bus_number:
     up_dict[user_profile.identifier] = user_profile
     count += 1
 
+# %% generate user profiles based on grid buses for mv
+
 if wind_number > 0:
     mv_buses = []
 
@@ -243,9 +255,11 @@ if wind_number > 0:
             mv_buses.append(bus)
 
 count = 0
+up_with_wind = []
 while count < wind_number:
 
     simbus = random.sample(mv_buses, 1)[0]
+    vpp.buses_with_wind.append(simbus)
 
     user_profile = UserProfile(
         identifier=simbus,
@@ -277,43 +291,7 @@ while count < wind_number:
     #                                              / 2).item()  # /4 *2= /2
     # user_profile.get_thermal_energy_demand()
 
-    up_dict[user_profile.identifier] = user_profile
-    count += 1
-
-# create a list of all user profiles and shuffle that list to obtain a random
-# assignment of components to the bus
-up_list = list(up_dict.keys())
-random.shuffle(up_list)
-
-# %% generate user profiles
-
-up_dict = {}
-count = 0
-while count < bus_number:
-    
-    user_profile = UserProfile(
-        identifier=(identifier + str(count)),
-        latitude=latitude,
-        longitude=longitude,
-        thermal_energy_demand_yearly=yearly_thermal_energy_demand,
-        building_type=building_type,
-        comfort_factor=None,
-        t_0=t_0,
-        daily_vehicle_usage=None,
-        week_trip_start=[],
-        week_trip_end=[],
-        weekend_trip_start=[],
-        weekend_trip_end=[],
-    )
-
-    user_profile.baseload = pd.DataFrame(
-        baseload[
-            str(random.randint(0, (len(baseload.columns) -1)))].loc[start:end]
-        / 1000)
-    # thermal energy demand equals two times the electrical energy demand:
-    user_profile.thermal_energy_demand_yearly = (user_profile.baseload.sum()
-                                                 / 2).item()  # /4 *2= /2
-    user_profile.get_thermal_energy_demand()
+    up_with_wind.append(user_profile.identifier)
 
     up_dict[user_profile.identifier] = user_profile
     count += 1
@@ -326,7 +304,7 @@ random.shuffle(up_list)
 # %% pick buses with components
 
 #wind_amount = int(round((len(up_dict.keys()) * (wind_percentage/100)), 0))
-up_with_wind = random.sample(list(up_dict.keys()), wind_number)
+# up_with_wind = random.sample(list(up_dict.keys()), wind_number)
 
 #pv_amount = int(round((len(up_dict.keys()) * (pv_percentage/100)), 0))
 up_with_pv = random.sample(
@@ -348,9 +326,6 @@ up_with_bev = random.sample(
 #storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
 up_with_ees = random.sample(up_with_pv, ees_number)
 
-# %% virtual power plant
-
-vpp = VirtualPowerPlant("vpp")
 
 # %% generate pv
 
