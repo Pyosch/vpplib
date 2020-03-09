@@ -12,19 +12,18 @@ Export timeseries and component values to csv-files at the end
 
 import pandas as pd
 import random
+import time
 
 import simbench as sb
 import pandapower as pp
 
-from vpplib import VirtualPowerPlant, UserProfile, Environment
+from vpplib import VirtualPowerPlant, UserProfile, Environment #, Operator
 from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
 # define virtual power plant
-bus_number = 20
-
-pv_number = 5
+pv_number = 10
 wind_number = 2
 bev_number = 5
 hp_number = 5  # always includes thermal energy storage
@@ -34,11 +33,11 @@ chp_number = 2  # always includes thermal energy storage
 lv_bus_number = pv_number + bev_number + hp_number + chp_number
 
 # Simbench Network parameters
-sb_code = "1-MVLV-semiurb-5.220-0-sw"
+sb_code = "1-MVLV-semiurb-5.220-0-sw" # "1-LV-semiurb4--0-sw"
 
 # Values for environment
 start = "2015-07-01 00:00:00"
-end = "2015-07-31 23:45:00"
+end = "2015-07-07 23:45:00"
 year = "2015"
 time_freq = "15 min"
 index_year = pd.date_range(
@@ -134,7 +133,8 @@ ramp_down_time = 1 / 15  # timesteps
 min_runtime_chp = 1  # timesteps
 min_stop_time_chp = 2  # timesteps
 
-
+print(time.asctime( time.localtime(time.time()) ))
+print("Loaded input\n")
 # %% environment
 
 environment = Environment(
@@ -191,6 +191,11 @@ def apply_absolute_values(net, absolute_values_dict, case_or_time_step):
             param = elm_param[1]
             net[elm].loc[:, param] = absolute_values_dict[elm_param].loc[case_or_time_step]
 
+print(time.asctime(time.localtime(time.time())))
+print("Initialized environment, vpp and net\n")
+
+# %% generate user profiles based on grid buses for lv
+
 # get buses with H0 loadprofiles
 # household_lst = []
 # for idx in net.load.index:
@@ -201,8 +206,6 @@ lv_buses = []
 for bus in net.bus.name:
     if "LV" in bus:
         lv_buses.append(bus)
-
-# %% generate user profiles based on grid buses for lv
 
 up_dict = {}
 count = 0
@@ -234,7 +237,7 @@ while count < lv_bus_number:
     user_profile.baseload = pd.DataFrame(
         profiles['load', 'p_mw'][
             net.load[net.load.bus == net.bus[
-                net.bus.name == simbus].index.item()].index.item()
+                net.bus.name == simbus].index.item()].iloc[0].name # net.bus.name == simbus].index.item()].index.item()
             ].loc[start:end]
         * 1000)
     # thermal energy demand equals two times the electrical energy demand:
@@ -301,35 +304,37 @@ while count < wind_number:
 up_list = list(up_dict.keys())
 random.shuffle(up_list)
 
+print(time.asctime(time.localtime(time.time())))
+print("Generated user_profiles\n")
 # %% pick buses with components
 
 #wind_amount = int(round((len(up_dict.keys()) * (wind_percentage/100)), 0))
 # up_with_wind = random.sample(list(up_dict.keys()), wind_number)
 
 #pv_amount = int(round((len(up_dict.keys()) * (pv_percentage/100)), 0))
-up_with_pv = random.sample(
+vpp.buses_with_pv = random.sample(
     [x for x in list(up_dict.keys()) if x not in up_with_wind], pv_number)
 
 #hp_amount = int(round((len(up_dict.keys()) * (hp_percentage/100)), 0))
-up_with_hp = random.sample(
+vpp.buses_with_hp = random.sample(
     [x for x in list(up_dict.keys()) if x not in up_with_wind], hp_number)
 
 #chp_amount = int(round((len(up_dict.keys()) * (chp_percentage/100)), 0))
-up_with_chp = random.sample(
+vpp.buses_with_chp = random.sample(
     [x for x in list(up_dict.keys()) if x not in up_with_wind], chp_number)
 
 #bev_amount = int(round((len(up_dict.keys()) * (bev_percentage/100)), 0))
-up_with_bev = random.sample(
+vpp.buses_with_bev = random.sample(
     [x for x in list(up_dict.keys()) if x not in up_with_wind], bev_number)
 
 # Distribution of el storage is only done for houses with pv
 #storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
-up_with_ees = random.sample(up_with_pv, ees_number)
+vpp.buses_with_ees = random.sample(vpp.buses_with_pv, ees_number)
 
 
 # %% generate pv
 
-for up in up_with_pv:
+for bus in vpp.buses_with_pv:
 
     pv_power = random.randrange(start=6000, stop=9000, step=100)
     surface_tilt = random.randrange(start=20, stop=40, step=5)
@@ -337,9 +342,9 @@ for up in up_with_pv:
 
     new_component = Photovoltaic(
     unit="kW",
-    identifier=(up_dict[up].identifier + "_pv"),
+    identifier=(bus + "_pv"),
     environment=environment,
-    user_profile=up_dict[up],
+    user_profile=up_dict[bus],
     module_lib=module_lib,
     module=None,
     inverter_lib=inverter_lib,
@@ -356,19 +361,29 @@ for up in up_with_pv:
                                 inverter_power_range)
 
     new_component.prepare_time_series()
+
+    # TODO
+    # Somehow in some pvlib timeseries the inverter losses during night hours
+    # are not complete. Once we find out how to solve this problem we can
+    # delete this part:
+    if new_component.timeseries.isnull().values.any():
+            new_component.timeseries.fillna(
+                value=new_component.timeseries.min(),
+                inplace=True)
+
     vpp.add_component(new_component)
 
 # %% generate ees
 
-for up in up_with_ees:
+for bus in vpp.buses_with_ees:
 
     cap_power = random.randrange(start=5, stop=9, step=1)
 
     new_component = ElectricalEnergyStorage(
     unit="kWh",
-    identifier=(up_dict[up].identifier + "_ees"),
+    identifier=(bus + "_ees"),
     environment=environment,
-    user_profile=up_dict[up],
+    user_profile=up_dict[bus],
     capacity=cap_power,
     charge_efficiency=charge_efficiency,
     discharge_efficiency=discharge_efficiency,
@@ -380,11 +395,11 @@ for up in up_with_ees:
 
 # %% generate wea
 
-for up in up_with_wind:
+for bus in vpp.buses_with_wind:
 
     new_component = WindPower(
     unit="kW",
-    identifier=(up_dict[up].identifier + "_wea"),
+    identifier=(bus + "_wea"),
     environment=environment,
     user_profile=None,
     turbine_type=wea_list[random.randint(0, (len(wea_list) -1))],
@@ -405,11 +420,11 @@ for up in up_with_wind:
 
 # %% generate bev
 
-for up in up_with_bev:
+for bus in vpp.buses_with_bev:
 
     new_component = BatteryElectricVehicle(
     unit="kW",
-    identifier=(up_dict[up].identifier + "_bev"),
+    identifier=(bus + "_bev"),
     battery_max=random.sample([50, 60, 17.6, 64, 33.5, 38.3,75, 20, 27.2, 6.1]
                               , 1)[0],
     battery_min=battery_min,
@@ -417,7 +432,7 @@ for up in up_with_bev:
     charging_power=random.sample([3.6, 11, 22], 1)[0],
     charge_efficiency=bev_charge_efficiency,
     environment=environment,
-    user_profile=up_dict[up],
+    user_profile=up_dict[bus],
     load_degradation_begin=load_degradation_begin,
     )
     new_component.timeseries = pd.DataFrame(
@@ -437,11 +452,11 @@ for up in up_with_bev:
 
 # %% generate hp and tes
 
-for up in up_with_hp:
+for bus in vpp.buses_with_hp:
 
     new_storage = ThermalEnergyStorage(
         unit="kWh",
-        identifier=(up_dict[up].identifier + "_hp_tes"),
+        identifier=(bus + "_hp_tes"),
         mass=random.randrange(start=mass_of_storage_min,
                               stop=mass_of_storage_max,
                               step=100),
@@ -450,16 +465,16 @@ for up in up_with_hp:
         target_temperature=target_temperature,
         thermal_energy_loss_per_day=thermal_energy_loss_per_day,
         environment=environment,
-        user_profile=up_dict[up],
+        user_profile=up_dict[bus],
     )
 
     new_heat_pump = HeatPump(
         unit="kW",
-        identifier=(up_dict[up].identifier + "_hp"),
+        identifier=(bus + "_hp"),
         heat_pump_type=heat_pump_type,
         heat_sys_temp=heat_sys_temp,
         environment=environment,
-        user_profile=up_dict[up],
+        user_profile=up_dict[bus],
         el_power=random.randrange(start=el_power_hp_min,
                                   stop=el_power_hp_max,
                                   step=1),
@@ -476,11 +491,11 @@ for up in up_with_hp:
 
 # %% generate chp and tes
 
-for up in up_with_chp:
+for bus in vpp.buses_with_chp:
 
     new_storage = ThermalEnergyStorage(
         unit="kWh",
-        identifier=(up_dict[up].identifier + "_chp_tes"),
+        identifier=(bus + "_chp_tes"),
         mass=random.randrange(start=mass_of_storage_min,
                               stop=mass_of_storage_max,
                               step=100),
@@ -489,14 +504,14 @@ for up in up_with_chp:
         target_temperature=target_temperature,
         thermal_energy_loss_per_day=thermal_energy_loss_per_day,
         environment=environment,
-        user_profile=up_dict[up],
+        user_profile=up_dict[bus],
     )
 
     new_chp = CombinedHeatAndPower(
     unit="kW",
-    identifier=(up_dict[up].identifier + "_chp"),
+    identifier=(bus + "_chp"),
     environment=environment,
-    user_profile=up_dict[up],
+    user_profile=up_dict[bus],
     el_power=el_power_chp,
     th_power=th_power_chp,
     overall_efficiency=overall_efficiency,
@@ -512,7 +527,69 @@ for up in up_with_chp:
     vpp.add_component(new_storage)
     vpp.add_component(new_chp)
 
+print(time.asctime(time.localtime(time.time())))
+print("Generated components in vpp\n")
+# %% create elements in the pandapower.net
 
+for bus in vpp.buses_with_pv:
+
+    pp.create_sgen(
+        net,
+        bus=net.bus[net.bus.name == bus].index[0],
+        p_mw=(
+            vpp.components[bus + "_pv"].module.Impo
+            * vpp.components[bus + "_pv"].module.Vmpo
+            / 1000000
+        ),
+        name=(bus + "_pv"),
+        type="pv",
+    )
+
+for bus in vpp.buses_with_storage:
+
+    pp.create_storage(
+        net,
+        bus=net.bus[net.bus.name == bus].index[0],
+        p_mw=0,
+        max_e_mwh=vpp.components[bus].capacity / 1000,
+        name=(bus + "_ees"),
+        type="ees",
+    )
+
+for bus in vpp.buses_with_bev:
+
+    pp.create_load(
+        net,
+        bus=net.bus[net.bus.name == bus].index[0],
+        p_mw=(vpp.components[bus + "_bev"].charging_power / 1000),
+        name=(bus + "_bev"),
+        type="bev",
+    )
+
+for bus in vpp.buses_with_hp:
+
+    pp.create_load(
+        net,
+        bus=net.bus[net.bus.name == bus].index[0],
+        p_mw=(vpp.components[bus + "_hp"].el_power / 1000),
+        name=(bus + "_hp"),
+        type="hp",
+    )
+
+for bus in vpp.buses_with_wind:
+
+    pp.create_sgen(
+        net,
+        bus=net.bus[net.bus.name == bus].index[0],
+        p_mw=(
+            vpp.components[bus + "_wea"].wind_turbine.nominal_power / 1000000
+        ),
+        name=(bus + "_wea"),
+        type="wea",
+    )
+
+print(time.asctime(time.localtime(time.time())))
+print("Generated components in net\n")
 #%% Export function for components in VirtualPowerPlant class
 
 df_component_values, df_timeseries = vpp.export_components(environment)
@@ -522,3 +599,34 @@ df_component_values, df_timeseries = vpp.export_components(environment)
 df_timeseries.to_csv("df_timeseries.csv")
 
 df_component_values.to_csv("df_component_values.csv")
+
+print(time.asctime(time.localtime(time.time())))
+print("Exported values and timeseries to csv\n")
+# # %% initialize operator
+
+# operator = Operator(virtual_power_plant=vpp, net=net, target_data=None)
+
+# print(time.asctime(time.localtime(time.time())))
+# print("Initialized Operator\n")
+# # %% run base_scenario without operation strategies
+
+# net_dict = operator.run_base_scenario(baseload)
+
+# print(time.asctime(time.localtime(time.time())))
+# print("Finished run_base_scenario()\n")
+# # %% extract results from powerflow
+
+# results = operator.extract_results(net_dict)
+# single_result = operator.extract_single_result(
+#     net_dict, res="ext_grid", value="p_mw"
+# )
+
+# print(time.asctime(time.localtime(time.time())))
+# print("Exported results\n")
+# # %% plot results of powerflow and storage values
+
+# single_result.plot(
+#     figsize=(16, 9), title="ext_grid from single_result function"
+# )
+# operator.plot_results(results)
+# operator.plot_storages()
