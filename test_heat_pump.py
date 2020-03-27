@@ -29,7 +29,7 @@ building_type = 'DE_HEF33'
 t_0 = 40
 
 #Values for Heatpump
-el_power = 5 #kW electric
+el_power = 3 #kW electric
 ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
