@@ -14,7 +14,7 @@ class HeatPump(Component):
     def __init__(self, unit="kW", identifier=None,
                  environment=None, user_profile=None,
                  cost=None,
-                 heat_pump_type="Air",
+                 heat_pump_type= None,
                  heat_sys_temp=60,
                  el_power=None, th_power=None,
                  ramp_up_time=0, ramp_down_time=0,
@@ -548,4 +548,4 @@ class HeatPump(Component):
                 
     def determine_optimum_thermal_power (self, user_profile):
         self.th_power = self.user_profile.thermal_energy_demand.max()
-        
+        self.th_power_realistic = int(self.user_profile.thermal_energy_demand.max())+1
