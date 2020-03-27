@@ -1,35 +1,37 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Feb 24 17:51:01 2020
+Info
+----
+In this testfile the basic functionalities of the HeatPump class are tested.
+Run each time you make changes on an existing function.
+Adjust if a new function is added or 
+parameters in an existing function are changed.
 
-@author: andre
-
-testing fct_get_opt_power
 """
 
 from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.heat_pump import HeatPump
-from vpplib.heating_rod import HeatingRod
 import matplotlib.pyplot as plt
-import fct_get_opt_power as gop
 
 #Values for environment
 start = '2015-01-01 00:00:00'
 end = '2015-01-14 23:45:00'
 year = '2015'
 time_freq = "15 min"
-timestamp_int = 48
-timestamp_str = '2015-01-01 12:00:00'
+timestamp_int1 = 48
+timestamp_int2 = 500
+timestamp_str1 = '2015-01-01 12:00:00'
+timestamp_str2 = '2015-01-10 06:00:00'
 timebase = 15
 
 #Values for user_profile
-thermal_energy_demand_yearly = 15000
+thermal_energy_demand_yearly = 12500
 building_type = 'DE_HEF33'
 t_0 = 40
 
 #Values for Heatpump
-el_power = 5 #kW electric
+#el_power = 5 #kW electric
 ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
@@ -63,15 +65,44 @@ hp = HeatPump(identifier='hp1',
               min_runtime=min_runtime,
               min_stop_time=min_stop_time)
 
-hr = HeatingRod(identifier='hr1', 
-                 environment=environment, user_profile = user_profile,
-                 el_power = el_power, rampUpTime = ramp_up_time, 
-                 rampDownTime = ramp_down_time, 
-                 min_runtime = min_runtime, 
-                 min_stop_time = min_stop_time)
 
-print("electrical power [kW] of the heatpump before optimization: " + str(hp.el_power))
-gop.get_opt_power(2000, user_profile, environment, hp, hr)
-print(str(hp.th_power))
-print(str(hr.el_power))
-print(str(hp.cop))
+def test_get_cop(hp):
+    
+    print('get_cop:')
+    hp.get_cop()
+    hp.cop.plot(figsize=(16,9))
+    plt.show()
+    
+    
+def test_prepare_timeseries(hp):
+    
+    print('prepareTimeseries:')
+    hp.prepare_time_series()
+    hp.timeseries.plot(figsize=(16,9))
+    plt.show()
+    
+def test_value_for_timestamp(hp, timestamp):
+    
+    print('value_for_timestamp:')
+    demand= hp.value_for_timestamp(timestamp)
+    print("El. Demand: ", demand, '\n')
+    
+def test_observations_for_timestamp(hp, timestamp):
+    
+    print('observations_for_timestamp:')
+    observation = hp.observations_for_timestamp(timestamp)
+    print(observation, '\n')
+
+
+test_get_cop(hp)
+test_prepare_timeseries(hp)
+
+test_value_for_timestamp(hp, timestamp_int1)
+test_observations_for_timestamp(hp, timestamp_int1)
+
+test_value_for_timestamp(hp, timestamp_str2)
+test_observations_for_timestamp(hp, timestamp_str2)
+
+print("thermal power [kW] before optimization: " + str(hp.th_power))
+hp.determine_optimum_thermal_power(user_profile)
+print("thermal power [kW] after optimization: " + str(hp.th_power))

@@ -538,3 +538,14 @@ class HeatPump(Component):
                 return True
             else: 
                 return False
+            
+#%% further functions 
+
+#------------------------------------------------------------------------------              
+# function to determine optimum thermal power of the heat pump according to
+# given heat demand
+#------------------------------------------------------------------------------
+                
+    def determine_optimum_thermal_power (self, user_profile):
+        self.th_power = self.user_profile.thermal_energy_demand.max()
+        

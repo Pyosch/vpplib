@@ -32,9 +32,9 @@ def get_opt_power(hours_exceeding_demand, user_profile, environment, heat_pump,
     
     heat_pump.th_power = pwr_heatpump
     
-    exceeding_demand = round(float(df_sorted.iloc[0].values - pwr_heatpump), 1)
+    exceeding_demand = df_sorted.iloc[0].values - pwr_heatpump
     
-    heating_rod.el_power = exceeding_demand/heating_rod.efficiency
+    heating_rod.el_power = round(float(exceeding_demand/heating_rod.efficiency), 1)
     
     print('Thermal power heat pump [kW]: ' + str(heat_pump.th_power))
     print('Electrical power heating rod [kW]: ' + str(heating_rod.el_power))

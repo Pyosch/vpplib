@@ -556,3 +556,8 @@ class UserProfile(object):
         self.thermal_energy_demand.interpolate(inplace=True)
         
         return self.thermal_energy_demand
+    
+    #%% further functions
+    
+    def get_maximum_thermal_demand(self):
+        return self.thermal_energy_demand.max()
