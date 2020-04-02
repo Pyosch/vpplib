@@ -445,7 +445,7 @@ class CombinedHeatAndPower(Component):
 
         """
 
-        if self.is_running():
+        if self.is_running:
 
             # Return current value
             return self.el_power * self.limit
