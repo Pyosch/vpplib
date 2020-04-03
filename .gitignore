@@ -14,6 +14,7 @@ vpplib/__pycache__/
 .ipynb_checkpoints/
 dist/
 vpplib.egg-info/
+input/input_vise/
 df_component_values.csv
 df_timeseries.csv
 
