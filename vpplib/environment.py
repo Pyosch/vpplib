@@ -12,16 +12,22 @@ TODO: Add regulatory influences e. g. photovoltaik maximum power at the grid con
 
 import pandas as pd
 
-class Environment(object):
 
-    def __init__(self, timebase=None, timezone='Europe/Berlin',
-                 start=None, end=None, year=None,
-                 time_freq="15 min",
-                 mean_temp_days=[], 
-                 mean_temp_hours=[], 
-                 pv_data=[], 
-                 wind_data=[]):
-        
+class Environment(object):
+    def __init__(
+        self,
+        timebase=None,
+        timezone="Europe/Berlin",
+        start=None,
+        end=None,
+        year=None,
+        time_freq="15 min",
+        mean_temp_days=[],
+        mean_temp_hours=[],
+        pv_data=[],
+        wind_data=[],
+    ):
+
         """
         Info
         ----
@@ -65,31 +71,33 @@ class Environment(object):
         self.mean_temp_hours = mean_temp_hours
         self.pv_data = pv_data
         self.wind_data = wind_data
-        
-    def get_pv_data(self, file="./input/pv/dwd_pv_data_2015.csv"):
-        
-        self.pv_data = pd.read_csv(file, index_col="time")
-        
-        return self.pv_data
-    
-    def get_mean_temp_days(self, file=
-                           "./input/thermal/dwd_temp_days_2015.csv"):
-        
-        self.mean_temp_days = pd.read_csv(file, index_col="time")
-        
-        return self.mean_temp_days
-    
-    def get_mean_temp_hours(self, file = 
-                            "./input/thermal/dwd_temp_hours_2015.csv"):
-        
-        self.mean_temp_hours = pd.read_csv(file, index_col="time")
-        
-        return self.mean_temp_hours
-        
 
-    def get_wind_data(self, file = "./input/wind/dwd_wind_data_2015.csv", 
-                      utc=False):
-        
+    def get_pv_data(self, file="./input/pv/dwd_pv_data_2015.csv"):
+
+        self.pv_data = pd.read_csv(file, index_col="time")
+
+        return self.pv_data
+
+    def get_mean_temp_days(
+        self, file="./input/thermal/dwd_temp_days_2015.csv"
+    ):
+
+        self.mean_temp_days = pd.read_csv(file, index_col="time")
+
+        return self.mean_temp_days
+
+    def get_mean_temp_hours(
+        self, file="./input/thermal/dwd_temp_hours_2015.csv"
+    ):
+
+        self.mean_temp_hours = pd.read_csv(file, index_col="time")
+
+        return self.mean_temp_hours
+
+    def get_wind_data(
+        self, file="./input/wind/dwd_wind_data_2015.csv", utc=False
+    ):
+
         r"""
         Imports weather data from a file.
     
@@ -120,23 +128,24 @@ class Environment(object):
     
         """
 
-        if utc==True:
+        if utc == True:
             df = pd.read_csv(
-                file, index_col=0, header=[0, 1],
-                date_parser=lambda idx: pd.to_datetime(idx, utc=True))
+                file,
+                index_col=0,
+                header=[0, 1],
+                date_parser=lambda idx: pd.to_datetime(idx, utc=True),
+            )
             # change type of index to datetime and set time zone
-            df.index = pd.to_datetime(df.index).tz_convert(
-                    self.timezone)
-            
+            df.index = pd.to_datetime(df.index).tz_convert(self.timezone)
+
         else:
             df = pd.read_csv(file, index_col=0, header=[0, 1])
             df.index = pd.to_datetime(df.index)
-        
+
         # change type of height from str to int by resetting columns
         l0 = [_[0] for _ in df.columns]
         l1 = [int(_[1]) for _ in df.columns]
         df.columns = [l0, l1]
-        
         self.wind_data = df
-        
+
         return self.wind_data

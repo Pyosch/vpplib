@@ -7,10 +7,10 @@ This is the mother class of all VPPx classes
 
 """
 
+
 class Component(object):
-    
     def __init__(self, unit, environment, user_profile, cost):
-        
+
         """
         Info
         ----
@@ -44,16 +44,15 @@ class Component(object):
         ...
         
         """
-    
+
         # Configure attributes
-        self.unit = unit # e.g. "kW"
+        self.unit = unit  # e.g. "kW"
         self.environment = environment
         self.user_profile = user_profile
-        self.cost = cost # e.g. Euro/kWh
-    
+        self.cost = cost  # e.g. Euro/kWh
 
     def value_for_timestamp(self, timestamp):
-        
+
         """
         Info
         ----
@@ -91,12 +90,13 @@ class Component(object):
         ...
         
         """
-    
-        raise NotImplementedError("value_for_timestamp needs to be implemented by child classes!")
-    
+
+        raise NotImplementedError(
+            "value_for_timestamp needs to be implemented by child classes!"
+        )
 
     def observations_for_timestamp(self, timestamp):
-        
+
         """
         Info
         ----
@@ -135,12 +135,11 @@ class Component(object):
         ...
         
         """
-    
+
         return {}
 
-
     def prepare_time_series(self):
-        
+
         """
         Info
         ----
@@ -180,10 +179,9 @@ class Component(object):
         """
 
         self.timeseries = []
-        
-        
+
     def reset_time_series(self):
-        
+
         self.timeseries = None
-        
+
         return self.timeseries
