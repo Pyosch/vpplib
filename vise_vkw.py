@@ -13,6 +13,7 @@ Export timeseries and component values to csv-files at the end
 import pandas as pd
 import random
 import time
+import pickle
 
 import simbench as sb
 import pandapower as pp
@@ -33,7 +34,7 @@ chp_number = 2  # always includes thermal energy storage
 lv_bus_number = pv_number + bev_number + hp_number + chp_number
 
 # Simbench Network parameters
-sb_code = "1-MVLV-semiurb-5.220-0-sw" # "1-LV-semiurb4--0-sw"
+sb_code = "1-MVLV-semiurb-5.220-0-sw" #"1-MVLV-semiurb-all-0-sw"  # "1-LV-semiurb4--0-sw"
 
 # Values for environment
 start = "2015-07-01 00:00:00"
@@ -133,6 +134,14 @@ ramp_down_time = 1 / 15  # timesteps
 min_runtime_chp = 1  # timesteps
 min_stop_time_chp = 2  # timesteps
 
+#%% load dicts with electrical and thermal profiles
+
+with open(r'Results/thermal_dict.pickle', 'rb') as handle:
+    thermal_dict = pickle.load(handle)
+
+with open(r'Results/el_dict_2015.pickle', 'rb') as handle:
+    el_dict = pickle.load(handle)
+
 print(time.asctime( time.localtime(time.time()) ))
 print("Loaded input\n")
 # %% environment
@@ -151,15 +160,6 @@ environment.get_mean_temp_hours()
 environment.get_pv_data()
 environment.get_wind_data()
 
-# %% baseload
-
-# input data
-baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
-baseload.drop(columns=["Time"], inplace=True)
-baseload.index = pd.date_range(
-    start=year, periods=35040, freq=time_freq, name="time"
-)
-
 # %% virtual power plant
 
 vpp = VirtualPowerPlant("vpp")
@@ -171,36 +171,26 @@ net = sb.get_simbench_net(sb_code)
 # plot the grid
 pp.plotting.simple_plot(net)
 
-# check that all needed profiles existent
-assert not sb.profiles_are_missing(net)
+# drop preconfigured electricity generators from the grid
+net.sgen.drop(net.sgen.index)
 
-# calculate absolute profiles
-profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
+# assign fzj profiles to existing loads
+for index in net.load.index:
+    if "LV" in net.load.name[index]:
+        net.load.profile[index] = random.sample(el_dict.keys(), 1)[0]
+        net.load.type[index] = "baseload"
 
-# get datetime index for profiles
-profiles['load', 'p_mw'].index = pd.date_range(
-    start=start[:4],
-    periods=len(profiles['load', 'p_mw'].index),
-    freq=time_freq)
+    elif "MV" in net.load.name[index]:
+        net.load.profile[index] = str(net.load.name[index] + "_mv_load")
+        net.load.type[index] = "mv_load"
 
-# # define a function to apply absolute values
-# def apply_absolute_values(net, absolute_values_dict, case_or_time_step):
-#     for elm_param in absolute_values_dict.keys():
-#         if absolute_values_dict[elm_param].shape[1]:
-#             elm = elm_param[0]
-#             param = elm_param[1]
-#             net[elm].loc[:, param] = absolute_values_dict[elm_param].loc[case_or_time_step]
+    else:
+        net.load.profile[index] = str(net.load.name[index])
 
 print(time.asctime(time.localtime(time.time())))
 print("Initialized environment, vpp and net\n")
 
 # %% generate user profiles based on grid buses for lv
-
-# get buses with H0 loadprofiles
-# household_lst = []
-# for idx in net.load.index:
-#     if "H0" in net.load.profile.iloc[idx]:
-#         household_lst.append(net.bus.name.iloc[net.load.bus.iloc[idx]])
 
 lv_buses = []
 for bus in net.bus.name:
@@ -212,7 +202,7 @@ count = 0
 while count <= lv_bus_number:
 
     # Get a bus with a load to add the loadprofile to the user_profile.
-    # This the equivalent to a do-while-loop
+    # This is the equivalent to a do-while-loop
     while True:
         simbus = random.sample(lv_buses, 1)[0]
         if len(net.load[net.load.bus == net.bus[
@@ -223,7 +213,7 @@ while count <= lv_bus_number:
         identifier=simbus,
         latitude=latitude,
         longitude=longitude,
-        thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+        thermal_energy_demand_yearly=None,
         building_type=building_type,
         comfort_factor=None,
         t_0=t_0,
@@ -234,16 +224,63 @@ while count <= lv_bus_number:
         weekend_trip_end=[],
     )
 
-    user_profile.baseload = pd.DataFrame(
-        profiles['load', 'p_mw'][
-            net.load[net.load.bus == net.bus[
-                net.bus.name == simbus].index.item()].iloc[0].name # net.bus.name == simbus].index.item()].index.item()
-            ].loc[start:end]
-        * 1000)
-    # thermal energy demand equals two times the electrical energy demand:
-    user_profile.thermal_energy_demand_yearly = (user_profile.baseload.sum()
-                                                 / 2).item()  # /4 *2= /2
-    user_profile.get_thermal_energy_demand()
+    el_profile = net.load.profile[  # get name of profile...
+        net.load.bus == net.bus[  # ...where the loadbus equals the bus...
+            # ...which has the same name as the bus of the user_profile:
+            net.bus.name == simbus].index.item()].item()
+
+    user_profile.baseload = el_dict[el_profile].loc[start:end]
+
+    # pick thermal profile corresponding to el_profile
+    user_profile.thermal_energy_demand = pd.DataFrame()
+    if "HH1a" in el_profile:
+        if "Dec" in el_profile:
+            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
+                'HH1a_vacationWinter'
+                ].HeatDemand.loc[start:end]
+        if "Jul" in el_profile:
+            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
+                'HH1a_vacationSummer'
+                ].HeatDemand.loc[start:end]
+
+    elif "HH1b" in el_profile:
+        if "Dec" in el_profile:
+            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
+                'HH1b_vacationWinter'
+                ].HeatDemand.loc[start:end]
+        if "Jul" in el_profile:
+            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
+                'HH1b_vacationSummer'
+                ].HeatDemand.loc[start:end]
+
+    elif "HH2a" in el_profile:
+        if "Dec" in el_profile:
+            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
+                'HH2a_vacationWinter'
+                ].HeatDemand.loc[start:end]
+
+        if "Jul" in el_profile:
+            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
+                'HH2a_vacationSummer'
+                ].HeatDemand.loc[start:end]
+
+    elif "HH2b" in el_profile:
+        if "Dec" in el_profile:
+            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
+                'HH2b_vacationWinter'
+                ].HeatDemand.loc[start:end]
+
+        if "Jul" in el_profile:
+            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
+                'HH2b_vacationSummer'
+                ].HeatDemand.loc[start:end]
+
+    else:
+        print("Profile ", el_profile, " not propperly assigned!")
+
+    user_profile.thermal_energy_demand.index = pd.to_datetime(
+        user_profile.thermal_energy_demand.index)
+    user_profile.thermal_energy_demand.index.freq = time_freq
 
     up_dict[user_profile.identifier] = user_profile
     count += 1
@@ -590,7 +627,10 @@ print(time.asctime(time.localtime(time.time())))
 print("Generated components in net\n")
 # %% initialize operator
 
-operator = Operator(virtual_power_plant=vpp, net=net, target_data=None)
+operator = Operator(virtual_power_plant=vpp,
+                    net=net,
+                    target_data=None,
+                    environment=environment)
 
 print(time.asctime(time.localtime(time.time())))
 print("Initialized Operator\n")
@@ -602,7 +642,7 @@ for component in vpp.components.keys():
         vpp.components[component].timeseries /= 1000
 
 # %% run base_scenario without operation strategies
-net_dict = operator.run_simbench_scenario(profiles)
+net_dict = operator.run_vise_scenario(el_dict)
 
 print(time.asctime(time.localtime(time.time())))
 print("Finished run_simbench_scenario()\n")
