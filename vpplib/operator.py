@@ -605,6 +605,204 @@ class Operator(object):
 
         return net_dict  # , res_loads #res_loads can be returned for analyses
 
+    #%% assign values of generation/demand over time and run powerflow
+    def run_vise_scenario(self, el_dict):
+
+        """
+        Info
+        ----
+        
+        ...
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+
+        net_dict = {}
+        index = pd.date_range(start=self.environment.start,
+                              end=self.environment.end,
+                              freq=self.environment.time_freq)
+        res_loads = pd.DataFrame(
+            columns=[self.net.bus.index[self.net.bus.type == "b"]], index=index
+        )  # maybe only take buses with storage
+
+        for idx in index:
+            for component in self.virtual_power_plant.components.keys():
+
+                if "_ees" not in component:
+                    if "tes" not in component:
+
+                        value_for_timestamp = self.virtual_power_plant.components[
+                            component
+                        ].value_for_timestamp(str(idx))
+    
+                        if math.isnan(value_for_timestamp):
+                            raise ValueError(
+                                (
+                                    "The value of ",
+                                    component,
+                                    "at timestep ",
+                                    idx,
+                                    "is NaN!",
+                                )
+                            )
+
+                if component in list(self.net.sgen.name):
+
+                    self.net.sgen.p_mw[self.net.sgen.name == component] = (
+                        value_for_timestamp / -1000
+                    )  # kW to MW; negative due to generation
+
+                    if math.isnan(
+                        self.net.sgen.p_mw[self.net.sgen.name == component]
+                    ):
+                        raise ValueError(
+                            (
+                                "The value of ",
+                                component,
+                                "at timestep ",
+                                idx,
+                                "is NaN!",
+                            )
+                        )
+
+                if component in list(self.net.load.name):
+
+                    self.net.load.p_mw[self.net.load.name == component] = (
+                        value_for_timestamp / 1000
+                    )  # kW to MW
+
+            # apply fzj profiles to baseloads
+            for load in self.net.load.index:
+                if self.net.load.type[load] == "baseload":
+
+                    self.net.load.p_mw[load] = el_dict[
+                        self.net.load.iloc[load].profile].loc[idx].item()/1000
+
+                    self.net.load.q_mvar[load] = 0
+
+
+                elif self.net.load.type[load] == "mv_load":
+
+                    self.net.load.p_mw[load] = 0
+                    self.net.load.q_mvar[load] = 0
+
+            if len(self.virtual_power_plant.buses_with_storage) > 0:
+                for bus in self.net.bus.index[self.net.bus.type == "b"]:
+
+                    storage_at_bus = pp.get_connected_elements(
+                        self.net, "storage", bus
+                    )
+                    sgen_at_bus = pp.get_connected_elements(
+                        self.net, "sgen", bus
+                    )
+                    load_at_bus = pp.get_connected_elements(
+                        self.net, "load", bus
+                    )
+
+                    if len(storage_at_bus) > 0:
+
+                        res_loads.loc[idx][bus] = sum(
+                            self.net.load.loc[load_at_bus].p_mw
+                        ) + sum(self.net.sgen.loc[sgen_at_bus].p_mw)
+
+                        # set loads and sgen to 0 since they are in res_loads now
+                        # reassign values after operate_storage has been executed
+                        for l in list(load_at_bus):
+                            self.net.load.p_mw[self.net.load.index == l] = 0
+
+                        for l in list(sgen_at_bus):
+                            self.net.sgen.p_mw[self.net.sgen.index == l] = 0
+
+                        # run storage operation with residual load
+                        state_of_charge, res_load = self.virtual_power_plant.components[
+                            self.net.storage.loc[storage_at_bus].name.item()
+                        ].operate_storage(
+                            res_loads.loc[idx][bus].item()
+                        )
+
+                        # save state of charge and residual load in timeseries
+                        self.virtual_power_plant.components[
+                            self.net.storage.loc[storage_at_bus].name.item()
+                        ].timeseries["state_of_charge"][
+                            idx
+                        ] = (
+                            state_of_charge
+                        )  # state_of_charge_df[idx][bus] = state_of_charge
+                        self.virtual_power_plant.components[
+                            self.net.storage.loc[storage_at_bus].name.item()
+                        ].timeseries["residual_load"][idx] = res_load
+
+                        # assign new residual load to loads and sgen depending on positive/negative values
+                        if res_load > 0:
+
+                            if len(load_at_bus) > 0:
+                                # TODO: load according to origin of demand (baseload, hp or bev)
+                                load_bus = load_at_bus.pop()
+                                self.net.load.p_mw[
+                                    self.net.load.index == load_bus
+                                ] = res_load
+
+                            else:
+                                # assign new residual load to storage
+                                storage_bus = storage_at_bus.pop()
+                                self.net.storage.p_mw[
+                                    self.net.storage.index == storage_bus
+                                ] = res_load
+
+                        else:
+
+                            if len(sgen_at_bus) > 0:
+                                # TODO: assign generation according to origin of energy (PV, wind oder CHP)
+                                gen_bus = sgen_at_bus.pop()
+                                self.net.sgen.p_mw[
+                                    self.net.sgen.index == gen_bus
+                                ] = res_load
+
+                            else:
+                                # assign new residual load to storage
+                                storage_bus = storage_at_bus.pop()
+                                self.net.storage.p_mw[
+                                    self.net.storage.index == storage_bus
+                                ] = res_load
+
+            pp.runpp(self.net)
+
+            net_dict[idx] = {}
+            net_dict[idx]["res_bus"] = self.net.res_bus
+            net_dict[idx]["res_line"] = self.net.res_line
+            net_dict[idx]["res_trafo"] = self.net.res_trafo
+            net_dict[idx]["res_load"] = self.net.res_load
+            net_dict[idx]["res_sgen"] = self.net.res_sgen
+            net_dict[idx]["res_ext_grid"] = self.net.res_ext_grid
+            net_dict[idx]["res_storage"] = self.net.res_storage
+
+        # res_loads.dropna(axis=1, inplace=True)
+
+        return net_dict  # , res_loads #res_loads can be returned for analyses
 
 # %% extract all results from pandas powerflow
 
