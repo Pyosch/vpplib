@@ -13,6 +13,7 @@ Export timeseries and component values to csv-files at the end
 import pandas as pd
 import random
 import time
+import matplotlib.pyplot as plt
 
 import simbench as sb
 import pandapower as pp
