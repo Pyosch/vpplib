@@ -15,12 +15,15 @@ TODO: Setup data type for target data and alter the referencing accordingly!
 import math
 import pandas as pd
 import pandapower as pp
-import simbench
 import matplotlib.pyplot as plt
 
 
 class Operator(object):
-    def __init__(self, virtual_power_plant, net, target_data):
+    def __init__(self,
+                 virtual_power_plant,
+                 net,
+                 target_data,
+                 environment = None):
 
         """
         Info
@@ -68,6 +71,7 @@ class Operator(object):
         self.virtual_power_plant = virtual_power_plant
         self.target_data = target_data
         self.net = net  # pandapower net object
+        self.environment = environment
 
     def operate_virtual_power_plant(self):
 
@@ -600,6 +604,7 @@ class Operator(object):
         # res_loads.dropna(axis=1, inplace=True)
 
         return net_dict  # , res_loads #res_loads can be returned for analyses
+
 
 # %% extract all results from pandas powerflow
 
