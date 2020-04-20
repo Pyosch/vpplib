@@ -33,18 +33,20 @@ net_dict = dict()
 # assign fzj profiles to existing loads
 for index in net.load.index:
     net.load.profile[index] = random.sample(el_dict.keys(), 1)[0]
+    net.load.type[index] = "baseload"
 
 for idx in pd.date_range(start=start, end=end, freq="15 Min"):
     for load in net.load.index:
-        net.load.p_mw[load] = el_dict[
-            net.load.iloc[
-                load
-                ].profile
-            ].loc[
-                idx
-                ].item()/1000
+        if net.load.type[load] == "baseload":
+            net.load.p_mw[load] = el_dict[
+                net.load.iloc[
+                    load
+                    ].profile
+                ].loc[
+                    idx
+                    ].item()/1000
 
-        net.load.q_mvar[load] = 0
+            net.load.q_mvar[load] = 0
 
     for sgen in net.sgen.index:
         net.sgen.p_mw[sgen] = 0
