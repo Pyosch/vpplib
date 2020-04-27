@@ -24,21 +24,21 @@ from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
 
 # define virtual power plant
-pv_number = 5
-wind_number = 2
-bev_number = 5
-hp_number = 5  # always includes thermal energy storage
-ees_number = 5
-chp_number = 2  # always includes thermal energy storage
+pv_number = 100
+wind_number = 10
+bev_number = 50
+hp_number = 50  # always includes thermal energy storage
+ees_number = 80
+chp_number = 0  # always includes thermal energy storage
 
-lv_bus_number = pv_number + bev_number + hp_number + chp_number
+component_number = pv_number + bev_number + hp_number + chp_number
 
 # Simbench Network parameters
-sb_code = "1-MVLV-semiurb-5.220-0-sw" #"1-MVLV-semiurb-all-0-sw"  # "1-LV-semiurb4--0-sw"
+sb_code = "1-MVLV-semiurb-all-0-sw" # "1-MVLV-semiurb-5.220-0-sw" # "1-LV-semiurb4--0-sw"
 
 # Values for environment
-start = "2015-07-01 00:00:00"
-end = "2015-07-07 23:45:00"
+start = "2015-01-01 00:00:00"
+end = "2015-01-01 23:45:00"
 year = "2015"
 time_freq = "15 min"
 index_year = pd.date_range(
@@ -199,15 +199,25 @@ for bus in net.bus.name:
 
 up_dict = {}
 count = 0
-while count <= lv_bus_number:
+while count <= component_number:
 
     # Get a bus with a load to add the loadprofile to the user_profile.
     # This is the equivalent to a do-while-loop
     while True:
         simbus = random.sample(lv_buses, 1)[0]
-        if len(net.load[net.load.bus == net.bus[
+        if 2 >  len(net.load[net.load.bus == net.bus[
                 net.bus.name == simbus].index.item()]) > 0:
             break
+
+# lv_loads = []
+# for load in net.load.name:
+#     if "LV" in load:
+#         lv_loads.append(load)
+
+# up_dict = {}
+# count = 0
+# while count <= component_number:
+
 
     user_profile = UserProfile(
         identifier=simbus,
@@ -657,8 +667,8 @@ print(time.asctime(time.localtime(time.time())))
 print("Exported results\n")
 # %% plot results of powerflow and storage values
 
-single_result.plot(
-    figsize=(16, 9), title="ext_grid from single_result function"
-)
-operator.plot_results(results, legend=False)
-operator.plot_storages()
+# single_result.plot(
+#     figsize=(16, 9), title="ext_grid from single_result function"
+# )
+# operator.plot_results(results, legend=False)
+# operator.plot_storages()
