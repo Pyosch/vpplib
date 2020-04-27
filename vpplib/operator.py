@@ -16,6 +16,7 @@ import math
 import pandas as pd
 import pandapower as pp
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 class Operator(object):
@@ -649,7 +650,7 @@ class Operator(object):
             columns=[self.net.bus.index[self.net.bus.type == "b"]], index=index
         )  # maybe only take buses with storage
 
-        for idx in index:
+        for idx in tqdm(index):
             for component in self.virtual_power_plant.components.keys():
 
                 if "_ees" not in component:
@@ -841,14 +842,19 @@ class Operator(object):
         
         """
 
+        # Create DataFrames for later export
         ext_grid = pd.DataFrame()
         line_loading_percent = pd.DataFrame()
         bus_vm_pu = pd.DataFrame()
+        bus_p_mw = pd.DataFrame()
+        bus_q_mvr = pd.DataFrame()
         trafo_loading_percent = pd.DataFrame()
         sgen_p_mw = pd.DataFrame()
         load_p_mw = pd.DataFrame()
         storage_p_mw = pd.DataFrame()
 
+        # The net_dic contains the data of the grid. The timestamps are the
+        # keys of the dictionary. First, extract the information to the df
         for idx in net_dict.keys():
 
             ext_grid = ext_grid.append(
@@ -858,6 +864,8 @@ class Operator(object):
                 "res_line"
             ].loading_percent
             bus_vm_pu[idx] = net_dict[idx]["res_bus"].vm_pu
+            bus_p_mw[idx] = net_dict[idx]["res_bus"].p_mw
+            bus_q_mvr[idx] = net_dict[idx]["res_bus"].q_mvar
             trafo_loading_percent[idx] = net_dict[idx][
                 "res_trafo"
             ].loading_percent
@@ -865,6 +873,8 @@ class Operator(object):
             load_p_mw[idx] = net_dict[idx]["res_load"].p_mw
             storage_p_mw[idx] = net_dict[idx]["res_storage"].p_mw
 
+        # Since the columns are now named after the timesteps, the df needs to
+        # be transposed and restructured
         if len(line_loading_percent.columns) > 0:
             line_loading_percent = line_loading_percent.T
             line_loading_percent.rename(
@@ -878,6 +888,16 @@ class Operator(object):
             bus_vm_pu = bus_vm_pu.T
             bus_vm_pu.rename(self.net.bus.name, axis="columns", inplace=True)
             bus_vm_pu.index = pd.to_datetime(bus_vm_pu.index)
+
+        if len(bus_p_mw.columns) > 0:
+            bus_p_mw = bus_p_mw.T
+            bus_p_mw.rename(self.net.bus.name, axis="columns", inplace=True)
+            bus_p_mw.index = pd.to_datetime(bus_p_mw.index)
+
+        if len(bus_q_mvr.columns) > 0:
+            bus_q_mvr = bus_q_mvr.T
+            bus_q_mvr.rename(self.net.bus.name, axis="columns", inplace=True)
+            bus_q_mvr.index = pd.to_datetime(bus_q_mvr.index)
 
         trafo_loading_percent = trafo_loading_percent.T
         trafo_loading_percent.index = pd.to_datetime(
@@ -910,6 +930,8 @@ class Operator(object):
             "trafo_loading_percent": trafo_loading_percent,
             "line_loading_percent": line_loading_percent,
             "bus_vm_pu": bus_vm_pu,
+            "bus_p_mw": bus_p_mw,
+            "bus_q_mvr": bus_q_mvr,
             "load_p_mw": load_p_mw,
             "sgen_p_mw": sgen_p_mw,
             "storage_p_mw": storage_p_mw,
