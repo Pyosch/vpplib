@@ -12,15 +12,20 @@ parameters in an existing function are changed.
 from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.heat_pump import HeatPump
+from vpplib.heating_rod import HeatingRod
 import matplotlib.pyplot as plt
+import pandas as pd
+from fct_optimize_bivalent import optimize_bivalent
 
 #Values for environment
 start = '2015-01-01 00:00:00'
 end = '2015-01-14 23:45:00'
 year = '2015'
 time_freq = "15 min"
-timestamp_int = 48
-timestamp_str = '2015-01-01 12:00:00'
+timestamp_int1 = 48
+timestamp_int2 = 500
+timestamp_str1 = '2015-01-01 12:00:00'
+timestamp_str2 = '2015-01-10 06:00:00'
 timebase = 15
 
 #Values for user_profile
@@ -29,12 +34,13 @@ building_type = 'DE_HEF33'
 t_0 = 40
 
 #Values for Heatpump
-el_power = 3 #kW electric
+#el_power = 5 #kW electric
 ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
-typeHP = "Ground"
+heat_pump_type = "Ground" #nur "Ground" oder "Air"!
+
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year,
                           time_freq=time_freq)
@@ -57,12 +63,22 @@ def test_get_thermal_energy_demand(user_profile):
 
 test_get_thermal_energy_demand(user_profile)
 
-hp = HeatPump(identifier='hp1',
+
+hp = HeatPump(identifier='hp',
               environment=environment, user_profile=user_profile,
-              el_power=el_power, ramp_up_time=ramp_up_time,
-              ramp_down_time=ramp_down_time,
+              #el_power=el_power,
+              ramp_up_time=ramp_up_time,
+              ramp_down_time=ramp_down_time, heat_pump_type = heat_pump_type,
               min_runtime=min_runtime,
-              min_stop_time=min_stop_time, heat_pump_type = typeHP)
+              min_stop_time=min_stop_time)
+
+hr = HeatingRod(identifier='hr1', 
+                 environment=environment, user_profile = user_profile,
+                 #el_power = el_power,
+                 rampUpTime = ramp_up_time, 
+                 rampDownTime = ramp_down_time, 
+                 min_runtime = min_runtime, 
+                 min_stop_time = min_stop_time)
 
 
 def test_get_cop(hp):
@@ -92,17 +108,8 @@ def test_observations_for_timestamp(hp, timestamp):
     observation = hp.observations_for_timestamp(timestamp)
     print(observation, '\n')
 
+optimize_bivalent(hp, hr, "parallel", user_profile)
 
-test_get_cop(hp)
-test_prepare_timeseries(hp)
-
-test_value_for_timestamp(hp, timestamp_int)
-test_observations_for_timestamp(hp, timestamp_int)
-
-test_value_for_timestamp(hp, timestamp_str)
-test_observations_for_timestamp(hp, timestamp_str)
-
-hp.determine_optimum_thermal_power (user_profile)
-print(str(hp.th_power))
-print(str(hp.th_power_realistic))
-
+print("thermal power hp at bivalence temperature: " + str(hp.th_power) + "[kW]")
+print("electrical power hp: " + str(hp.el_power) + "[kW]")
+print("electrical power hr: " + str(hr.el_power) + "[kW]")

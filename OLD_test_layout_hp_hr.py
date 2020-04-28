@@ -13,6 +13,7 @@ from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
+import pandas as pd
 
 #Values for environment
 start = '2015-01-01 00:00:00'
@@ -36,7 +37,7 @@ ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
-heat_pump_type = "Air" #nur "Ground" oder "Air"!
+heat_pump_type = "Ground" #nur "Ground" oder "Air"!
 
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year,
@@ -63,7 +64,8 @@ test_get_thermal_energy_demand(user_profile)
 
 hp = HeatPump(identifier='hp',
               environment=environment, user_profile=user_profile,
-              el_power=el_power, ramp_up_time=ramp_up_time,
+              #el_power=el_power,
+              ramp_up_time=ramp_up_time,
               ramp_down_time=ramp_down_time, heat_pump_type = heat_pump_type,
               min_runtime=min_runtime,
               min_stop_time=min_stop_time)
@@ -97,17 +99,44 @@ def test_observations_for_timestamp(hp, timestamp):
     print(observation, '\n')
 
 
-test_get_cop(hp)
-test_prepare_timeseries(hp)
+#------------------------------------------------------------------------------
+# print heat_demand and temperature over time to show they dont fit together exactly
+#------------------------------------------------------------------------------
+print(str(user_profile.get_thermal_energy_demand_hourly()))
+heat_demand_sorted = user_profile.thermal_energy_demand_hourly.sort_values(by =[0], ascending = False)
+# key bei thermal_energy_demand_hourly anscheinend falsch => wie heißt der?
 
-test_value_for_timestamp(hp, timestamp_int1)
-test_observations_for_timestamp(hp, timestamp_int1)
+heat_demand_sorted = user_profile.thermal_energy_demand.sort_values(by =['thermal_energy_demand'], ascending = False)
+# das hat jetzt viertelstündliche Auflösung, also muss mean_temp_hours (stündliche
+# Auflösug) auch noch interpoliert werden
 
-test_value_for_timestamp(hp, timestamp_str2)
-test_observations_for_timestamp(hp, timestamp_str2)
+# mean_temp_hours interpolieren auf Viertelstunde 
+temperature_interpolated = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv", index_col="time")
+print(str(temperature_interpolated))
+dataframe = pd.concat([heat_demand_sorted, temperature_interpolated], axis = 1)
+dataframe.sort_values(by = ['temperature'], ascending = False, inplace = True)
 
 
-print("thermal power [kW] air-heat pump before optimization: " + str(hp.th_power))
-hp.determine_optimum_thermal_power(user_profile)
-print("thermal power [kW] air-heat pump after optimization: " + str(hp.th_power))
-print("thermal power [kW]  air-heat pumprealistic after optimization: " + str(hp.th_power_realistic))
+print(str(dataframe))
+
+# liefert nur NaN (?)
+
+print(str(temperature_interpolated))
+
+
+x = dataframe['temperature'].values
+y = range(len(dataframe['temperature'].values))
+# =============================================================================
+# y2 = temperature_interpolated.values
+# x = range(35040)
+# 
+# plt.plot(x, y2)
+# =============================================================================
+print(str(y))
+print(str(x))
+plt.plot(y, x)
+
+
+    
+print(str(dataframe['temperature'].iat[3]))
+#datframe_cold = 

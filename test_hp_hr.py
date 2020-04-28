@@ -13,10 +13,11 @@ from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
+from fct_optimize_bivalent import optimize_bivalent
 
 #Values for environment
 start = '2015-01-01 00:00:00'
-end = '2015-01-14 23:45:00'
+end = '2015-01-31 23:45:00'
 year = '2015'
 time_freq = "15 min"
 timestamp_int = 48
@@ -64,6 +65,13 @@ hp = HeatPump(identifier='hp1',
               min_runtime=min_runtime,
               min_stop_time=min_stop_time, heat_pump_type = typeHP)
 
+hr = HeatingRod(identifier='hr1', 
+                 environment=environment, user_profile = user_profile,
+                 el_power = el_power, rampUpTime = rampUpTime, 
+                 rampDownTime = rampDownTime, 
+                 min_runtime = min_runtime, 
+                 min_stop_time = min_stop_time)
+
 
 def test_get_cop(hp):
     
@@ -91,7 +99,10 @@ def test_observations_for_timestamp(hp, timestamp):
     print('observations_for_timestamp:')
     observation = hp.observations_for_timestamp(timestamp)
     print(observation, '\n')
+    
 
+    
+optimize_bivalent(hp, hr, "p", user_profile)
 
 test_get_cop(hp)
 test_prepare_timeseries(hp)
@@ -102,7 +113,16 @@ test_observations_for_timestamp(hp, timestamp_int)
 test_value_for_timestamp(hp, timestamp_str)
 test_observations_for_timestamp(hp, timestamp_str)
 
-hp.determine_optimum_thermal_power (user_profile)
-print(str(hp.th_power))
-print(str(hp.th_power_realistic))
+test_prepare_timeseries(hr)
+
+test_value_for_timestamp(hr, timestamp_int)
+test_observations_for_timestamp(hr, timestamp_int)
+
+test_value_for_timestamp(hr, timestamp_str)
+test_observations_for_timestamp(hr, timestamp_str)
+
+temp = environment.mean_temp_hours
+time = range(len(temp))
+plt.plot(time, temp)
+
 
