@@ -392,9 +392,9 @@ class BatteryElectricVehicle(Component):
                 ]
 
             if (hour > arrival) | (hour < departure):
-                lst.append(1)
+                lst.append(1.0)
             else:
-                lst.append(0)
+                lst.append(0.0)
 
         self.at_home = pd.DataFrame({"at home": lst})
         self.at_home.index = self.timeseries.index
