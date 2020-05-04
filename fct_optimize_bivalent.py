@@ -44,7 +44,7 @@ def optimize_bivalent(heat_pump, heating_rod, mode, user_profile):
     b = 0 - a * 20
     
     # bivalence temerature (determine with tabels in Vaillant hand book)
-    T_biv = -6.5
+    T_biv = 0
     
     # calculate corresponding heat demand (equals thermal power of heat pump)
     P_biv = a * T_biv + b
@@ -54,7 +54,7 @@ def optimize_bivalent(heat_pump, heating_rod, mode, user_profile):
     th_power_hp_coldest = heat_pump.el_power * heat_pump.get_current_cop(T_p0)
     
     if mode == "parallel":
-        heating_rod.el_power = round(float(P_p0 - th_power_hp_coldest), 1) / heating_rod.efficiency
+        heating_rod.el_power = round(float((P_p0 - th_power_hp_coldest) / heating_rod.efficiency), 1)
         
     else:
-        heating_rod.el_power = P_p0 / heating_rod.efficiency
+        heating_rod.el_power = round(float(P_p0 / heating_rod.efficiency), 1)
