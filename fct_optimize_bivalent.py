@@ -8,7 +8,7 @@ Created on Mon Apr 27 08:30:32 2020
 """
 import pandas as pd
 
-def optimize_bivalent(heat_pump, heating_rod, mode, user_profile):
+def optimize_bivalent(heat_pump, heating_rod, mode, biv_temp, user_profile):
     if mode not in ["parallel", "alternative"]:
         print("error: mode needs to be \"parallel\" or \"alternative\"")
         
@@ -44,7 +44,7 @@ def optimize_bivalent(heat_pump, heating_rod, mode, user_profile):
     b = 0 - a * 20
     
     # bivalence temerature (determine with tabels in Vaillant hand book)
-    T_biv = 0
+    T_biv = biv_temp
     
     # calculate corresponding heat demand (equals thermal power of heat pump)
     P_biv = a * T_biv + b

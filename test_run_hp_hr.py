@@ -80,8 +80,12 @@ hr = HeatingRod(identifier='hr1',
                  min_runtime = min_runtime, 
                  min_stop_time = min_stop_time)
 
+# parameters for running hp and hr
+t_biv = 4.0
+mode = "parallel"
+
 # layout hr and hp
-optimize_bivalent(hp, hr, "parallel", user_profile)
+optimize_bivalent(hp, hr, mode, t_biv, user_profile)
 
 # show results of layout
 print("thermal power hp: " + str(hp.th_power) + "[kW]")
@@ -91,8 +95,6 @@ print("electrical power hr: " + str(hr.el_power) + "[kW]")
 heat_demand = user_profile.thermal_energy_demand
 temperature = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv", index_col="time")
 dataframe = pd.concat([heat_demand, temperature], axis = 1)
-
-t_biv = 0
 
 # times where hp is running
 filter_hp = dataframe['temperature'] >= t_biv
@@ -116,15 +118,28 @@ power_hr = []
 th_energy_demand = dataframe['thermal_energy_demand'].values
 
 # determine heat output of heat pump
-for i in range(len(dataframe)):
-    if bools_hp[i] == True:
-        if th_energy_demand[i] <= hp.th_power:
-            power_hp.append(th_energy_demand[i])
+if mode == "alternative":
+    for i in range(len(dataframe)):
+        if bools_hp[i] == True:
+            if th_energy_demand[i] <= hp.th_power:
+                power_hp.append(th_energy_demand[i])
+            else:
+                power_hp.append(hp.th_power)
         else:
-            power_hp.append(hp.th_power)
+            power_hp.append(0)
             
-    else:
-        power_hp.append(0)
+if mode == "parallel":
+    for i in range(len(dataframe)):
+        if bools_hp[i] == True:
+            if th_energy_demand[i] <= hp.th_power:
+                power_hp.append(th_energy_demand[i])
+            else:
+                power_hp.append(hp.th_power)
+        else:
+            if th_energy_demand[i] <= hp.th_power:
+                power_hp.append(th_energy_demand[i])
+            else:
+                power_hp.append(hp.th_power)
         
 th_output_hp = pd.DataFrame(data = power_hp, columns = ['th_output_hp'], index =
                             dataframe.index)
@@ -133,21 +148,36 @@ dataframe = pd.concat([dataframe, th_output_hp], axis = 1)
 print(str(dataframe))
 
 # determine heat output of heating rod
-for i in range(len(dataframe)):
-    if bools_hr[i] == True:
-        difference = th_energy_demand[i] - power_hp[i]
-        power_hr.append(difference)
-    else:
-        power_hr.append(0)
+if mode == "parallel":
+    for i in range(len(dataframe)):
+        if bools_hr[i] == True:
+            difference = th_energy_demand[i] - power_hp[i]
+            power_hr.append(difference)
+        else:
+            power_hr.append(0)
+            
+if mode == "alternative":
+    for i in range(len(dataframe)):
+        if bools_hr[i] == True:
+            power_hr.append(th_energy_demand[i])
+        else:
+            power_hr.append(0)
         
 th_output_hr = pd.DataFrame(data = power_hr, columns = ['th_output_hr'], index =
                             dataframe.index)
 
+# =============================================================================
+# el_demand_hp = []
+# 
+# for i in range(len(dataframe)):
+#     el_demand = power_hp[i] * 
+# =============================================================================
+    
 dataframe = pd.concat([dataframe, th_output_hr], axis = 1)
 print(str(dataframe))
-dataframe[0:(24*4*3)].plot()
+dataframe[0:(24*4*7)].plot(figsize = (16, 9))
 plt.show()
-        
+
 
 
 
