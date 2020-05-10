@@ -81,7 +81,7 @@ hr = HeatingRod(identifier='hr1',
                  min_stop_time = min_stop_time)
 
 # parameters for running hp and hr
-t_biv = 4.0
+t_biv = 0.0
 mode = "parallel"
 
 # layout hr and hp
@@ -187,7 +187,7 @@ dataframe = pd.concat([dataframe, el_demand_hp], axis = 1)
     
 dataframe = pd.concat([dataframe, th_output_hr], axis = 1)
 print(str(dataframe))
-dataframe[:(24*4*7*12)].plot(figsize = (16, 9))
+dataframe[:(24*4*7)].plot(figsize = (16, 9))
 plt.show()
 
 

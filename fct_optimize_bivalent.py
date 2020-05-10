@@ -8,7 +8,7 @@ Created on Mon Apr 27 08:30:32 2020
 """
 import pandas as pd
 
-def optimize_bivalent(heat_pump, heating_rod, mode, biv_temp, user_profile):
+def optimize_bivalent(heat_pump, heating_rod, mode, norm_temp, user_profile):
     if mode not in ["parallel", "alternative"]:
         print("error: mode needs to be \"parallel\" or \"alternative\"")
         
@@ -24,6 +24,15 @@ def optimize_bivalent(heat_pump, heating_rod, mode, biv_temp, user_profile):
 #     if user_profile.thermal_energy_demand == None:
 #         user_profile.get_thermal_energy_demand()
 # =============================================================================
+    
+    if norm_temp <= -15:
+        biv_temp = -12.0
+    elif (norm_temp > -15) & (norm_temp <= -12):
+        biv_temp = -10.0
+    elif (norm_temp > -12) & (norm_temp <= -9):
+        biv_temp = -8.0
+    elif norm_temp > -9:
+        biv_temp = -6.0
     
     heat_demand = user_profile.get_thermal_energy_demand()
     temperature = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv", index_col="time")
