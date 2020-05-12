@@ -81,7 +81,7 @@ hr = HeatingRod(identifier='hr1',
 
 # parameters for running hp and hr
 norm_temp = -7.0    # biv_temp = -6.0
-mode = "parallel"
+mode = "alternative"
 
 # layout hr and hp
 optimize_bivalent(hp, hr, mode, norm_temp, user_profile)
