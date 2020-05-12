@@ -11,9 +11,19 @@ aufsteigenden Werten) hatten, sondern nur die geordneten Temperaturwerte über
 das gesamte Jahr. So gab es bestimmte Temperaturen öfter, die öfter als nur
 einmal vorkamen => Zitterlinie
 Hier soll eine schöne Linie der Heizlast entstehen
+
+Alernativ:
+wirklich mal versuchen im user_profile (oder vielleicht in einer Kopie davon)
+die mean_temp_days so abzuändern, dass einmal immer nur -15C und einmal immer
+nur 20C herrscht. Dann mal für beide Varianten die Zitterlinie erzeugen (also
+ein Dataframe mit der Temperatur und dem Heatdemand über der Zeit platten lassen
+P über T (wobei dann ja eigentlich jeweils immer nur ein T-Wert dargestellt ist
+für alle Zeitpunkte im Jahr => also ist das resultierende P-T-Diagramm ja eigentlich
+nur eine vertikale Linie?))
 """
 
 import pandas as pd
+import matplotlib.pyplot as plt
 
 mean_temp_days = pd.read_csv("input/thermal/dwd_temp_days_2015.csv",
                              index_col="time")
@@ -68,5 +78,12 @@ for i in range(999):
         h_lst.append(h_del)
 
 h_del = pd.DataFrame(h_lst, columns = ["h_del"])
+
+# das müsste jetzt eigentlich die P(T) Heizlastkennlinie vom Gebäude sein
+# noch nicht ganz klar, wo da jetzt der Einfluss des yearly_thermal_energy_demands
+# mit rein spielt
+T_axis = temperature
+P_axis = h_del["h_del"].values
+plt.plot(T_axis, P_axis)
 
 print(str(h_del))
