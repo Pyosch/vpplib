@@ -30,7 +30,7 @@ def optimize_bivalent(heat_pump, heating_rod, mode, norm_temp, user_profile):
     elif (norm_temp > -15) & (norm_temp <= -12):
         biv_temp = -10.0
     elif (norm_temp > -12) & (norm_temp <= -9):
-        biv_temp = -8.0
+        biv_temp = -4.0
     elif norm_temp > -9:
         biv_temp = -6.0
     

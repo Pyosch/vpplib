@@ -17,7 +17,7 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     elif (norm_temp > -15) & (norm_temp <= -12):
         biv_temp = -10.0
     elif (norm_temp > -12) & (norm_temp <= -9):
-        biv_temp = -8.0
+        biv_temp = -4.0
     elif norm_temp > -9:
         biv_temp = -6.0
         
