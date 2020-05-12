@@ -81,7 +81,7 @@ hr = HeatingRod(identifier='hr1',
                  min_stop_time = min_stop_time)
 
 # parameters for running hp and hr
-t_biv = 0.0
+t_biv = -5.0
 mode = "parallel"
 
 # layout hr and hp
