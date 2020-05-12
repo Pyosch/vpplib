@@ -28,7 +28,7 @@ timestamp_str2 = '2015-01-10 06:00:00'
 timebase = 15
 
 #Values for user_profile
-thermal_energy_demand_yearly = 12500
+thermal_energy_demand_yearly = 36000
 building_type = 'DE_HEF33'
 t_0 = 40
 
@@ -80,8 +80,8 @@ hr = HeatingRod(identifier='hr1',
                  min_stop_time = min_stop_time)
 
 # parameters for running hp and hr
-norm_temp = -7.0    # biv_temp = -6.0
-mode = "alternative"
+norm_temp = -10.0    # biv_temp = -6.0
+mode = "parallel"
 
 # layout hr and hp
 optimize_bivalent(hp, hr, mode, norm_temp, user_profile)
