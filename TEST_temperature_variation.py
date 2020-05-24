@@ -20,6 +20,11 @@ ein Dataframe mit der Temperatur und dem Heatdemand über der Zeit platten lasse
 P über T (wobei dann ja eigentlich jeweils immer nur ein T-Wert dargestellt ist
 für alle Zeitpunkte im Jahr => also ist das resultierende P-T-Diagramm ja eigentlich
 nur eine vertikale Linie?))
+
+oder besser:
+für die abgeänderten mean_temp_days mal die P-t zeichnen lassen, dann den Peak
+vom P-t-Diagramm von überall -15C nehmen, denjenigen Peak vom P-t-Diagramm von
+überall 20C nehmen und die beiden Peaks als Punkte im P-T-Diagramm nehmen
 """
 
 import pandas as pd
@@ -32,10 +37,11 @@ mean_temp_days.index = pd.to_datetime(mean_temp_days.index)
 print(str(mean_temp_days))
 
 i = 0
-start = -20
+T_start = -20
+T_end = 30
 while i < len(mean_temp_days):
-    mean_temp_days['temperature'].iat[i] = start
-    start = start + i * (30 + 20) / 365
+    temp = T_start + (T_end - T_start) / len(mean_temp_days) * i
+    mean_temp_days['temperature'].iat[i] = temp
     i += 1
 
 print(str(mean_temp_days))

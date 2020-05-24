@@ -12,14 +12,12 @@ import pandas as pd
 def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     
     # determine bivalence temperature according to norm_temperature
-    if norm_temp <= -15:
-        biv_temp = -12.0
-    elif (norm_temp > -15) & (norm_temp <= -12):
-        biv_temp = -10.0
-    elif (norm_temp > -12) & (norm_temp <= -9):
-        biv_temp = -4.0
-    elif norm_temp > -9:
-        biv_temp = -6.0
+    if norm_temp <= -16:
+        biv_temp = -7
+    elif (norm_temp > -16) & (norm_temp <= -10):
+        biv_temp = -6
+    elif norm_temp > -10:
+        biv_temp = -5
         
     # temperature and heat demand over time
     heat_demand = user_profile.thermal_energy_demand

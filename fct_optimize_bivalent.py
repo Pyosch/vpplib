@@ -25,14 +25,12 @@ def optimize_bivalent(heat_pump, heating_rod, mode, norm_temp, user_profile):
 #         user_profile.get_thermal_energy_demand()
 # =============================================================================
     
-    if norm_temp <= -15:
-        biv_temp = -12.0
-    elif (norm_temp > -15) & (norm_temp <= -12):
-        biv_temp = -10.0
-    elif (norm_temp > -12) & (norm_temp <= -9):
-        biv_temp = -4.0
-    elif norm_temp > -9:
-        biv_temp = -6.0
+    if norm_temp <= -16:
+        biv_temp = -7
+    elif (norm_temp > -16) & (norm_temp <= -10):
+        biv_temp = -6
+    elif norm_temp > -10:
+        biv_temp = -5
     
     heat_demand = user_profile.get_thermal_energy_demand()
     temperature = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv", index_col="time")
