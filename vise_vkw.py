@@ -142,6 +142,21 @@ with open(r'Results/thermal_dict.pickle', 'rb') as handle:
 with open(r'Results/el_dict_2015.pickle', 'rb') as handle:
     el_dict = pickle.load(handle)
 
+# load COMODO results
+df_tech_input = pd.read_excel(
+    r"./input/input_vise/COMODO/Input_Tech_COMODO_v1.01.xlsx",
+    decimal=",",
+    index_col="tech")
+
+df_installed_cap = pd.read_excel(
+    r"./input/input_vise/COMODO/comodo_results_instaCap.xlsx",
+    decimal=",",
+    sheet_name="out_INSTCAP",
+    index_col=[0,1])
+
+# Year to pick data from COMODO installed capacity
+observation_year = [2025, 2030, 2035, 2040]
+
 print(time.asctime( time.localtime(time.time()) ))
 print("Loaded input\n")
 # %% environment
@@ -197,103 +212,82 @@ for bus in net.bus.name:
     if "LV" in bus:
         lv_buses.append(bus)
 
-up_dict = {}
-count = 0
-while count <= component_number:
+household_dict = dict()
+for house in df_installed_cap.index.get_level_values(0).unique():
+    for y in observation_year:
+        # Create UserProfile for every buildug type
+        user_profile = UserProfile(
+            identifier=(house+"_"+str(y)),
+            latitude=latitude,
+            longitude=longitude,
+            thermal_energy_demand_yearly=None,
+            building_type=None,
+            comfort_factor=None,
+            t_0=t_0,
+            daily_vehicle_usage=None,
+            week_trip_start=[],
+            week_trip_end=[],
+            weekend_trip_start=[],
+            weekend_trip_end=[],
+        )
+        # Include COMODO results
+        user_profile.pv_kwp = df_installed_cap.loc[house].loc[y].PV
+        user_profile.chp_kw_th = df_installed_cap.loc[house].loc[y].CHP_Otto
+        user_profile.chp_el_eff = df_tech_input.loc["CHP_Otto"].efficiency_el
+        user_profile.chp_th_eff = df_tech_input.loc["CHP_Otto"].efficiency_th
+        user_profile.chp_kw_el = ((df_tech_input.loc["CHP_Otto"].efficiency_el
+                                  /df_tech_input.loc["CHP_Otto"].efficiency_th)
+                                  *user_profile.chp_kw_th)
+        user_profile.tes = df_installed_cap.loc[house].loc[y].Th_Stor_water_heat
+        user_profile.heating_rod = df_installed_cap.loc[house].loc[y].SimplePTH
+        user_profile.ees = df_installed_cap.loc[house].loc[y].Batt
 
-    # Get a bus with a load to add the loadprofile to the user_profile.
-    # This is the equivalent to a do-while-loop
-    while True:
-        simbus = random.sample(lv_buses, 1)[0]
-        if 2 >  len(net.load[net.load.bus == net.bus[
-                net.bus.name == simbus].index.item()]) > 0:
-            break
+        # Include fzj profiles
+        user_profile.el_profile = random.sample(el_dict.keys(), 1)[0]
 
-# lv_loads = []
-# for load in net.load.name:
-#     if "LV" in load:
-#         lv_loads.append(load)
+        if "HH1a" in user_profile.el_profile:
+            if "Winter" in user_profile.el_profile:
+                user_profile.th_profile = 'HH1a_vacationWinter'
 
-# up_dict = {}
-# count = 0
-# while count <= component_number:
+            if "Summer" in user_profile.el_profile:
+                user_profile.th_profile = 'HH1a_vacationSummer'
 
+        elif "HH1b" in user_profile.el_profile:
+            if "Dec" in user_profile.el_profile:
+                user_profile.th_profile = 'HH1b_vacationWinter'
 
-    user_profile = UserProfile(
-        identifier=simbus,
-        latitude=latitude,
-        longitude=longitude,
-        thermal_energy_demand_yearly=None,
-        building_type=building_type,
-        comfort_factor=None,
-        t_0=t_0,
-        daily_vehicle_usage=None,
-        week_trip_start=[],
-        week_trip_end=[],
-        weekend_trip_start=[],
-        weekend_trip_end=[],
-    )
+            if "Summer" in user_profile.el_profile:
+                user_profile.th_profile = 'HH1b_vacationSummer'
+    
+        elif "HH2a" in user_profile.el_profile:
+            if "Winter" in user_profile.el_profile:
+                user_profile.th_profile = 'HH2a_vacationWinter'
+    
+            if "Summer" in user_profile.el_profile:
+                user_profile.th_profile = 'HH2a_vacationSummer'
 
-    el_profile = net.load.profile[  # get name of profile...
-        net.load.bus == net.bus[  # ...where the loadbus equals the bus...
-            # ...which has the same name as the bus of the user_profile:
-            net.bus.name == simbus].index.item()].item()
+        elif "HH2b" in user_profile.el_profile:
+            if "Winter" in user_profile.el_profile:
+                user_profile.th_profile = 'HH2b_vacationWinter'
+    
+            if "Summer" in user_profile.el_profile:
+                user_profile.th_profile = 'HH2b_vacationSummer'
+    
+        else:
+            print("Profile of", user_profile.identifier, " not propperly assigned!")
 
-    user_profile.baseload = el_dict[el_profile].loc[start:end]
+        user_profile.electric_energy_demand = el_dict[user_profile.el_profile].loc[start:end]
+        user_profile.thermal_energy_demand = thermal_dict[user_profile.th_profile].loc[start:end]
 
-    # pick thermal profile corresponding to el_profile
-    user_profile.thermal_energy_demand = pd.DataFrame()
-    if "HH1a" in el_profile:
-        if "Dec" in el_profile:
-            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
-                'HH1a_vacationWinter'
-                ].HeatDemand.loc[start:end]
-        if "Jul" in el_profile:
-            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
-                'HH1a_vacationSummer'
-                ].HeatDemand.loc[start:end]
+        household_dict[user_profile.identifier] = user_profile
 
-    elif "HH1b" in el_profile:
-        if "Dec" in el_profile:
-            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
-                'HH1b_vacationWinter'
-                ].HeatDemand.loc[start:end]
-        if "Jul" in el_profile:
-            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
-                'HH1b_vacationSummer'
-                ].HeatDemand.loc[start:end]
+# Assign user_profiles to buses
+up_dict = dict()
+for bus in net.bus.name:
+    if "LV" in bus:
+        house = random.sample(household_dict.keys(), 1)[0]
+        up_dict[bus+'_'+house] = household_dict[house]
 
-    elif "HH2a" in el_profile:
-        if "Dec" in el_profile:
-            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
-                'HH2a_vacationWinter'
-                ].HeatDemand.loc[start:end]
-
-        if "Jul" in el_profile:
-            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
-                'HH2a_vacationSummer'
-                ].HeatDemand.loc[start:end]
-
-    elif "HH2b" in el_profile:
-        if "Dec" in el_profile:
-            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
-                'HH2b_vacationWinter'
-                ].HeatDemand.loc[start:end]
-
-        if "Jul" in el_profile:
-            user_profile.thermal_energy_demand["thermal_energy_demand"] = thermal_dict[
-                'HH2b_vacationSummer'
-                ].HeatDemand.loc[start:end]
-
-    else:
-        print("Profile ", el_profile, " not propperly assigned!")
-
-    user_profile.thermal_energy_demand.index = pd.to_datetime(
-        user_profile.thermal_energy_demand.index)
-    user_profile.thermal_energy_demand.index.freq = time_freq
-
-    up_dict[user_profile.identifier] = user_profile
-    count += 1
 
 # %% generate user profiles based on grid buses for mv
 
@@ -326,6 +320,7 @@ while count < wind_number:
         weekend_trip_end=[],
     )
 
+    #TODO: MAYBE USE FOR aggregated MV loads
     # Uncomment if loadprofile in user_profile is needed
     # Keep in mind to include check for loadprofile when choosing "simbus"
     # like done for lv_buses.
@@ -359,24 +354,24 @@ print("Generated user_profiles\n")
 # up_with_wind = random.sample(list(up_dict.keys()), wind_number)
 
 #pv_amount = int(round((len(up_dict.keys()) * (pv_percentage/100)), 0))
-vpp.buses_with_pv = random.sample(
-    [x for x in list(up_dict.keys()) if x not in up_with_wind], pv_number)
+# vpp.buses_with_pv = random.sample(
+#     [x for x in list(up_dict.keys()) if x not in up_with_wind], pv_number)
 
-#hp_amount = int(round((len(up_dict.keys()) * (hp_percentage/100)), 0))
-vpp.buses_with_hp = random.sample(
-    [x for x in list(up_dict.keys()) if x not in up_with_wind], hp_number)
+# #hp_amount = int(round((len(up_dict.keys()) * (hp_percentage/100)), 0))
+# vpp.buses_with_hp = random.sample(
+#     [x for x in list(up_dict.keys()) if x not in up_with_wind], hp_number)
 
-#chp_amount = int(round((len(up_dict.keys()) * (chp_percentage/100)), 0))
-vpp.buses_with_chp = random.sample(
-    [x for x in list(up_dict.keys()) if x not in up_with_wind], chp_number)
+# #chp_amount = int(round((len(up_dict.keys()) * (chp_percentage/100)), 0))
+# vpp.buses_with_chp = random.sample(
+#     [x for x in list(up_dict.keys()) if x not in up_with_wind], chp_number)
 
-#bev_amount = int(round((len(up_dict.keys()) * (bev_percentage/100)), 0))
-vpp.buses_with_bev = random.sample(
-    [x for x in list(up_dict.keys()) if x not in up_with_wind], bev_number)
+# #bev_amount = int(round((len(up_dict.keys()) * (bev_percentage/100)), 0))
+# vpp.buses_with_bev = random.sample(
+#     [x for x in list(up_dict.keys()) if x not in up_with_wind], bev_number)
 
-# Distribution of el storage is only done for houses with pv
-#storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
-vpp.buses_with_ees = random.sample(vpp.buses_with_pv, ees_number)
+# # Distribution of el storage is only done for houses with pv
+# #storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
+# vpp.buses_with_ees = random.sample(vpp.buses_with_pv, ees_number)
 
 
 # %% generate pv
