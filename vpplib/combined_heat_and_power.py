@@ -21,6 +21,8 @@ class CombinedHeatAndPower(Component):
         min_stop_time,
         overall_efficiency,
         unit,
+        efficiency_el=None,
+        efficiency_th=None,
         identifier=None,
         environment=None,
         user_profile=None,
@@ -107,6 +109,8 @@ class CombinedHeatAndPower(Component):
         self.identifier = identifier
         self.el_power = el_power
         self.th_power = th_power
+        self.efficiency_el = efficiency_el
+        self.efficiency_th = efficiency_th
         self.overall_efficiency = overall_efficiency
         self.ramp_up_time = ramp_up_time
         self.ramp_down_time = ramp_down_time
