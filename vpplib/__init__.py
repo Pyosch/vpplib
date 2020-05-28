@@ -11,3 +11,4 @@ from .thermal_energy_storage import ThermalEnergyStorage
 from .user_profile import UserProfile
 from .virtual_power_plant import VirtualPowerPlant
 from .wind_power import WindPower
+from .heating_rod import HeatingRod
