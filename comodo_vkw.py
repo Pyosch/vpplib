@@ -108,6 +108,7 @@ for house in df_installed_cap.index.get_level_values(0).unique():
         )
 
         # Include fzj profiles
+        user_profile.environment = environment
         user_profile.el_profile = random.sample(el_dict.keys(), 1)[0]
 
         if "HH1a" in user_profile.el_profile:
@@ -154,7 +155,7 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                               surface_azimuth = random.randrange(start=160, stop=220, step=10),
                               unit="kW",
                               identifier=(user_profile.identifier+'_pv'),
-                              environment=None,
+                              environment=environment,
                               user_profile=user_profile,
                               cost=None)
 
@@ -206,7 +207,7 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                 cp=cp,
                 thermal_energy_loss_per_day=thermal_energy_loss_per_day,
             )
-            
+
             user_profile.tes = tes
 
         if math.isnan(df_installed_cap.loc[house].loc[y].SimplePTH) == False:
@@ -220,8 +221,10 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                          min_runtime = min_runtime_hr, 
                          min_stop_time = min_stop_time_hr)
 
+            user_profile.hr = hr
+
         if math.isnan(df_installed_cap.loc[house].loc[y].Batt) == False:
-        
+
             ees = ElectricalEnergyStorage(
                 unit="kWh",
                 identifier=(user_profile.identifier + "_ees"),
@@ -233,6 +236,8 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                 max_power=df_installed_cap.loc[house].loc[y].Batt,
                 max_c=max_c,
             )
+
+            user_profile.ees = ees
 
         user_profiles_dict[user_profile.identifier] = user_profile
 
