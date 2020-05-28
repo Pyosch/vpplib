@@ -13,7 +13,7 @@ import math
 from vpplib import UserProfile, Environment
 from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
-from vpplib import CombinedHeatAndPower
+from vpplib import CombinedHeatAndPower, HeatingRod
 
 # UserProfile data
 latitude = 50.941357
@@ -43,6 +43,15 @@ target_temperature = 60  # °C
 hysteresis = 10  # °K
 cp = 4.2
 thermal_energy_loss_per_day = 0.13
+
+#Values for HeatingRod
+ramp_up_time_hr = 1/15 #timesteps
+ramp_down_time_hr = 1 / 15  # timesteps
+min_runtime_hr = 0  # timesteps
+min_stop_time_hr = 0  # timesteps
+
+# Values for electrical storage
+max_c = 1  # factor between 0.5 and 1.2
 
 # Year to pick data from COMODO installed capacity
 year = [2025, 2030, 2035, 2040]
@@ -144,7 +153,7 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                               surface_tilt = random.randrange(start=20, stop=40, step=5),
                               surface_azimuth = random.randrange(start=160, stop=220, step=10),
                               unit="kW",
-                              identifier=None,
+                              identifier=(user_profile.identifier+'_pv'),
                               environment=None,
                               user_profile=user_profile,
                               cost=None)
@@ -162,8 +171,8 @@ for house in df_installed_cap.index.get_level_values(0).unique():
         if math.isnan(df_installed_cap.loc[house].loc[y].CHP_Otto) == False:
             chp = CombinedHeatAndPower(
                 unit="kW",
-                identifier="chp1",
-                environment=None,
+                identifier=(user_profile.identifier+'_chp'),
+                environment=environment,
                 user_profile=user_profile,
                 el_power=((df_tech_input.loc["CHP_Otto"].efficiency_el
                               /df_tech_input.loc["CHP_Otto"].efficiency_th)
@@ -183,6 +192,7 @@ for house in df_installed_cap.index.get_level_values(0).unique():
         if math.isnan(df_installed_cap.loc[house].loc[y].Th_Stor_water_heat) == False:
 
             tes = ThermalEnergyStorage(
+                identifier=(user_profile.identifier+'_tes'),
                 environment=environment,
                 user_profile=user_profile,
                 unit="kWh",
@@ -199,7 +209,29 @@ for house in df_installed_cap.index.get_level_values(0).unique():
             
             user_profile.tes = tes
 
-        user_profile.heating_rod = df_installed_cap.loc[house].loc[y].SimplePTH
-        user_profile.ees = df_installed_cap.loc[house].loc[y].Batt
+        if math.isnan(df_installed_cap.loc[house].loc[y].SimplePTH) == False:
+
+            hr = HeatingRod(identifier=(user_profile.identifier+'_hr'),
+                         environment=environment,
+                         user_profile = user_profile,
+                         el_power = df_installed_cap.loc[house].loc[y].SimplePTH,
+                         rampUpTime = ramp_up_time_hr, 
+                         rampDownTime = ramp_down_time_hr, 
+                         min_runtime = min_runtime_hr, 
+                         min_stop_time = min_stop_time_hr)
+
+        if math.isnan(df_installed_cap.loc[house].loc[y].Batt) == False:
+        
+            ees = ElectricalEnergyStorage(
+                unit="kWh",
+                identifier=(user_profile.identifier + "_ees"),
+                environment=environment,
+                user_profile=user_profile,
+                capacity=df_installed_cap.loc[house].loc[y].Batt,
+                charge_efficiency=df_tech_input.loc["Batt"].efficiency_el,
+                discharge_efficiency=df_tech_input.loc["Batt"].efficiency_el,
+                max_power=df_installed_cap.loc[house].loc[y].Batt,
+                max_c=max_c,
+            )
 
         user_profiles_dict[user_profile.identifier] = user_profile
