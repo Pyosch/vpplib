@@ -10,6 +10,9 @@ import pickle
 import random
 
 from vpplib import UserProfile
+from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
+from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
+from vpplib import CombinedHeatAndPower
 
 # UserProfile data
 latitude = 50.941357
@@ -18,7 +21,7 @@ target_temperature = 60  # °C
 t_0 = 40  # °C
 
 # Year to pick data from COMODO installed capacity
-year = [2025, 2030, 2035, 2040]
+year = [2040] #[2025, 2030, 2035, 2040]
 
 #%% load data
 with open(r'./input/input_vise/thermal_dict.pickle', 'rb') as handle:
@@ -38,12 +41,9 @@ df_installed_cap = pd.read_excel(
     sheet_name="out_INSTCAP",
     index_col=[0,1])
 
-#%% Generate UserProfiles based on fzj profiles als COMODO results
-#look at the results of the desired year
-for idx in df_installed_cap.index:
-    if year in idx:
-        print(idx)
-        
+#%% Generate UserProfiles based on fzj profiles and COMODO results
+
+
 user_profiles_dict = dict()
 for house in df_installed_cap.index.get_level_values(0).unique():
     for y in year:
@@ -63,7 +63,29 @@ for house in df_installed_cap.index.get_level_values(0).unique():
             weekend_trip_end=[],
         )
         # Include COMODO results
-        user_profile.pv_kwp = df_installed_cap.loc[house].loc[y].PV
+        if df_installed_cap.loc[house].loc[y].PV:
+
+            pv = Photovoltaic(module_lib="SandiaMod",
+                  inverter_lib="SandiaInverter",
+                  surface_tilt = random.randrange(start=20, stop=40, step=5),
+                  surface_azimuth = random.randrange(start=160, stop=220, step=10),
+                  unit="kW",
+                  identifier=None,
+                  environment=None,
+                  user_profile=user_profile,
+                  cost=None)
+
+            (modules_per_string,
+             strings_per_inverter,
+             module, inverter) = pv.pick_pvsystem(
+                 min_module_power = 100,
+                 max_module_power = 200,
+                 pv_power = (df_installed_cap.loc[house].loc[y].PV*1000),
+                 inverter_power_range = 100)
+
+            # user_profile.pv_kwp = pv.peak_power
+            user_profile.pv_system = pv
+
         user_profile.chp_kw_th = df_installed_cap.loc[house].loc[y].CHP_Otto
         user_profile.chp_el_eff = df_tech_input.loc["CHP_Otto"].efficiency_el
         user_profile.chp_th_eff = df_tech_input.loc["CHP_Otto"].efficiency_th
