@@ -86,16 +86,8 @@ with open(r'Results/20200528_up_dummy_profiles.pickle', 'rb') as handle:
 
 print(time.asctime( time.localtime(time.time()) ))
 print("Loaded input\n")
-# %% environment
 
-# environment = Environment(
-#     timebase=timebase,
-#     timezone="Europe/Berlin",
-#     start=start,
-#     end=end,
-#     year=year,
-#     time_freq=time_freq,
-# )
+
 #%% Adjust the values of the environments in the household_dict with the
 #   current values. Since the environment is stored in one place
 #   (eg. 0x158c9b24c08) and all components have the same, it only has to be
@@ -114,6 +106,20 @@ household_dict[list(household_dict.keys())[0]].environment.get_mean_temp_hours()
 household_dict[list(household_dict.keys())[0]].environment.get_pv_data()
 household_dict[list(household_dict.keys())[0]].environment.get_wind_data()
 
+#%% Get timeseries of the households
+
+for house in household_dict.keys():
+    if "pv_system" in list(household_dict[house].__dict__.keys()):
+        household_dict[house].pv_system.prepare_time_series()
+        
+        # TODO
+        # Somehow in some pvlib timeseries the inverter losses during night hours
+        # are not complete. Once we find out how to solve this problem we can
+        # delete this part:
+        if household_dict[house].pv_system.timeseries.isnull().values.any():
+                household_dict[house].pv_system.timeseries.fillna(
+                    value=0,
+                    inplace=True)
 
 # %% virtual power plant
 
@@ -128,19 +134,6 @@ pp.plotting.simple_plot(net)
 
 # drop preconfigured electricity generators from the grid
 net.sgen.drop(net.sgen.index)
-
-# assign fzj profiles to existing loads
-for index in net.load.index:
-    if "LV" in net.load.name[index]:
-        net.load.profile[index] = random.sample(el_dict.keys(), 1)[0]
-        net.load.type[index] = "baseload"
-
-    elif "MV" in net.load.name[index]:
-        net.load.profile[index] = str(net.load.name[index] + "_mv_load")
-        net.load.type[index] = "mv_load"
-
-    else:
-        net.load.profile[index] = str(net.load.name[index])
 
 print(time.asctime(time.localtime(time.time())))
 print("Initialized environment, vpp and net\n")
