@@ -8,8 +8,9 @@ Created on Tue May 19 16:27:36 2020
 import pandas as pd
 import pickle
 import random
+import math
 
-from vpplib import UserProfile
+from vpplib import UserProfile, Environment
 from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
 from vpplib import HeatPump, ThermalEnergyStorage, ElectricalEnergyStorage
 from vpplib import CombinedHeatAndPower
@@ -20,8 +21,31 @@ longitude = 6.958307
 target_temperature = 60  # °C
 t_0 = 40  # °C
 
+# Values for environment
+start = "2015-01-01 00:00:00"
+end = "2015-01-01 23:45:00"
+year = "2015"
+time_freq = "15 min"
+index_year = pd.date_range(
+    start=year, periods=35040, freq=time_freq, name="time"
+)
+index_hours = pd.date_range(start=start, end=end, freq="h", name="time")
+timebase = 15  # for calculations from kW to kWh
+
+#chp data
+ramp_up_time = 1 / 15  # timesteps
+ramp_down_time = 1 / 15  # timesteps
+min_runtime = 1  # timesteps
+min_stop_time = 2  # timesteps
+
+# Values for Thermal Storage
+target_temperature = 60  # °C
+hysteresis = 10  # °K
+cp = 4.2
+thermal_energy_loss_per_day = 0.13
+
 # Year to pick data from COMODO installed capacity
-year = [2040] #[2025, 2030, 2035, 2040]
+year = [2025, 2030, 2035, 2040]
 
 #%% load data
 with open(r'./input/input_vise/thermal_dict.pickle', 'rb') as handle:
@@ -40,6 +64,17 @@ df_installed_cap = pd.read_excel(
     decimal=",",
     sheet_name="out_INSTCAP",
     index_col=[0,1])
+
+#%% environment to prevent errors
+
+environment = Environment(
+    timebase=timebase,
+    timezone="Europe/Berlin",
+    start=start,
+    end=end,
+    year=year,
+    time_freq=time_freq,
+)
 
 #%% Generate UserProfiles based on fzj profiles and COMODO results
 
@@ -62,40 +97,7 @@ for house in df_installed_cap.index.get_level_values(0).unique():
             weekend_trip_start=[],
             weekend_trip_end=[],
         )
-        # Include COMODO results
-        if df_installed_cap.loc[house].loc[y].PV:
 
-            pv = Photovoltaic(module_lib="SandiaMod",
-                  inverter_lib="SandiaInverter",
-                  surface_tilt = random.randrange(start=20, stop=40, step=5),
-                  surface_azimuth = random.randrange(start=160, stop=220, step=10),
-                  unit="kW",
-                  identifier=None,
-                  environment=None,
-                  user_profile=user_profile,
-                  cost=None)
-
-            (modules_per_string,
-             strings_per_inverter,
-             module, inverter) = pv.pick_pvsystem(
-                 min_module_power = 100,
-                 max_module_power = 200,
-                 pv_power = (df_installed_cap.loc[house].loc[y].PV*1000),
-                 inverter_power_range = 100)
-
-            # user_profile.pv_kwp = pv.peak_power
-            user_profile.pv_system = pv
-
-        user_profile.chp_kw_th = df_installed_cap.loc[house].loc[y].CHP_Otto
-        user_profile.chp_el_eff = df_tech_input.loc["CHP_Otto"].efficiency_el
-        user_profile.chp_th_eff = df_tech_input.loc["CHP_Otto"].efficiency_th
-        user_profile.chp_kw_el = ((df_tech_input.loc["CHP_Otto"].efficiency_el
-                                  /df_tech_input.loc["CHP_Otto"].efficiency_th)
-                                  *user_profile.chp_kw_th)
-        user_profile.tes = df_installed_cap.loc[house].loc[y].Th_Stor_water_heat
-        user_profile.heating_rod = df_installed_cap.loc[house].loc[y].SimplePTH
-        user_profile.ees = df_installed_cap.loc[house].loc[y].Batt
-    
         # Include fzj profiles
         user_profile.el_profile = random.sample(el_dict.keys(), 1)[0]
 
@@ -107,7 +109,7 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                 user_profile.th_profile = 'HH1a_vacationSummer'
 
         elif "HH1b" in user_profile.el_profile:
-            if "Dec" in user_profile.el_profile:
+            if "Winter" in user_profile.el_profile:
                 user_profile.th_profile = 'HH1b_vacationWinter'
 
             if "Summer" in user_profile.el_profile:
@@ -132,5 +134,72 @@ for house in df_installed_cap.index.get_level_values(0).unique():
 
         user_profile.electric_energy_demand = el_dict[user_profile.el_profile]
         user_profile.thermal_energy_demand = thermal_dict[user_profile.th_profile]
+
+        # Include COMODO results
+        if math.isnan(df_installed_cap.loc[house].loc[y].PV) == False:
+
+            ### PV ###
+            pv = Photovoltaic(module_lib="SandiaMod",
+                              inverter_lib="SandiaInverter",
+                              surface_tilt = random.randrange(start=20, stop=40, step=5),
+                              surface_azimuth = random.randrange(start=160, stop=220, step=10),
+                              unit="kW",
+                              identifier=None,
+                              environment=None,
+                              user_profile=user_profile,
+                              cost=None)
+
+            pv.pick_pvsystem(
+                  min_module_power = 100,
+                  max_module_power = 200,
+                  pv_power = (df_installed_cap.loc[house].loc[y].PV*1000),
+                  inverter_power_range = 100)
+
+            # user_profile.pv_kwp = pv.peak_power
+            user_profile.pv_system = pv
+
+        ### CHP ###
+        if math.isnan(df_installed_cap.loc[house].loc[y].CHP_Otto) == False:
+            chp = CombinedHeatAndPower(
+                unit="kW",
+                identifier="chp1",
+                environment=None,
+                user_profile=user_profile,
+                el_power=((df_tech_input.loc["CHP_Otto"].efficiency_el
+                              /df_tech_input.loc["CHP_Otto"].efficiency_th)
+                              *df_installed_cap.loc[house].loc[y].CHP_Otto),
+                th_power=df_installed_cap.loc[house].loc[y].CHP_Otto,
+                overall_efficiency=None,
+                efficiency_el=df_tech_input.loc["CHP_Otto"].efficiency_el,
+                efficiency_th=df_tech_input.loc["CHP_Otto"].efficiency_th,
+                ramp_up_time=ramp_up_time,
+                ramp_down_time=ramp_down_time,
+                min_runtime=min_runtime,
+                min_stop_time=min_stop_time,
+            )
+
+            user_profile.chp = chp
+
+        if math.isnan(df_installed_cap.loc[house].loc[y].Th_Stor_water_heat) == False:
+
+            tes = ThermalEnergyStorage(
+                environment=environment,
+                user_profile=user_profile,
+                unit="kWh",
+                # E = m * cp * dT <-> m = E/cp*dT
+                mass=(df_installed_cap.loc[house].loc[y].Th_Stor_water_heat
+                      *3600
+                      /(cp*(hysteresis*2))
+                      ),
+                hysteresis=hysteresis,
+                target_temperature=target_temperature,
+                cp=cp,
+                thermal_energy_loss_per_day=thermal_energy_loss_per_day,
+            )
+            
+            user_profile.tes = tes
+
+        user_profile.heating_rod = df_installed_cap.loc[house].loc[y].SimplePTH
+        user_profile.ees = df_installed_cap.loc[house].loc[y].Batt
 
         user_profiles_dict[user_profile.identifier] = user_profile
