@@ -14,7 +14,8 @@ import pandas as pd
 import random
 import time
 import pickle
-from tqdm import tqdm 
+from tqdm import tqdm
+import copy
 
 import simbench as sb
 import pandapower as pp
@@ -132,8 +133,9 @@ net = sb.get_simbench_net(sb_code)
 # plot the grid
 pp.plotting.simple_plot(net)
 
-# drop preconfigured electricity generators from the grid
-net.sgen.drop(net.sgen.index)
+# drop preconfigured electricity generators  and loads from the grid
+net.sgen.drop(net.sgen.index, inplace = True)
+net.load.drop(net.load.index, inplace = True)
 
 print(time.asctime(time.localtime(time.time())))
 print("Initialized environment, vpp and net\n")
@@ -141,11 +143,112 @@ print("Initialized environment, vpp and net\n")
 
 #%% Assign user_profiles to buses
 up_dict = dict()
-for bus in net.bus.name:
+for bus in tqdm(net.bus.name):
     if "LV" in bus:
+
         house = random.sample(household_dict.keys(), 1)[0]
-        up_dict[bus+'_'+house] = household_dict[house]
-        up_dict[bus+'_'+house].bus = bus
+        up_id = bus+'_'+house
+
+        # In this place we need a deep copy to recieve independent users.
+        # Otherwise changes in one up would impact multiple up's
+        up_dict[up_id] = copy.deepcopy(household_dict[house])
+        up_dict[up_id].bus = bus
+
+        # Adjust the identifier of the user_profile itself
+        up_dict[up_id].identifier = up_id
+
+        # Adjust the identifier of the components
+        # Add components to vpp and pandapower network
+        if "pv_system" in up_dict[up_id].__dict__.keys():
+            up_dict[up_id].pv_system.identifier = up_id+'_pv'
+
+            vpp.add_component(up_dict[up_id].pv_system)
+
+            pp.create_sgen(
+                net,
+                bus=net.bus[net.bus.name == bus].index[0],
+                p_mw=(
+                    vpp.components[up_id + "_pv"].module.Impo
+                    * vpp.components[up_id + "_pv"].module.Vmpo
+                    / 1000000
+                ),
+                q_mvar = 0,
+                name=(up_id + "_pv"),
+                type="pv",
+            )
+
+        if "chp" in up_dict[up_id].__dict__.keys():
+            up_dict[up_id].chp.identifier = up_id+'_chp'
+            vpp.add_component(up_dict[up_id].chp)
+            
+            pp.create_sgen(
+                net,
+                bus=net.bus[net.bus.name == bus].index[0],
+                p_mw=(vpp.components[up_id + "_chp"].el_power / 1000),
+                q_mvar = 0,
+                name=(up_id + "_chp"),
+                type="chp",
+            )
+
+        if "hr" in up_dict[up_id].__dict__.keys():
+            up_dict[up_id].hr.identifier = up_id+'_hr'
+            vpp.add_component(up_dict[up_id].hr)
+            
+            pp.create_load(
+                net,
+                bus=net.bus[net.bus.name == bus].index[0],
+                p_mw=(vpp.components[up_id + "_hr"].el_power / 1000),
+                q_mvar = 0,
+                name=(up_id + "_hr"),
+                type="hr",
+            )
+
+        if "hp" in up_dict[up_id].__dict__.keys():
+            up_dict[up_id].hp.identifier = up_id+'_hp'
+            vpp.add_component(up_dict[up_id].hp)
+            
+            pp.create_load(
+                net,
+                bus=net.bus[net.bus.name == bus].index[0],
+                p_mw=(vpp.components[up_id + "_hp"].el_power / 1000),
+                q_mvar = 0,
+                name=(up_id + "_hp"),
+                type="hp",
+            )
+
+        if "tes" in up_dict[up_id].__dict__.keys():
+            up_dict[up_id].tes.identifier = up_id+'_tes'
+            vpp.add_component(up_dict[up_id].tes)
+            # Thermal component, no equivalent in pandapower
+
+        if "ees" in up_dict[up_id].__dict__.keys():
+            up_dict[up_id].ees.identifier = up_id+'_ees'
+
+            vpp.add_component(up_dict[up_id].ees)
+
+            pp.create_storage(
+                net,
+                bus=net.bus[net.bus.name == bus].index[0],
+                p_mw=0,
+                q_mvar = 0,
+                max_e_mwh=vpp.components[up_id + "_ees"].capacity / 1000,
+                name=(up_id + "_ees"),
+                type="ees",
+            )
+
+        if "bev" in up_dict[up_id].__dict__.keys():
+            up_dict[up_id].bev.identifier = up_id+'_bev'
+
+            vpp.add_component(up_dict[up_id].bev)
+            
+            pp.create_load(
+                net,
+                bus=net.bus[net.bus.name == bus].index[0],
+                p_mw=(vpp.components[up_id + "_bev"].charging_power / 1000),
+                q_mvar = 0,
+                name=(up_id + "_bev"),
+                type="bev",
+            )
 
 
 # %% generate user profiles based on grid buses for mv
@@ -207,149 +310,7 @@ for bus in net.bus.name:
 
 print(time.asctime(time.localtime(time.time())))
 print("Generated user_profiles\n")
-# %% pick buses with components
 
-#wind_amount = int(round((len(up_dict.keys()) * (wind_percentage/100)), 0))
-# up_with_wind = random.sample(list(up_dict.keys()), wind_number)
-
-#pv_amount = int(round((len(up_dict.keys()) * (pv_percentage/100)), 0))
-# vpp.buses_with_pv = random.sample(
-#     [x for x in list(up_dict.keys()) if x not in up_with_wind], pv_number)
-
-# #hp_amount = int(round((len(up_dict.keys()) * (hp_percentage/100)), 0))
-# vpp.buses_with_hp = random.sample(
-#     [x for x in list(up_dict.keys()) if x not in up_with_wind], hp_number)
-
-# #chp_amount = int(round((len(up_dict.keys()) * (chp_percentage/100)), 0))
-# vpp.buses_with_chp = random.sample(
-#     [x for x in list(up_dict.keys()) if x not in up_with_wind], chp_number)
-
-# #bev_amount = int(round((len(up_dict.keys()) * (bev_percentage/100)), 0))
-# vpp.buses_with_bev = random.sample(
-#     [x for x in list(up_dict.keys()) if x not in up_with_wind], bev_number)
-
-# # Distribution of el storage is only done for houses with pv
-# #storage_amount = int(round((len(buses_with_pv) * (storage_percentage/100)), 0))
-# vpp.buses_with_ees = random.sample(vpp.buses_with_pv, ees_number)
-
-#%% generate components based on user_profiles
-
-print("generate components based on user_profiles:")
-
-for up in tqdm(up_dict.keys()):
-
-    if up_dict[up].pv_kwp:
-
-        surface_tilt = random.randrange(start=20, stop=40, step=5)
-        surface_azimuth = random.randrange(start=160, stop=220, step=10)
-
-        new_component = Photovoltaic(
-        unit="kW",
-        identifier=(up_dict[up].bus + "_pv"),
-        environment=environment,
-        user_profile=up_dict[up],
-        module_lib=module_lib,
-        module=None,
-        inverter_lib=inverter_lib,
-        inverter=None,
-        surface_tilt=surface_tilt,
-        surface_azimuth=surface_azimuth,
-        modules_per_string=None,
-        strings_per_inverter=None,
-        )
-
-        new_component.pick_pvsystem(min_module_power,
-                                    max_module_power,
-                                    up_dict[up].pv_kwp,
-                                    inverter_power_range)
-
-        new_component.prepare_time_series()
-
-        # TODO
-        # Somehow in some pvlib timeseries the inverter losses during night hours
-        # are not complete. Once we find out how to solve this problem we can
-        # delete this part:
-        if new_component.timeseries.isnull().values.any():
-                new_component.timeseries.fillna(
-                    value=new_component.timeseries.min(),
-                    inplace=True)
-
-        vpp.add_component(new_component)
-
-        # Create element in pandapower network
-        pp.create_sgen(
-        net,
-        bus=net.bus[net.bus.name == up_dict[up].bus].index[0],
-        p_mw=(
-            vpp.components[up_dict[up].bus + "_pv"].module.Impo
-            * vpp.components[up_dict[up].bus + "_pv"].module.Vmpo
-            / 1000000
-        ),
-        q_mvar = 0,
-        name=(up_dict[up].identifier + "_pv"),
-        type="pv",
-        )
-
-# %% generate pv
-
-for bus in vpp.buses_with_pv:
-
-    pv_power = random.randrange(start=6000, stop=9000, step=100)
-    surface_tilt = random.randrange(start=20, stop=40, step=5)
-    surface_azimuth = random.randrange(start=160, stop=220, step=10)
-
-    new_component = Photovoltaic(
-    unit="kW",
-    identifier=(bus + "_pv"),
-    environment=environment,
-    user_profile=up_dict[bus],
-    module_lib=module_lib,
-    module=None,
-    inverter_lib=inverter_lib,
-    inverter=None,
-    surface_tilt=surface_tilt,
-    surface_azimuth=surface_azimuth,
-    modules_per_string=None,
-    strings_per_inverter=None,
-    )
-
-    new_component.pick_pvsystem(min_module_power,
-                                max_module_power,
-                                pv_power,
-                                inverter_power_range)
-
-    new_component.prepare_time_series()
-
-    # TODO
-    # Somehow in some pvlib timeseries the inverter losses during night hours
-    # are not complete. Once we find out how to solve this problem we can
-    # delete this part:
-    if new_component.timeseries.isnull().values.any():
-            new_component.timeseries.fillna(
-                value=new_component.timeseries.min(),
-                inplace=True)
-
-    vpp.add_component(new_component)
-
-# %% generate ees
-
-for bus in vpp.buses_with_ees:
-
-    cap_power = random.randrange(start=5, stop=9, step=1)
-
-    new_component = ElectricalEnergyStorage(
-    unit="kWh",
-    identifier=(bus + "_ees"),
-    environment=environment,
-    user_profile=up_dict[bus],
-    capacity=cap_power,
-    charge_efficiency=charge_efficiency,
-    discharge_efficiency=discharge_efficiency,
-    max_power=cap_power,
-    max_c=max_c,
-    )
-
-    vpp.add_component(new_component)
 
 # %% generate wea
 
@@ -397,155 +358,11 @@ for bus in vpp.buses_with_bev:
     new_component.prepare_time_series()
     vpp.add_component(new_component)
 
-# %% generate hp and tes
 
-for bus in vpp.buses_with_hp:
-
-    new_storage = ThermalEnergyStorage(
-        unit="kWh",
-        identifier=(bus + "_hp_tes"),
-        mass=random.randrange(start=mass_of_storage_min,
-                              stop=mass_of_storage_max,
-                              step=100),
-        cp=cp,
-        hysteresis=hysteresis,
-        target_temperature=target_temperature,
-        thermal_energy_loss_per_day=thermal_energy_loss_per_day,
-        environment=environment,
-        user_profile=up_dict[bus],
-    )
-
-    new_heat_pump = HeatPump(
-        unit="kW",
-        identifier=(bus + "_hp"),
-        heat_pump_type=heat_pump_type,
-        heat_sys_temp=heat_sys_temp,
-        environment=environment,
-        user_profile=up_dict[bus],
-        el_power=random.randrange(start=el_power_hp_min,
-                                  stop=el_power_hp_max,
-                                  step=1),
-        th_power=th_power_hp,
-        ramp_up_time=ramp_up_time,
-        ramp_down_time=ramp_down_time,
-        min_runtime=min_runtime_hp,
-        min_stop_time=min_stop_time_hp,
-    )
-
-    # generate timeseries for heat pump and storage
-    for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
-        new_storage.operate_storage(i, new_heat_pump)
-
-    vpp.add_component(new_storage)
-    vpp.add_component(new_heat_pump)
-
-
-# %% generate chp and tes
-
-for bus in vpp.buses_with_chp:
-
-    new_storage = ThermalEnergyStorage(
-        unit="kWh",
-        identifier=(bus + "_chp_tes"),
-        mass=random.randrange(start=mass_of_storage_min,
-                              stop=mass_of_storage_max,
-                              step=100),
-        cp=cp,
-        hysteresis=hysteresis,
-        target_temperature=target_temperature,
-        thermal_energy_loss_per_day=thermal_energy_loss_per_day,
-        environment=environment,
-        user_profile=up_dict[bus],
-    )
-
-    new_chp = CombinedHeatAndPower(
-    unit="kW",
-    identifier=(bus + "_chp"),
-    environment=environment,
-    user_profile=up_dict[bus],
-    el_power=el_power_chp,
-    th_power=th_power_chp,
-    overall_efficiency=overall_efficiency,
-    ramp_up_time=ramp_up_time,
-    ramp_down_time=ramp_down_time,
-    min_runtime=min_runtime_chp,
-    min_stop_time=min_stop_time_chp,
-)
-
-    for i in new_storage.user_profile.thermal_energy_demand.loc[start:end].index:
-        new_storage.operate_storage(i, new_chp)
-
-    vpp.add_component(new_storage)
-    vpp.add_component(new_chp)
 
 print(time.asctime(time.localtime(time.time())))
 print("Generated components in vpp\n")
-# %% create elements in the pandapower.net
 
-for bus in vpp.buses_with_pv:
-
-    pp.create_sgen(
-        net,
-        bus=net.bus[net.bus.name == bus].index[0],
-        p_mw=(
-            vpp.components[bus + "_pv"].module.Impo
-            * vpp.components[bus + "_pv"].module.Vmpo
-            / 1000000
-        ),
-        q_mvar = 0,
-        name=(bus + "_pv"),
-        type="pv",
-    )
-
-for bus in vpp.buses_with_storage:
-
-    pp.create_storage(
-        net,
-        bus=net.bus[net.bus.name == bus].index[0],
-        p_mw=0,
-        q_mvar = 0,
-        max_e_mwh=vpp.components[bus].capacity / 1000,
-        name=(bus + "_ees"),
-        type="ees",
-    )
-
-for bus in vpp.buses_with_bev:
-
-    pp.create_load(
-        net,
-        bus=net.bus[net.bus.name == bus].index[0],
-        p_mw=(vpp.components[bus + "_bev"].charging_power / 1000),
-        q_mvar = 0,
-        name=(bus + "_bev"),
-        type="bev",
-    )
-
-for bus in vpp.buses_with_hp:
-
-    pp.create_load(
-        net,
-        bus=net.bus[net.bus.name == bus].index[0],
-        p_mw=(vpp.components[bus + "_hp"].el_power / 1000),
-        q_mvar = 0,
-        name=(bus + "_hp"),
-        type="hp",
-    )
-
-for bus in vpp.buses_with_wind:
-
-    pp.create_sgen(
-        net,
-        bus=net.bus[net.bus.name == bus].index[0],
-        p_mw=(
-            vpp.components[bus + "_wea"].wind_turbine.nominal_power / 1000000
-        ),
-        q_mvar = 0,
-        name=(bus + "_wea"),
-        type="wea",
-    )
-
-print(time.asctime(time.localtime(time.time())))
-print("Generated components in net\n")
 # %% initialize operator
 
 operator = Operator(virtual_power_plant=vpp,
