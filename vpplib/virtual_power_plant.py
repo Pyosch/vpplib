@@ -344,7 +344,7 @@ class VirtualPowerPlant(object):
         """
 
         # create connection
-        conn = sqlite3.connect((name + '.sqlite'))
+        conn = sqlite3.connect((r'./Results/' + name + '.sqlite'))
 
         # create curser object
         c = conn.cursor()
@@ -400,7 +400,7 @@ class VirtualPowerPlant(object):
                           +"bus, "
                           +"capacity_kWh, "
                           +"power_kW, "
-                          +"efficiency_el, "
+                          +"efficiency_el) "
                           +"VALUES (?, ?, ?, ?, ?, ?)",
                           (component,
                            "ees",
@@ -484,7 +484,7 @@ class VirtualPowerPlant(object):
                            self.components[component].user_profile.bus,
                            self.components[component].el_power,
                            self.components[component].th_power,
-                           self.components[component].efficiency_el
+                           self.components[component].efficiency_el,
                            self.components[component].efficiency_th
                            )
                           )
@@ -492,22 +492,22 @@ class VirtualPowerPlant(object):
                 conn.commit()
 
             elif '_hr' in component:
-            c.execute("INSERT INTO component_values "
-                      +"(name, "
-                      +"technology, "
-                      +"bus, "
-                      +"th_power_kW, "
-                      +"efficiency_th) "
-                      +"VALUES (?, ?, ?, ?, ?)",
-                      (component,
-                       "hr",
-                       self.components[component].user_profile.bus,
-                       self.components[component].el_power,
-                       self.components[component].efficiency
-                       )
-                      )
-
-            conn.commit()
+                c.execute("INSERT INTO component_values "
+                          +"(name, "
+                          +"technology, "
+                          +"bus, "
+                          +"th_power_kW, "
+                          +"efficiency_th) "
+                          +"VALUES (?, ?, ?, ?, ?)",
+                          (component,
+                           "hr",
+                           self.components[component].user_profile.bus,
+                           self.components[component].el_power,
+                           self.components[component].efficiency
+                           )
+                          )
+    
+                conn.commit()
 
             elif '_tes' in component:
                 # Formula: E = m * cp * dT
