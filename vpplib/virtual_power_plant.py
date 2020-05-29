@@ -358,8 +358,8 @@ class VirtualPowerPlant(object):
                   +"capacity_kWh, "
                   +"power_kW, "
                   +"th_power_kW, "
-                  +"efficiency ,"
-                  +"discharge_efficiency)")
+                  +"efficiency_el ,"
+                  +"efficiency_th)")
 
         # Create table
         c.execute("CREATE TABLE timeseries ("
@@ -400,16 +400,14 @@ class VirtualPowerPlant(object):
                           +"bus, "
                           +"capacity_kWh, "
                           +"power_kW, "
-                          +"efficiency, "
-                          +"discharge_efficiency) "
-                          +"VALUES (?, ?, ?, ?, ?, ?, ?)",
+                          +"efficiency_el, "
+                          +"VALUES (?, ?, ?, ?, ?, ?)",
                           (component,
                            "ees",
                            self.components[component].user_profile.identifier,
                            self.components[component].capacity,
                            self.components[component].max_power,
-                           self.components[component].charge_efficiency,
-                           self.components[component].discharge_efficiency)
+                           self.components[component].charge_efficiency)
                           )
 
                 conn.commit()
@@ -439,7 +437,7 @@ class VirtualPowerPlant(object):
                           +"bus, "
                           +"power_kW, "
                           +"capacity_kWh, "
-                          +"efficiency, "
+                          +"efficiency_el, "
                           +"arrival_soc) "
                           +"VALUES (?, ?, ?, ?, ?, ?, ?)",
                           (component,
@@ -478,14 +476,16 @@ class VirtualPowerPlant(object):
                           +"bus, "
                           +"power_kW, "
                           +"th_power_kW, "
-                          +"efficiency) "
-                          +"VALUES (?, ?, ?, ?, ?, ?)",
+                          +"efficiency_el, "
+                          +"efficiency_th) "
+                          +"VALUES (?, ?, ?, ?, ?, ?, ?)",
                           (component,
                            "chp",
                            self.components[component].user_profile.identifier,
                            self.components[component].el_power,
                            self.components[component].th_power,
-                           self.components[component].overall_efficiency
+                           self.components[component].efficiency_el
+                           self.components[component].efficiency_th
                            )
                           )
 
@@ -498,7 +498,7 @@ class VirtualPowerPlant(object):
                           +"technology, "
                           +"bus, "
                           +"capacity_kWh, "
-                          +"efficiency) "
+                          +"efficiency_th) "
                           +"VALUES (?, ?, ?, ?, ?)",
                           (component,
                            "tes",
@@ -507,7 +507,7 @@ class VirtualPowerPlant(object):
                             * self.components[component].cp
                             * (self.components[component].hysteresis * 2)  #dT
                             / 3600),  # convert KJ to kW
-                           self.components[component].efficiency_per_timestep
+                           self.components[component].efficiency_th
                            )
                           )
 
