@@ -619,7 +619,7 @@ class VirtualPowerPlant(object):
                                   (str(idx),
                                    component,
                                    cop.cop[str(idx)],
-                                   self.components[component].user_profile.thermal_energy_demand.loc[str(idx)].item()
+                                   self.components[component].user_profile.thermal_energy_demand.HeatDemand.loc[str(idx)].item()
                                    )
                                   )
 
@@ -638,7 +638,7 @@ class VirtualPowerPlant(object):
                                   +"VALUES (?, ?, ?)",
                                   (str(idx),
                                    component,
-                                   self.components[component].user_profile.thermal_energy_demand.loc[str(idx)].item()
+                                   self.components[component].user_profile.thermal_energy_demand.HeatDemand.loc[str(idx)].item()
                                    )
                                   )
 
