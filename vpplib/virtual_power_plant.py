@@ -456,86 +456,62 @@ class VirtualPowerPlant(object):
                 conn.commit()
 
             elif '_hp' in component:
-                if '_tes' in component:
-                    # Formula: E = m * cp * dT
-                    c.execute("INSERT INTO component_values "
-                              +"(name, "
-                              +"technology, "
-                              +"bus, "
-                              +"capacity_kWh, "
-                              +"efficiency) "
-                              +"VALUES (?, ?, ?, ?, ?)",
-                              (component,
-                               "tes",
-                               self.components[component].user_profile.identifier,
-                               (self.components[component].mass
-                                * self.components[component].cp
-                                * (self.components[component].hysteresis * 2)  #dT
-                                / 3600),  # convert KJ to kW
-                               self.components[component].efficiency_per_timestep
-                               )
-                              )
+                c.execute("INSERT INTO component_values "
+                          +"(name, "
+                          +"technology, "
+                          +"bus, "
+                          +"power_kW) "
+                          +"VALUES (?, ?, ?, ?)",
+                          (component,
+                           "hp",
+                           self.components[component].user_profile.identifier,
+                           self.components[component].el_power
+                           )
+                          )
 
-                    conn.commit()
-
-                else:
-                    c.execute("INSERT INTO component_values "
-                              +"(name, "
-                              +"technology, "
-                              +"bus, "
-                              +"power_kW) "
-                              +"VALUES (?, ?, ?, ?)",
-                              (component,
-                               "hp",
-                               self.components[component].user_profile.identifier,
-                               self.components[component].el_power
-                               )
-                              )
-
-                    conn.commit()
+                conn.commit()
 
             elif '_chp' in component:
-                if '_tes' in component:
-                    # Formula: E = m * cp * dT
-                    c.execute("INSERT INTO component_values "
-                              +"(name, "
-                              +"technology, "
-                              +"bus, "
-                              +"capacity_kWh, "
-                              +"efficiency) "
-                              +"VALUES (?, ?, ?, ?, ?)",
-                              (component,
-                               "tes",
-                               self.components[component].user_profile.identifier,
-                               (self.components[component].mass
-                                * self.components[component].cp
-                                * (self.components[component].hysteresis * 2)  #dT
-                                / 3600),  # convert KJ to kW
-                               self.components[component].efficiency_per_timestep
-                               )
-                              )
+                c.execute("INSERT INTO component_values "
+                          +"(name, "
+                          +"technology, "
+                          +"bus, "
+                          +"power_kW, "
+                          +"th_power_kW, "
+                          +"efficiency) "
+                          +"VALUES (?, ?, ?, ?, ?, ?)",
+                          (component,
+                           "chp",
+                           self.components[component].user_profile.identifier,
+                           self.components[component].el_power,
+                           self.components[component].th_power,
+                           self.components[component].overall_efficiency
+                           )
+                          )
 
-                    conn.commit()
+                conn.commit()
 
-                else:
-                    c.execute("INSERT INTO component_values "
-                              +"(name, "
-                              +"technology, "
-                              +"bus, "
-                              +"power_kW, "
-                              +"th_power_kW, "
-                              +"efficiency) "
-                              +"VALUES (?, ?, ?, ?, ?, ?)",
-                              (component,
-                               "chp",
-                               self.components[component].user_profile.identifier,
-                               self.components[component].el_power,
-                               self.components[component].th_power,
-                               self.components[component].overall_efficiency
-                               )
-                              )
+            elif '_tes' in component:
+                # Formula: E = m * cp * dT
+                c.execute("INSERT INTO component_values "
+                          +"(name, "
+                          +"technology, "
+                          +"bus, "
+                          +"capacity_kWh, "
+                          +"efficiency) "
+                          +"VALUES (?, ?, ?, ?, ?)",
+                          (component,
+                           "tes",
+                           self.components[component].user_profile.identifier,
+                           (self.components[component].mass
+                            * self.components[component].cp
+                            * (self.components[component].hysteresis * 2)  #dT
+                            / 3600),  # convert KJ to kW
+                           self.components[component].efficiency_per_timestep
+                           )
+                          )
 
-                    conn.commit()
+                conn.commit()
 
         # Save (commit) the changes
         conn.commit()
@@ -591,59 +567,54 @@ class VirtualPowerPlant(object):
 
                     conn.commit()
 
+
                 elif '_hp' in component:
-                    if '_tes' in component:
-                        # Thermal energy storage has no timeseries
-                        no_timeseries_lst.append(component)
 
-                    else:
+                    # Check if the variable cop exists.
+                    # COP is the same for all heat pumps!
+                    if 'cop' not in locals():
+                        cop = pd.DataFrame(
+                            index = self.components[
+                                next(iter(self.components.keys()))
+                                ].timeseries.index,
+                            columns=["cop"])
 
-                        # Check if the variable cop exists.
-                        # COP is the same for all heat pumps!
-                        if 'cop' not in locals():
-                            cop = pd.DataFrame(
-                                index = self.components[
-                                    next(iter(self.components.keys()))
-                                    ].timeseries.index,
-                                columns=["cop"])
+                        cop.cop = self.components[component].get_cop().cop
+                        cop.interpolate(inplace=True)
 
-                            cop.cop = self.components[component].get_cop().cop
-                            cop.interpolate(inplace=True)
+                    c.execute("INSERT INTO timeseries "
+                              +"(time, "
+                              +"name, "
+                              +"cop, "
+                              +"th_energy) "
+                              +"VALUES (?, ?, ?, ?)",
+                              (str(idx),
+                               component,
+                               cop.cop[str(idx)],
+                               self.components[component].user_profile.thermal_energy_demand.HeatDemand.loc[str(idx)].item()
+                               )
+                              )
 
-                        c.execute("INSERT INTO timeseries "
-                                  +"(time, "
-                                  +"name, "
-                                  +"cop, "
-                                  +"th_energy) "
-                                  +"VALUES (?, ?, ?, ?)",
-                                  (str(idx),
-                                   component,
-                                   cop.cop[str(idx)],
-                                   self.components[component].user_profile.thermal_energy_demand.HeatDemand.loc[str(idx)].item()
-                                   )
-                                  )
-
-                        conn.commit()
+                    conn.commit()
 
                 elif '_chp' in component:
-                    if '_tes' in component:
-                        # Thermal energy storage has no timeseries
-                        no_timeseries_lst.append(component)
+                    c.execute("INSERT INTO timeseries "
+                              +"(time, "
+                              +"name, "
+                              +"th_energy) "
+                              +"VALUES (?, ?, ?)",
+                              (str(idx),
+                               component,
+                               self.components[component].user_profile.thermal_energy_demand.HeatDemand.loc[str(idx)].item()
+                               )
+                              )
 
-                    else:
-                        c.execute("INSERT INTO timeseries "
-                                  +"(time, "
-                                  +"name, "
-                                  +"th_energy) "
-                                  +"VALUES (?, ?, ?)",
-                                  (str(idx),
-                                   component,
-                                   self.components[component].user_profile.thermal_energy_demand.HeatDemand.loc[str(idx)].item()
-                                   )
-                                  )
+                    conn.commit()
 
-                        conn.commit()
-                
+                elif '_tes' in component:
+                    # Thermal energy storage has no timeseries
+                    no_timeseries_lst.append(component)
+
                 else:
                     no_timeseries_lst.append(component)
 
