@@ -9,6 +9,7 @@ import pandas as pd
 import pickle
 import random
 import math
+import time
 
 from vpplib import UserProfile, Environment
 from vpplib import Photovoltaic, WindPower, BatteryElectricVehicle
@@ -244,5 +245,7 @@ for house in df_installed_cap.index.get_level_values(0).unique():
 
         user_profiles_dict[user_profile.identifier] = user_profile
 
-with open(r'Results/20200528_up_dummy_profiles.pickle', 'wb') as handle:
+with open(r'Results/'
+          + time.strftime("%Y%m%d-%H%M%S",time.localtime())
+          + '_up_dummy_profiles.pickle', 'wb') as handle:
     pickle.dump(user_profiles_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
