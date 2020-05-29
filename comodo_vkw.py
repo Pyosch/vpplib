@@ -218,12 +218,11 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                          environment=environment,
                          user_profile = user_profile,
                          el_power = df_installed_cap.loc[house].loc[y].SimplePTH,
+                         efficiency = df_tech_input.loc["SimplePTH"].efficiency_th,
                          rampUpTime = ramp_up_time_hr, 
                          rampDownTime = ramp_down_time_hr, 
                          min_runtime = min_runtime_hr, 
                          min_stop_time = min_stop_time_hr)
-
-            hr.efficiency_th = df_tech_input.loc["SimplePTH"].efficiency_th
 
             user_profile.hr = hr
 
