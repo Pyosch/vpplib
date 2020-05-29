@@ -76,7 +76,7 @@ bev_charge_efficiency = 0.98
 load_degradation_begin = 0.8
 
 #%% load dicts with electrical and thermal profiles
-with open(r'Results/20200528_up_dummy_profiles.pickle', 'rb') as handle:
+with open(r'Results/20200529-152558_up_dummy_profiles.pickle', 'rb') as handle:
     household_dict = pickle.load(handle)
 
 print(time.asctime( time.localtime(time.time()) ))
@@ -157,7 +157,13 @@ for bus in tqdm(net.bus.name):
             up_dict[up_id].pv_system.identifier = up_id+'_pv'
 
             vpp.add_component(up_dict[up_id].pv_system)
-            vpp.components[up_dict[up_id].pv_system.identifier].timeseries.columns = [vpp.components[up_dict[up_id].pv_system.identifier].identifier]
+            # Adjust column name of timeseries to match new identifier of 
+            # component
+            vpp.components[
+                up_dict[up_id].pv_system.identifier
+                ].timeseries.columns = [
+                    vpp.components[
+                        up_dict[up_id].pv_system.identifier].identifier]
 
             pp.create_sgen(
                 net,
@@ -247,129 +253,19 @@ for bus in tqdm(net.bus.name):
 
 print(time.asctime(time.localtime(time.time())))
 print("Assigned user profiles to vpp and net\n")
-# %% generate user profiles based on grid buses for mv
 
-# if wind_number > 0:
-#     mv_buses = []
-
-#     for bus in net.bus.name:
-#         if "MV" in bus:
-#             mv_buses.append(bus)
-
-# count = 0
-# up_with_wind = []
-# while count < wind_number:
-
-#     simbus = random.sample(mv_buses, 1)[0]
-#     vpp.buses_with_wind.append(simbus)
-
-#     user_profile = UserProfile(
-#         identifier=simbus,
-#         latitude=latitude,
-#         longitude=longitude,
-#         thermal_energy_demand_yearly=yearly_thermal_energy_demand,
-#         building_type=building_type,
-#         comfort_factor=None,
-#         t_0=t_0,
-#         daily_vehicle_usage=None,
-#         week_trip_start=[],
-#         week_trip_end=[],
-#         weekend_trip_start=[],
-#         weekend_trip_end=[],
-#     )
-
-#     #TODO: MAYBE USE FOR aggregated MV loads
-#     # Uncomment if loadprofile in user_profile is needed
-#     # Keep in mind to include check for loadprofile when choosing "simbus"
-#     # like done for lv_buses.
-#     #
-#     # user_profile.baseload = pd.DataFrame(
-#     #     profiles['load', 'p_mw'][
-#     #         net.load[net.load.bus == net.bus[
-#     #             net.bus.name == simbus].index.item()].iloc[0].name
-#     #         ].loc[start:end]
-#     #     * 1000)
-#     # # thermal energy demand equals two times the electrical energy demand:
-#     # user_profile.thermal_energy_demand_yearly = (user_profile.baseload.sum()
-#     #                                              / 2).item()  # /4 *2= /2
-#     # user_profile.get_thermal_energy_demand()
-
-#     up_with_wind.append(user_profile.identifier)
-
-#     up_dict[user_profile.identifier] = user_profile
-#     count += 1
-
-# # create a list of all user profiles and shuffle that list to obtain a random
-# # assignment of components to the bus
-# up_list = list(up_dict.keys())
-# random.shuffle(up_list)
-
-# print(time.asctime(time.localtime(time.time())))
-# print("Generated user_profiles\n")
-
-
-# %% generate wea
-
-# for bus in vpp.buses_with_wind:
-
-#     new_component = WindPower(
-#     unit="kW",
-#     identifier=(bus + "_wea"),
-#     environment=environment,
-#     user_profile=None,
-#     turbine_type=wea_list[random.randint(0, (len(wea_list) -1))],
-#     hub_height=hub_height,
-#     rotor_diameter=rotor_diameter,
-#     fetch_curve=fetch_curve,
-#     data_source=data_source,
-#     wind_speed_model=wind_speed_model,
-#     density_model=density_model,
-#     temperature_model=temperature_model,
-#     power_output_model=power_output_model,
-#     density_correction=density_correction,
-#     obstacle_height=obstacle_height,
-#     hellman_exp=hellman_exp,
-#     )
-#     new_component.prepare_time_series()
-#     vpp.add_component(new_component)
-
-# %% generate bev
-
-# for bus in vpp.buses_with_bev:
-
-#     new_component = BatteryElectricVehicle(
-#     unit="kW",
-#     identifier=(bus + "_bev"),
-#     battery_max=random.sample([50, 60, 17.6, 64, 33.5, 38.3,75, 20, 27.2, 6.1]
-#                               , 1)[0],
-#     battery_min=battery_min,
-#     battery_usage=battery_usage,
-#     charging_power=random.sample([3.6, 11, 22], 1)[0],
-#     charge_efficiency=bev_charge_efficiency,
-#     environment=environment,
-#     user_profile=up_dict[bus],
-#     load_degradation_begin=load_degradation_begin,
-#     )
-
-#     new_component.prepare_time_series()
-#     vpp.add_component(new_component)
-
-
-
-# print(time.asctime(time.localtime(time.time())))
-# print("Generated components in vpp\n")
 
 # %% Export vpp to sql
 
 savety_timestamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())
 
-vpp.export_components_to_sql(savety_timestamp+"_vpp_export"))
+vpp.export_components_to_sql(savety_timestamp+"_vpp_export")
 
 print(time.asctime(time.localtime(time.time())))
 print("Exported component values and timeseries to sql\n")
 #%% Save vpp and net to pickle for later powerflow analysis
 
-                    
+
 with open((r"./Results/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
     pickle.dump(vpp, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -378,3 +274,4 @@ with open((r"./Results/"+savety_timestamp+"_net_export"+".pickle"),"wb") as hand
 
 print(time.asctime(time.localtime(time.time())))
 print("Saved vpp and net to pickle\n")
+
