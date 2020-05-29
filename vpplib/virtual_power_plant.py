@@ -491,6 +491,24 @@ class VirtualPowerPlant(object):
 
                 conn.commit()
 
+            elif '_hr' in component:
+            c.execute("INSERT INTO component_values "
+                      +"(name, "
+                      +"technology, "
+                      +"bus, "
+                      +"th_power_kW, "
+                      +"efficiency_th) "
+                      +"VALUES (?, ?, ?, ?, ?)",
+                      (component,
+                       "hr",
+                       self.components[component].user_profile.identifier,
+                       self.components[component].el_power,
+                       self.components[component].efficiency
+                       )
+                      )
+
+            conn.commit()
+
             elif '_tes' in component:
                 # Formula: E = m * cp * dT
                 c.execute("INSERT INTO component_values "
