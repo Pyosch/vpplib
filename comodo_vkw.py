@@ -208,6 +208,8 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                 thermal_energy_loss_per_day=thermal_energy_loss_per_day,
             )
 
+            tes.efficiency_th = df_tech_input.loc["Th_Stor_water_heat"].efficiency_th
+
             user_profile.tes = tes
 
         if math.isnan(df_installed_cap.loc[house].loc[y].SimplePTH) == False:
@@ -220,6 +222,8 @@ for house in df_installed_cap.index.get_level_values(0).unique():
                          rampDownTime = ramp_down_time_hr, 
                          min_runtime = min_runtime_hr, 
                          min_stop_time = min_stop_time_hr)
+
+            hr.efficiency_th = df_tech_input.loc["SimplePTH"].efficiency_th
 
             user_profile.hr = hr
 
