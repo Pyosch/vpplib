@@ -381,7 +381,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?)",
                           (component,
                            "pv",
-                           self.components[component].user_profile.identifier,
+                           self.components[component].user_profile.bus,
                            (self.components[component].module.Impo
                             * self.components[component].module.Vmpo
                             / 1000
@@ -404,7 +404,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?, ?)",
                           (component,
                            "ees",
-                           self.components[component].user_profile.identifier,
+                           self.components[component].user_profile.bus,
                            self.components[component].capacity,
                            self.components[component].max_power,
                            self.components[component].charge_efficiency)
@@ -442,7 +442,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?, ?, ?)",
                           (component,
                            "bev",
-                           self.components[component].user_profile.identifier,
+                           self.components[component].user_profile.bus,
                            self.components[component].charging_power,
                            self.components[component].battery_max,
                            self.components[component].charge_efficiency,
@@ -462,7 +462,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?)",
                           (component,
                            "hp",
-                           self.components[component].user_profile.identifier,
+                           self.components[component].user_profile.bus,
                            self.components[component].el_power
                            )
                           )
@@ -481,7 +481,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?, ?, ?)",
                           (component,
                            "chp",
-                           self.components[component].user_profile.identifier,
+                           self.components[component].user_profile.bus,
                            self.components[component].el_power,
                            self.components[component].th_power,
                            self.components[component].efficiency_el
@@ -501,7 +501,7 @@ class VirtualPowerPlant(object):
                       +"VALUES (?, ?, ?, ?, ?)",
                       (component,
                        "hr",
-                       self.components[component].user_profile.identifier,
+                       self.components[component].user_profile.bus,
                        self.components[component].el_power,
                        self.components[component].efficiency
                        )
@@ -520,7 +520,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?)",
                           (component,
                            "tes",
-                           self.components[component].user_profile.identifier,
+                           self.components[component].user_profile.bus,
                            (self.components[component].mass
                             * self.components[component].cp
                             * (self.components[component].hysteresis * 2)  #dT
