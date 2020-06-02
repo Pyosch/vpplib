@@ -30,11 +30,17 @@ wind_number = 0
 bev_number = 0
 
 # Simbench Network parameters
-sb_code = "1-LV-semiurb4--0-sw" #"1-MVLV-semiurb-all-0-sw" # "1-MVLV-semiurb-5.220-0-sw" # 
+# Preconfigured Grid:
+with open(r'Results/SimBench_grids/1-MVLV-semiurb-all-0-sw_1007_lvbuses.pickle', 'rb') as handle:
+    net = pickle.load(handle)
+
+# Standard SimBench grid:
+#sb_code = "1-LV-semiurb4--0-sw" #"1-MVLV-semiurb-all-0-sw" # "1-MVLV-semiurb-5.220-0-sw" #
+#net = sb.get_simbench_net(sb_code)
 
 # Values for environment
-start = "2015-01-01 00:00:00"
-end = "2015-01-01 23:45:00"
+start = "2015-04-01 00:00:00"
+end = "2015-04-30 23:45:00"
 year = "2015"
 time_freq = "15 min"
 index_year = pd.date_range(
@@ -115,14 +121,15 @@ for house in household_dict.keys():
                 household_dict[house].pv_system.timeseries.fillna(
                     value=0,
                     inplace=True)
+                
+    if "chp" in list(household_dict[house].__dict__.keys()):
+        household_dict[house].chp.reset_time_series()
 
 # %% virtual power plant
 
 vpp = VirtualPowerPlant("vpp")
 
 # %% Simbench network
-
-net = sb.get_simbench_net(sb_code)
 
 # plot the grid
 pp.plotting.simple_plot(net)
@@ -136,6 +143,8 @@ print("Initialized environment, vpp and net\n")
 
 
 #%% Assign user_profiles to buses
+
+print("Assign user_profiles to buses:\n")
 up_dict = dict()
 for bus in tqdm(net.bus.name):
     if "LV" in bus:
