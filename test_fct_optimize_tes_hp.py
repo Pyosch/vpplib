@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun May 10 12:23:05 2020
+Created on Sun May 24 12:25:31 2020
 
 @author: andre
-test fct_run_hp_hr
+
+test fct_optimize_tes_hp
 """
 
 from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.heat_pump import HeatPump
-from vpplib.heating_rod import HeatingRod
-from fct_optimize_bivalent import optimize_bivalent
-from fct_run_hp_hr import run_hp_hr
-from fct_determin_heating_ratio import determin_heating_ratio
+from vpplib.thermal_energy_storage import ThermalEnergyStorage
+from fct_optimize_tes_hp import optimize_tes_hp
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -28,7 +27,7 @@ timestamp_str2 = '2015-01-10 06:00:00'
 timebase = 15
 
 #Values for user_profile
-thermal_energy_demand_yearly = 13000
+thermal_energy_demand_yearly = 15000
 building_type = 'DE_HEF33'
 t_0 = 40
 
@@ -39,6 +38,11 @@ ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
 heat_pump_type = "Ground" #nur "Ground" oder "Air"!
+
+#Values for Thermal Storage
+target_temperature = 60  # °C
+hysteresis = 5  # °K
+#mass_of_storage = 500  # kg
 
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year,
@@ -71,30 +75,14 @@ hp = HeatPump(identifier='hp',
               min_runtime=min_runtime,
               min_stop_time=min_stop_time)
 
-hr = HeatingRod(identifier='hr1', 
-                 environment=environment, user_profile = user_profile,
-                 #el_power = el_power,
-                 rampUpTime = ramp_up_time, 
-                 rampDownTime = ramp_down_time, 
-                 min_runtime = min_runtime, 
-                 min_stop_time = min_stop_time)
+tes = ThermalEnergyStorage(environment=environment, user_profile=user_profile,
+                           #mass=mass_of_storage,
+                           hysteresis=hysteresis,
+                           target_temperature=target_temperature)
 
-# parameters for running hp and hr
-norm_temp = -14.0    # biv_temp = -6.0
-mode = "parallel"
+mode = "overcome shutdown"
+optimize_tes_hp(tes, hp, mode, user_profile)
 
-# layout hr and hp
-optimize_bivalent(hp, hr, mode, norm_temp, user_profile)
-
-# show results of layout
-print("thermal power hp: " + str(hp.th_power) + "[kW]")
-print("electrical power hr: " + str(hr.el_power) + "[kW]")
-
-data = run_hp_hr(hp, hr, mode, user_profile, norm_temp)
-ratio = determin_heating_ratio(data)
-print("share of heating rod: " + (str(ratio * 100)) + " %")
-
-print(str(data))
-data[:(24*4*7)].plot(figsize = (16, 9))
-plt.show()
-
+print("mass of thermal storage: " + str(tes.mass) + " [kg]")
+print("electrical power hp: " + str(hp.el_power) + " [kW]")
+print("thermal power hp: " + str(hp.th_power) + " [kW]")

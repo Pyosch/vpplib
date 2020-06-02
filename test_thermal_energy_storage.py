@@ -19,7 +19,7 @@ year = '2015'
 #Values for user_profile
 yearly_thermal_energy_demand = 2500 # kWh
 building_type = 'DE_HEF33'
-t_0 = 40  # °C
+t_0 = 30  # °C
 
 #Values for Thermal Storage
 target_temperature = 60  # °C

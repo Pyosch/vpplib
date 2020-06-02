@@ -113,7 +113,7 @@ class ThermalEnergyStorage(Component):
         if self.current_temperature >= (self.target_temperature + self.hysteresis): 
             self.needs_loading = False
             
-        if self.current_temperature < 40: 
+        if self.current_temperature < 40:
             raise ValueError("Thermal energy production to low to maintain " +
                              "heat storage temperature!")
             
