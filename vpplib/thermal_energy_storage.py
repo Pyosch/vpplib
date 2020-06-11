@@ -4,6 +4,7 @@ Info
 ----
 This file contains the basic functionalities of the Component class.
 This is the mother class of all VPPx classes
+Verluste: Q_ps = 16,66 + 8,33*V^0,4
 
 """
 
@@ -15,8 +16,7 @@ class ThermalEnergyStorage(Component):
     # 
     def __init__(self, unit="kWh", identifier=None,
                  environment=None, user_profile=None, cost=None,
-                 target_temperature=60, hysteresis=3, mass=300, cp=4.2,
-                 thermal_energy_loss_per_day=0.13):
+                 target_temperature=60, hysteresis=3, mass=300, cp=4.2):
         
         """
         Info
@@ -67,12 +67,14 @@ class ThermalEnergyStorage(Component):
                                     name="time"))
         self.hysteresis = hysteresis
         self.mass = mass
+        self.density = 1
+        self.volumen = self.mass / self.density
         self.cp = cp
         self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
         #Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10% 
         #Bereitschaftsverluste hat (ohne Rohrleitungen!!)
-        self.thermal_energy_loss_per_day = thermal_energy_loss_per_day
-        self.thermal_energy_loss_per_timestep = 1 - (thermal_energy_loss_per_day /
+        self.thermal_energy_loss_per_day = (16.66 + 8.33 * pow(self.volumen, 0.4))/1000*24
+        self.thermal_energy_loss_per_timestep = 1 - (self.thermal_energy_loss_per_day /
                                                      (24 * (60 / self.environment.timebase)))
         self.needs_loading = None
     
@@ -289,3 +291,28 @@ class ThermalEnergyStorage(Component):
                                     name="time"))
         
         return self.timeseries
+    
+    def optimize_tes_hp(self, hp, mode):
+            if mode == "optimize runtime":
+                factor = 20
+            elif mode == "overcome shutdown":
+                factor = 60
+            else:
+                raise ValueError("mode needs to be 'optimize runtime' or 'overcome shutdown'.")
+                
+            th_demand = self.user_profile.thermal_energy_demand
+            temps = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv",
+                                      index_col="time")
+            
+            dataframe = pd.concat([th_demand, temps], axis = 1)
+            dataframe.sort_values(by = ['thermal_energy_demand'], ascending = False, inplace = True)
+            
+            hp.th_power = round(float(dataframe['thermal_energy_demand'][0]), 1)
+            hp.el_power = round(float(hp.th_power / hp.get_current_cop(dataframe['temperature'][0])), 1)
+            
+            density = 1  #kg/l
+                
+            self.mass = hp.th_power * factor * density
+            self.mass = self.mass / 10
+            self.mass = round(self.mass, 0)
+            self.mass = self.mass * 10 + 10

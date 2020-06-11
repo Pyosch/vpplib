@@ -81,10 +81,14 @@ tes = ThermalEnergyStorage(environment=environment, user_profile=user_profile,
                            target_temperature=target_temperature)
 
 mode = "overcome shutdown"
-optimize_tes_hp(tes, hp, mode, user_profile)
+#optimize_tes_hp(tes, hp, mode, user_profile)
+tes.optimize_tes_hp(hp, mode)
 
 print("mass of thermal storage: " + str(tes.mass) + " [kg]")
 print("electrical power hp: " + str(hp.el_power) + " [kW]")
 print("thermal power hp: " + str(hp.th_power) + " [kW]")
 
 dataframe = run_tes_hp(tes, hp, mode, user_profile, environment)
+
+dataframe[:].plot(figsize = (16, 9))
+plt.show()
