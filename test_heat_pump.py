@@ -29,7 +29,6 @@ building_type = 'DE_HEF33'
 t_0 = 40
 
 #Values for Heatpump
-el_power = 3 #kW electric
 ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
@@ -59,7 +58,7 @@ test_get_thermal_energy_demand(user_profile)
 
 hp = HeatPump(identifier='hp1',
               environment=environment, user_profile=user_profile,
-              el_power=el_power, ramp_up_time=ramp_up_time,
+             ramp_up_time=ramp_up_time,
               ramp_down_time=ramp_down_time,
               min_runtime=min_runtime,
               min_stop_time=min_stop_time, heat_pump_type = typeHP)
@@ -104,5 +103,5 @@ test_observations_for_timestamp(hp, timestamp_str)
 
 hp.determine_optimum_thermal_power (user_profile)
 print(str(hp.th_power))
-print(str(hp.th_power_realistic))
+print("thermal power hp " + str(hp.th_power_realistic))
 
