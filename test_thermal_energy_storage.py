@@ -17,9 +17,9 @@ end = '2015-01-31 23:45:00'
 year = '2015'
 
 #Values for user_profile
-yearly_thermal_energy_demand = 2500 # kWh
+yearly_thermal_energy_demand = 15000 # kWh
 building_type = 'DE_HEF33'
-t_0 = 30  # °C
+t_0 = 40  # °C
 
 #Values for Thermal Storage
 target_temperature = 60  # °C
@@ -33,6 +33,8 @@ ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
 timebase = 15
+type_hp = "Ground"
+heat_sys_temp = 60
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year)
 
@@ -63,9 +65,18 @@ hp = HeatPump(identifier='hp1',
               environment=environment, user_profile=user_profile,
               el_power=el_power, ramp_up_time=ramp_up_time,
               ramp_down_time=ramp_down_time,
-              min_runtime=min_runtime,
-              min_stop_time=min_stop_time)
+              min_runtime=min_runtime, heat_pump_type = type_hp,
+              min_stop_time=min_stop_time,
+              heat_sys_temp = heat_sys_temp)
 
+mode = "overcome shutdown"
+# layout of hp and tes according to thermal energy demand
+tes.optimize_tes_hp(hp, mode)
+
+print("mass of tes: " + str(tes.mass) + " [kg]")
+print("electrical power of hp: " + str(hp.el_power) + " [kW]")
+print("thermal power of hp: " + str(hp.th_power) + " [kW]")
+print(tes.timeseries)
 
 for i in tes.user_profile.thermal_energy_demand.loc[start:end].index:
     tes.operate_storage(i, hp)
