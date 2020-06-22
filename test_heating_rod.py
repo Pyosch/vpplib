@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 #Values for environment
 start = '2015-01-01 00:00:00'
-end = '2015-01-14 23:45:00'
+end = '2015-01-31 23:45:00'
 year = '2015'
 time_freq = "15 min"
 timestamp_int = 48

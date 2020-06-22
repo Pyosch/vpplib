@@ -26,7 +26,7 @@ t_0 = 40  # °C
 # Values for Thermal Storage
 target_temperature = 60  # °C
 hysteresis = 5  # °K
-#mass_of_storage = 500  # kg
+mass_of_storage = 500  # kg
 cp = 4.2
 thermal_energy_loss_per_day = 0.13
 
