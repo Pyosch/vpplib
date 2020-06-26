@@ -95,6 +95,6 @@ ratio = determin_heating_ratio(data)
 print("share of heating rod: " + (str(ratio * 100)) + " %")
 
 print(str(data))
-data[:(24*4*7)].plot(figsize = (16, 9))
+data[:(24*4*7*4)].plot(figsize = (16, 9))
 plt.show()
 

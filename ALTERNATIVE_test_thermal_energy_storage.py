@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 figsize = (10, 6)
 # Values for environment
-start = "2015-01-01 00:00:00"
+start = "2015-01-05 00:00:00"
 end = "2015-02-03 23:45:00"     # bis 2015-02-04 geht es gut, dann sinkt die Temperatur wieder zu tief! :(
 year = "2015"
 timebase = 15
