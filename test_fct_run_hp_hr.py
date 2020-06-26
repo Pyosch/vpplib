@@ -28,7 +28,7 @@ timestamp_str2 = '2015-01-10 06:00:00'
 timebase = 15
 
 #Values for user_profile
-thermal_energy_demand_yearly = 13000
+thermal_energy_demand_yearly = 36000
 building_type = 'DE_HEF33'
 t_0 = 40
 
@@ -38,7 +38,7 @@ ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
-heat_pump_type = "Ground" #nur "Ground" oder "Air"!
+heat_pump_type = "Air" #nur "Ground" oder "Air"!
 
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year,
@@ -80,7 +80,7 @@ hr = HeatingRod(identifier='hr1',
                  min_stop_time = min_stop_time)
 
 # parameters for running hp and hr
-norm_temp = -14.0    # biv_temp = -6.0
+norm_temp = -14.0    # biv_temp = -3.0
 mode = "parallel"
 
 # layout hr and hp
