@@ -13,11 +13,11 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     
     # determine bivalence temperature according to norm_temperature
     if norm_temp <= -16:
-        biv_temp = -7
+        biv_temp = -4
     elif (norm_temp > -16) & (norm_temp <= -10):
-        biv_temp = -6
+        biv_temp = -3
     elif norm_temp > -10:
-        biv_temp = -5
+        biv_temp = -2
         
     # temperature and heat demand over time
     heat_demand = user_profile.thermal_energy_demand

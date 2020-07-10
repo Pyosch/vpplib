@@ -26,7 +26,7 @@ def optimize_tes_hp(tes, hp, mode, user_profile):
     
     hp.th_power = round(float(dataframe['thermal_energy_demand'][0]), 1)
     hp.el_power = round(float(hp.th_power / hp.get_current_cop(dataframe['temperature'][0])), 1)
-    
+    hp.el_power *= 1.1
     density = 1  #kg/l
         
     tes.mass = hp.th_power * factor * density
