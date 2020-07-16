@@ -226,7 +226,7 @@ class Operator(object):
             columns=[self.net.bus.index[self.net.bus.type == "b"]], index=index
         )  # maybe only take buses with storage
 
-        for idx in index:
+        for idx in tqdm(index):
             for component in self.virtual_power_plant.components.keys():
 
                 if "storage" not in component:
@@ -458,7 +458,7 @@ class Operator(object):
                 next(iter(self.virtual_power_plant.components))
                 ].environment.time_freq)
 
-        for idx in index:
+        for idx in tqdm(index):
 
             # assign loadprofiles to simbench components
             self.apply_absolute_simbench_values(profiles, idx)
