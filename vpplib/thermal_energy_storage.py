@@ -110,12 +110,14 @@ class ThermalEnergyStorage(Component):
         #     <=> T = E / (m * cp)
         self.state_of_charge -= (
             (thermal_energy_demand - thermal_production)
-            * 1000
+            * 1000  # kWh to Wh ?? Why?
             / (60 / self.environment.timebase)
         )
         self.state_of_charge *= self.efficiency_per_timestep
         self.current_temperature = (
-            self.state_of_charge / (self.mass * self.cp)
+            self.state_of_charge
+#            * 3600  # kWh to KJ
+            / (self.mass * self.cp)
         ) - 273.15
 
         if thermal_energy_generator.is_running:
