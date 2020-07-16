@@ -233,9 +233,9 @@ class VirtualPowerPlant(object):
                     self.components[component].identifier + "_arrival_soc"
                     ] = random.uniform(self.components[component].battery_min,
                                        self.components[component].battery_max)
-
+                #TODO: timeseries vereinheitlichen!!
                 df_timeseries[self.components[component].identifier] = self.components[
-                    component].timeseries
+                    component].timeseries["car_charger"]
 
             elif '_hp' in component:
                 if '_tes' in component:
