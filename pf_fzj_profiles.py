@@ -3,6 +3,10 @@
 Created on Thu Apr  9 15:16:35 2020
 
 @author: sbirk
+
+Run powerflow with el profiles from fzj, to generate basic load profiles for
+MV buses without detailed lv grid attached
+
 """
 
 import simbench as sb
@@ -17,15 +21,28 @@ from vpplib import Operator
 start = "2015-03-01 00:00:00"
 end = "2015-03-01 23:45:00"
 
-with open(r'Results/thermal_dict.pickle', 'rb') as handle:
-    thermal_dict = pickle.load(handle)
-
-with open(r'Results/el_dict_2015.pickle', 'rb') as handle:
+with open(r'Results/20200714_el_dict_15min.pickle', 'rb') as handle:
     el_dict = pickle.load(handle)
-    
 
-net = sb.get_simbench_net("1-LV-semiurb4--0-sw")
+for load in el_dict.keys():
+    el_dict[load]['Sum [kWh]'] *= 4 #  Convert kWh to kW
+    el_dict[load].columns = ['kW'] #  Rename columns from kWh to kW
+
+net = sb.get_simbench_net("1-MVLV-semiurb-all-0-sw")
 print(net)
+
+# calculate the absolute values:
+loadcases = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
+
+# define a function to apply absolute values
+def apply_absolute_values(net, absolute_values_dict, case_or_time_step):
+    for elm_param in absolute_values_dict.keys():
+        if absolute_values_dict[elm_param].shape[1]:
+            elm = elm_param[0]
+            param = elm_param[1]
+            net[elm].loc[:, param] = absolute_values_dict[elm_param].loc[case_or_time_step]
+
+#apply_absolute_values(net, profiles, time_step)
 
 operator = Operator(virtual_power_plant=None, net=net, target_data=None)
 
@@ -36,8 +53,9 @@ net_dict = dict()
 
 # assign fzj profiles to existing loads
 for index in net.load.index:
-    net.load.profile[index] = random.sample(el_dict.keys(), 1)[0]
-    net.load.type[index] = "baseload"
+    if "LV" in index:
+        net.load.profile[index] = random.sample(el_dict.keys(), 1)[0]
+        net.load.type[index] = "baseload"
 
 for idx in pd.date_range(start=start, end=end, freq="15 Min"):
     for load in net.load.index:
@@ -48,7 +66,7 @@ for idx in pd.date_range(start=start, end=end, freq="15 Min"):
                     ].profile
                 ].loc[
                     idx
-                    ].item()/1000
+                    ].item()/1000 #  Convert loadprofile to MWh for pandapower
 
             net.load.q_mvar[load] = 0
 
