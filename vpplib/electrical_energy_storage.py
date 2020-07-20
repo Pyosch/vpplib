@@ -258,6 +258,7 @@ class ElectricalEnergyStorage(Component):
             charge = (self.max_power * self.max_c) * (
                 self.environment.timebase / 60
             )
+            #TODO: Process residual load when power > max_power * max_c
 
         if self.state_of_charge < self.capacity:
             # storage has not reached its max capacity
