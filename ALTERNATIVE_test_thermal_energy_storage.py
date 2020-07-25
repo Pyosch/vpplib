@@ -14,12 +14,12 @@ import matplotlib.pyplot as plt
 figsize = (10, 6)
 # Values for environment
 start = "2015-01-05 00:00:00"
-end = "2015-02-03 23:45:00"     # bis 2015-02-04 geht es gut, dann sinkt die Temperatur wieder zu tief! :(
+end = "2015-12-31 23:45:00"     # bis 2015-02-04 geht es gut, dann sinkt die Temperatur wieder zu tief! :(
 year = "2015"
 timebase = 15
 
 # Values for user_profile
-yearly_thermal_energy_demand = 15000  # kWh
+yearly_thermal_energy_demand = 5000  # kWh
 building_type = "DE_HEF33"
 t_0 = 40  # °C
 
@@ -90,9 +90,11 @@ mode = "overcome shutdown"
 # layout tes and hp
 tes.optimize_tes_hp(hp, mode)
 
+
 print("mass of tes: " + str(tes.mass) + " [kg]")
 print("electrical power of hp: " + str(hp.el_power) + " [kW]")
 #print("thermal power of hp: " + str(hp.th_power) + " [kW]")
+hp.el_power = 1.3
 
 for i in tes.user_profile.thermal_energy_demand.loc[start:end].index:
     tes.operate_storage(i, hp)

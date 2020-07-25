@@ -37,10 +37,10 @@ class HeatingRod(Component):
         self.lastRampDown = self.user_profile.thermal_energy_demand.index[0]
 
         self.timeseries_year = pd.DataFrame(
-                columns=["heat_output", "efficiency", "el_demand"], 
+                columns=["thermal_energy_output", "efficiency", "el_demand"], 
                 index=self.user_profile.thermal_energy_demand.index)
         self.timeseries = pd.DataFrame(
-                columns=["heat_output", "efficiency", "el_demand"], 
+                columns=["thermal_energy_output", "efficiency", "el_demand"], 
                 index=pd.date_range(start=self.environment.start, 
                                     end=self.environment.end, 
                                     freq=self.environment.time_freq, 
@@ -48,7 +48,7 @@ class HeatingRod(Component):
 
 #        self.heat_sys_temp = heat_sys_temp
         
-        self.isRunning = False
+        self.is_running = False
               
    
 # =============================================================================
@@ -138,7 +138,7 @@ class HeatingRod(Component):
         if pd.isna(next(iter(self.user_profile.thermal_energy_demand.thermal_energy_demand))) == True:
             self.user_profile.get_thermal_energy_demand()
           
-        if pd.isna(next(iter(self.timeseries_year.heat_output))) == True:
+        if pd.isna(next(iter(self.timeseries_year.thermal_energy_output))) == True:
             self.get_timeseries_year()
         
         self.timeseries = self.timeseries_year.loc[self.environment.start:self.environment.end]
@@ -147,8 +147,8 @@ class HeatingRod(Component):
     
     def get_timeseries_year(self):
         
-        self.timeseries_year["heat_output"] = self.user_profile.thermal_energy_demand
-        self.timeseries_year["el_demand"] = (self.timeseries_year.heat_output / 
+        self.timeseries_year["thermal_energy_output"] = self.user_profile.thermal_energy_demand
+        self.timeseries_year["el_demand"] = (self.timeseries_year.thermal_energy_output / 
                             self.efficiency)
         
         return self.timeseries_year
@@ -190,68 +190,67 @@ class HeatingRod(Component):
                              "Stringformat: YYYY-MM-DD hh:mm:ss")
         
     
-    def observationsForTimestamp(self, timestamp):
+    def observations_for_timestamp(self, timestamp):
         
         if type(timestamp) == int:
             
             if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
                 
-                heat_output, efficiency , el_demand = self.timeseries.iloc[timestamp]
+                thermal_energy_output, efficiency , el_demand = self.timeseries.iloc[timestamp]
                 
             else:
                 
-                if self.isRunning: 
+                if self.is_running: 
                     el_demand = self.el_power
                     temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
                     efficiency = self.efficiency                   
-                    heat_output = el_demand * efficiency
+                    thermal_energy_output = el_demand * efficiency
                 else: 
-                    el_demand, efficiency, heat_output = 0, 0, 0
+                    el_demand, thermal_energy_output = 0, 0
             
         elif type(timestamp) == str:
             
             if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
                 
-                heat_output, efficiency , el_demand = self.timeseries.loc[timestamp]
+                thermal_energy_output, efficiency , el_demand = self.timeseries.loc[timestamp]
             else:
                 
-                if self.isRunning: 
+                if self.is_running: 
                     el_demand = self.el_power
                     temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp]
                     efficiency = self.efficiency                  
-                    heat_output = el_demand * efficiency
+                    thermal_energy_output = el_demand * efficiency
                 else: 
-                    el_demand, efficiency, heat_output = 0, 0, 0
+                    el_demand, thermal_energy_output = 0, 0
                 
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
             
             if pd.isna(next(iter(self.timeseries.loc[str(timestamp)]))) == False:
                 
-                 heat_output, efficiency , el_demand = self.timeseries.loc[str(timestamp)]
+                 thermal_energy_output, efficiency , el_demand = self.timeseries.loc[str(timestamp)]
                  
             else:
                 
-                if self.isRunning: 
+                if self.is_running: 
                     el_demand = self.el_power
                     temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
                     efficiency = self.efficiency                  
-                    heat_output = el_demand * efficiency
+                    thermal_energy_output = el_demand * efficiency
                 else: 
-                    el_demand, efficiency, heat_output = 0, 0, 0
+                    el_demand, thermal_energy_output = 0, 0
             
         else:
             raise ValueError("timestamp needs to be of type int, " +
                              "string (Stringformat: YYYY-MM-DD hh:mm:ss)" +
                              " or pd._libs.tslibs.timestamps.Timestamp")
         
-        observations = {'heat_output':heat_output, 
-                        'efficiency':efficiency, 'el_demand':el_demand}
+        observations = {'thermal_energy_output':thermal_energy_output, 'el_demand':el_demand}
         
         return observations
 
     def log_observation(self, observation, timestamp):
         
-        self.timeseries.heat_output.loc[timestamp] = observation["heat_output"]
+        self.timeseries.thermal_energy_output.loc[timestamp] = observation["thermal_energy_output"]
         self.timeseries.el_demand.loc[timestamp] = observation["el_demand"]
         
         return self.timeseries
@@ -262,13 +261,13 @@ class HeatingRod(Component):
         
         if type(timestamp) == int:
             if timestamp - self.lastRampDown > self.min_stop_time:
-                self.isRunning = True
-            else: self.isRunning = False
+                self.is_running = True
+            else: self.is_running = False
         
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
             if self.lastRampDown + self.min_stop_time * timestamp.freq < timestamp:
-                self.isRunning = True
-            else: self.isRunning = False
+                self.is_running = True
+            else: self.is_running = False
             
         else:
             raise ValueError("timestamp needs to be of type int or " +
@@ -278,40 +277,40 @@ class HeatingRod(Component):
         
         if type(timestamp) == int:
             if timestamp - self.lastRampUp > self.min_runtime:
-                self.isRunning = False
-            else: self.isRunning = True
+                self.is_running = False
+            else: self.is_running = True
         
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
             if self.lastRampUp + self.min_runtime * timestamp.freq < timestamp:
-                self.isRunning = False
-            else: self.isRunning = True
+                self.is_running = False
+            else: self.is_running = True
             
         else:
             raise ValueError("timestamp needs to be of type int or " +
                              "pandas._libs.tslibs.timestamps.Timestamp")
         
-    def rampUp(self, timestamp):
+    def ramp_up(self, timestamp):
         
         
-        if self.isRunning:
+        if self.is_running:
             return None
         else:
             if self.isLegitRampUp(timestamp):
-                self.isRunning = True
+                self.is_running = True
                 return True
             else: 
                 return False
 
 
-    def rampDown(self, timestamp):
+    def ramp_down(self, timestamp):
         
     
 
-        if not self.isRunning:
+        if not self.is_running:
             return None
         else:
             if self.isLegitRampDown(timestamp):
-                self.isRunning = False
+                self.is_running = False
                 return True
             else: 
                 return False

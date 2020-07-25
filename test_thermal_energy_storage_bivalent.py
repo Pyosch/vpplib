@@ -102,12 +102,12 @@ hr = HeatingRod(
 
 mode = "overcome shutdown"
 # layout tes and hp
-#tes.optimize_tes_hp(hp, mode)
+tes.optimize_tes_hp(hp, mode)
 
 # layout hp and hr bivalent - override layout of hp from before
 modus = "alternative"
 optimize_bivalent(hp, hr, modus, t_norm, user_profile)
-hp.el_power = 5
+#hp.el_power = 5
 
 print("mass of tes: " + str(tes.mass) + " [kg]")
 print("electrical power of hp: " + str(hp.el_power) + " [kW]")
@@ -140,15 +140,13 @@ hp.timeseries.el_demand.iloc[0:96].plot(
 )
 plt.show()
 
-# =============================================================================
-# hr.timeseries.el_demand.plot(figsize=figsize, title="Electrical Loadshape hr")
-# plt.show()
-# hr.timeseries.el_demand.iloc[0:960].plot(
-#     figsize=figsize, title="Electrical Loadshape hr 10-Day View"
-# )
-# plt.show()
-# hr.timeseries.el_demand.iloc[0:96].plot(
-#     figsize=figsize, title="Electrical Loadshape hr Daily View"
-# )
-# plt.show()
-# =============================================================================
+hr.timeseries.el_demand.plot(figsize=figsize, title="Electrical Loadshape hr")
+plt.show()
+hr.timeseries.el_demand.iloc[0:960].plot(
+    figsize=figsize, title="Electrical Loadshape hr 10-Day View"
+)
+plt.show()
+hr.timeseries.el_demand.iloc[0:96].plot(
+    figsize=figsize, title="Electrical Loadshape hr Daily View"
+)
+plt.show()

@@ -80,7 +80,9 @@ class ThermalEnergyStorage(Component):
         self.hysteresis = hysteresis
         self.mass = mass
         self.cp = cp
-        self.state_of_charge = mass * cp * (2 * self.hysteresis)
+        #self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
+        self.state_of_charge = mass * cp * (self.current_temperature - (target_temperature +    # somit müsste der Ladestand zu beginn immer = 0 sein
+                                                                        - hysteresis))
         # Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10%
         # Bereitschaftsverluste hat (ohne Rohrleitungen!!)
         self.thermal_energy_loss_per_day = thermal_energy_loss_per_day
@@ -115,7 +117,7 @@ class ThermalEnergyStorage(Component):
         self.state_of_charge *= self.efficiency_per_timestep
         self.current_temperature = (
             self.state_of_charge / (self.mass * self.cp)
-        ) - 273.15
+        ) + (self.target_temperature - self.hysteresis) #- 273.15
 
         if thermal_energy_generator.is_running:
             el_load = observation["el_demand"]
@@ -127,23 +129,26 @@ class ThermalEnergyStorage(Component):
         # log timeseries of thermal_energy_generator_class:
         thermal_energy_generator.log_observation(observation, timestamp)
 
-        return self.current_temperature, el_load
+        #return self.current_temperature, el_load
     
     def operate_storage_bivalent(self, timestamp, hp, hr, norm_temp):
         # determine bivalence temperature according to norm_temperature
         if norm_temp <= -16:
-            biv_temp = -4
+            biv_temp = -4 #-1
         elif (norm_temp > -16) & (norm_temp <= -10):
-            biv_temp = -3
+            biv_temp = -3 #0
         elif norm_temp > -10:
-            biv_temp = -2
+            biv_temp = -2 #1
         # dataframe with temperatures to decide whether hp or hr has to be run    
-        temperatures = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv",
-                                   index_col = "time")
-        temperatures.index = self.user_profile.thermal_energy_demand.index
+       # temperatures = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv",
+                                   #index_col = "time")
+        #temperatures.index = self.user_profile.thermal_energy_demand.index
 
         # for temperatures above bivalence the hp is running
-        if temperatures.temperature.loc[timestamp] > biv_temp:
+        #if temperatures.temperature.loc[timestamp] > biv_temp:
+        if self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp] > biv_temp:
+            if hr.is_running:
+                hr.ramp_down(timestamp)
             if self.get_needs_loading():
                 hp.ramp_up(timestamp)
             else:
@@ -155,6 +160,9 @@ class ThermalEnergyStorage(Component):
             observation = hp.observations_for_timestamp(
                 timestamp
             )
+            observation_hr = hr.observations_for_timestamp(
+                    timestamp
+                    )
             thermal_production = observation["thermal_energy_output"]
     
             # Formula: E = m * cp * T
@@ -166,8 +174,8 @@ class ThermalEnergyStorage(Component):
             )
             self.state_of_charge *= self.efficiency_per_timestep
             self.current_temperature = (
-                self.state_of_charge / (self.mass * self.cp)
-            ) - 273.15
+                self.state_of_charge / (self.mass * self.cp)    # hier eventuell noch Faktor 3.6 für Umrechnung Wh (abgegebene Energie hp) nach kJ
+            ) + (self.target_temperature - self.hysteresis) #- 273.15
             
             #print("tes temp: " + str(self.current_temperature))
     
@@ -180,11 +188,15 @@ class ThermalEnergyStorage(Component):
     
             # log timeseries of thermal_energy_generator_class:
             hp.log_observation(observation, timestamp)
+            hr.log_observation(observation_hr, timestamp)
             
-            return self.current_temperature, el_load
+            #return self.current_temperature, el_load
         
         # for temperatures below bivalence the hr is running
-        if temperatures.temperature.loc[timestamp] <= biv_temp:
+        #if temperatures.temperature.loc[timestamp] <= biv_temp:
+        if self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp] < biv_temp:
+            if hp.is_running:
+                hp.ramp_down(timestamp)
             if self.get_needs_loading():
                 hr.ramp_up(timestamp)
             else:
@@ -196,6 +208,11 @@ class ThermalEnergyStorage(Component):
             observation = hr.observations_for_timestamp(
                 timestamp
             )
+            
+            observation_hp = hp.observations_for_timestamp(
+                timestamp
+            )
+            
             thermal_production = observation["thermal_energy_output"]
     
             # Formula: E = m * cp * T
@@ -208,7 +225,7 @@ class ThermalEnergyStorage(Component):
             self.state_of_charge *= self.efficiency_per_timestep
             self.current_temperature = (
                 self.state_of_charge / (self.mass * self.cp)
-            ) - 273.15
+            ) + (self.target_temperature - self.hysteresis) #- 273.15
             
             #print("tes temp: " + str(self.current_temperature))
     
@@ -221,8 +238,9 @@ class ThermalEnergyStorage(Component):
     
             # log timeseries of thermal_energy_generator_class:
             hr.log_observation(observation, timestamp)
+            hp.log_observation(observation_hp, timestamp)
             
-            return self.current_temperature, el_load
+            #return self.current_temperature, el_load
 
 
     def get_needs_loading(self):

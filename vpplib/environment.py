@@ -18,7 +18,7 @@ class Environment(object):
                  start=None, end=None, year=None,
                  time_freq="15 min",
                  mean_temp_days=[], 
-                 mean_temp_hours=[], 
+                 mean_temp_hours=[],
                  pv_data=[], 
                  wind_data=[]):
         
