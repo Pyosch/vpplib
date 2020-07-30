@@ -855,7 +855,8 @@ class Operator(object):
 
         # The net_dic contains the data of the grid. The timestamps are the
         # keys of the dictionary. First, extract the information to the df
-        for idx in net_dict.keys():
+        print("Extracting results:")
+        for idx in tqdm(net_dict.keys()):
 
             ext_grid = ext_grid.append(
                 net_dict[idx]["res_ext_grid"], ignore_index=True
