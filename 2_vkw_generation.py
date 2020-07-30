@@ -20,11 +20,15 @@ import copy
 import simbench as sb
 import pandapower as pp
 
-from vpplib import VirtualPowerPlant
+from vpplib import VirtualPowerPlant, Environment, UserProfile
+from vpplib import Photovoltaic, WindPower
 
 # define virtual power plant
-wind_number = 0
-bev_number = 0
+nr_bev = 316
+nr_ahp = 246
+nr_whp = 97
+nr_chp = 8
+nr_pv = 557
 
 # Values for environment
 start = "2015-04-01 00:00:00"
@@ -38,29 +42,24 @@ index_hours = pd.date_range(start=start, end=end, freq="h", name="time")
 timebase = 15  # for calculations from kW to kWh
 timezone="Europe/Berlin"
 
+# UserProfile data
+latitude = 50.941357
+longitude = 6.958307
+
 # WindTurbine data
-wea_list = [
-        "E-53/800",
-        "E48/800",
-        "V100/1800",
-        "E-82/2000",
-        "V90/2000"]  # randomly choose windturbine
-hub_height = 135
-rotor_diameter = 127
 fetch_curve = "power_curve"
 data_source = "oedb"
 
-# Wind ModelChain data
+# ModelChain data
 # possible wind_speed_model: 'logarithmic', 'hellman',
-# 'interpolation_extrapolation', 'log_interpolation_extrapolation'
+#'interpolation_extrapolation', 'log_interpolation_extrapolation'
 wind_speed_model = "logarithmic"
 density_model = "ideal_gas"
 temperature_model = "linear_gradient"
-power_output_model = "power_coefficient_curve"  # alt.: 'power_curve'
+power_output_model = "power_coefficient_curve"  #'power_curve'
 density_correction = True
 obstacle_height = 0
 hellman_exp = None
-
 
 # Values for bev
 # power and capacity will be randomly assigned during component generation
@@ -70,7 +69,7 @@ bev_charge_efficiency = 0.98
 load_degradation_begin = 0.8
 
 #%% load dicts with electrical and thermal profiles
-with open(r'Results/20200723-090057_up_dena_example_profiles.pickle', 'rb') as handle:  # 'Results/20200529-152558_up_dummy_profiles.pickle'
+with open(r'Results/20200730-151519_up_dena_profiles.pickle', 'rb') as handle:
     user_profiles_dict = pickle.load(handle)
 
 print(time.asctime( time.localtime(time.time()) ))
@@ -92,7 +91,7 @@ with open(r'Results/SimBench_grids/1-MVLV-semiurb-all-0-sw_1015_lvbuses.pickle',
 # pp.plotting.simple_plot(net)
 
 # drop preconfigured electricity generators  and loads from the grid
-net.sgen.drop(net.sgen.index, inplace = True)
+# net.sgen.drop(net.sgen.index, inplace = True)
 # net.load.drop(net.load.index, inplace = True)
 
 # Get preconfigured SimBench profiles:
@@ -114,12 +113,12 @@ print("Assigning new index to sb_profiles:")
 for elm_param in tqdm(sb_profiles.keys()):
     if sb_profiles[elm_param].shape[0]:
         sb_profiles[elm_param] = sb_profiles[elm_param].drop(drop_list)
-        # Change index to 0-35039
-        # sb_profiles[elm_param].index = list(range(0, len(sb_profiles[elm_param])))
+
         sb_profiles[elm_param].index = user_profiles_dict[
             list(user_profiles_dict.keys())[0]
             ].electric_energy_demand.index
 
+# Initialize Index for storage timeseries
 sb_profiles[('storage', 'p_mw')] = pd.DataFrame(index = user_profiles_dict[
             list(user_profiles_dict.keys())[0]
             ].electric_energy_demand.index)
@@ -181,6 +180,142 @@ vpp = VirtualPowerPlant("vpp")
 
 print(time.asctime(time.localtime(time.time())))
 print("Initialized environment, vpp and net\n")
+
+#%% Assign new pv profiles to existing pv plants in lv grid
+
+environment = Environment(
+    timebase=timebase,
+    timezone="Europe/Berlin",
+    start=start,
+    end=end,
+    year=year,
+    time_freq=time_freq,
+)
+
+environment.get_pv_data()
+environment.get_wind_data()
+
+print("Reassign generation to existing sgen:")
+for idx in tqdm(net.sgen.index):
+    # if "LV" in net.sgen.name[idx]:
+    #TODO: Save SimBench user_profiles in up_dict
+    #(does not influence export in vpp,
+    #just in case, up_dict is needed again)
+    user_profile = UserProfile(
+        identifier=net.sgen.name[idx],
+        latitude=latitude,
+        longitude=longitude,
+        thermal_energy_demand_yearly=None,
+        building_type=None,
+        comfort_factor=None,
+        t_0=None,
+        daily_vehicle_usage=None,
+        week_trip_start=[],
+        week_trip_end=[],
+        weekend_trip_start=[],
+        weekend_trip_end=[],
+    )
+    # Bus name is saved during export in vpp
+    user_profile.bus = net.bus.name[net.sgen.bus[idx]]
+
+    if "PV" in net.sgen.type[idx]:
+
+        pv = Photovoltaic(module_lib="SandiaMod",
+                      inverter_lib="SandiaInverter",
+                      surface_tilt = random.randrange(start=20, stop=40, step=5),
+                      surface_azimuth = random.randrange(start=160, stop=220, step=10),
+                      unit="kW",
+                      identifier=(net.sgen.name[idx]+'_pv'),
+                      environment=environment,
+                      user_profile=user_profile,
+                      cost=None)
+
+        pv.pick_pvsystem(
+              min_module_power = 100,
+              max_module_power = 200,
+              pv_power = net.sgen.p_mw[idx]*1000000, # Watt
+              inverter_power_range = 100)
+
+
+        # Create timeseries for pv
+        pv.prepare_time_series()
+
+        # TODO
+        # Somehow in some pvlib timeseries the inverter losses during night hours
+        # are not complete. Once we find out how to solve this problem we can
+        # delete this part:
+        if pv.timeseries.isnull().values.any():
+                pv.timeseries.fillna(
+                    value=0,
+                    inplace=True)
+
+        # Add profile to simbench profiles
+        sb_profiles[("sgen", "p_mw")][net.sgen.index[0]] = pv.timeseries
+
+        # Add Componentn in vpp
+        vpp.add_component(pv)
+
+        if "LV" in net.sgen.name[idx]:
+            nr_pv -= 1
+
+
+    elif "Wind" in net.sgen.type[idx]:
+#wea = windpowerlib.wind_turbine.load_turbine_data_from_oedb(schema='supply', table='wind_turbine_library')
+#wea.sort_values(by=["nominal_power"], ignore_index=True).iloc[3]
+        if net.sgen.p_mw[idx] == 1.5:
+            # turbine_type = "VS82/1500" # no power_curve
+            # hub_height = 85
+            # rotor_diameter = 82
+            turbine_type = "V100/1800"
+            hub_height = 85
+            rotor_diameter = 100
+
+        elif net.sgen.p_mw[idx] == 1.7:
+            turbine_type = "V100/1800"
+            hub_height = 85
+            rotor_diameter = 100
+
+        elif net.sgen.p_mw[idx] == 1.8:
+            turbine_type = "V100/1800"
+            hub_height = 85
+            rotor_diameter = 100
+
+        elif net.sgen.p_mw[idx] == 2.0:
+            turbine_type = "E-82/2000"
+            hub_height = 85
+            rotor_diameter = 82
+
+        elif net.sgen.p_mw[idx] == 2.1:
+            turbine_type = "ENO100/2200"
+            hub_height = 99
+            rotor_diameter = 100
+
+        wind = WindPower(
+            unit="kW",
+            identifier=net.sgen.name[idx],
+            environment=environment,
+            user_profile=user_profile,
+            turbine_type=turbine_type,
+            hub_height=hub_height,
+            rotor_diameter=rotor_diameter,
+            fetch_curve=fetch_curve,
+            data_source=data_source,
+            wind_speed_model=wind_speed_model,
+            density_model=density_model,
+            temperature_model=temperature_model,
+            power_output_model=power_output_model,
+            density_correction=density_correction,
+            obstacle_height=obstacle_height,
+            hellman_exp=hellman_exp,
+        )
+
+        wind.prepare_time_series()
+
+        # Add profile to simbench profiles
+        sb_profiles[("sgen", "p_mw")][net.sgen.index[0]] = wind.timeseries
+
+        # Add Componentn in vpp
+        vpp.add_component(wind)
 
 #%% Assign user_profiles to load buses
 
@@ -341,8 +476,8 @@ print("Exported component values and timeseries to sql\n")
 #%% Save vpp and net to pickle for later powerflow analysis
 
 #TODO: Create Folder for results every time
-with open((r"./Results/"+savety_timestamp+"_user_profiles_dict"+".pickle"),"wb") as handle:
-    pickle.dump(user_profiles_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open((r"./Results/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
+    pickle.dump(up_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 with open((r"./Results/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
     pickle.dump(vpp, handle, protocol=pickle.HIGHEST_PROTOCOL)
