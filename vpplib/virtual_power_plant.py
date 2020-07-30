@@ -10,6 +10,7 @@ This is the overall aggregator of the technologies used.
 import random
 import pandas as pd
 import sqlite3
+from tqdm import tqdm
 
 class VirtualPowerPlant(object):
     def __init__(self, name):
@@ -181,7 +182,8 @@ class VirtualPowerPlant(object):
 
         df_component_values = pd.DataFrame(index=[0])
 
-        for component in self.components.keys():
+        print("Exporting components:")
+        for component in tqdm(self.components.keys()):
             if '_pv' in component:
                 df_component_values[self.components[component].identifier + "_kWp"] = (
                     self.components[component].module.Impo
@@ -370,7 +372,8 @@ class VirtualPowerPlant(object):
                   +"th_energy)")
 
         # Insert data of the components into the component_values table
-        for component in self.components.keys():
+        print("Exporting components to sql:")
+        for component in tqdm(self.components.keys()):
 
             if '_pv' in component:
                 c.execute("INSERT INTO component_values "
@@ -421,7 +424,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?)",
                           (component,
                            "wea",
-                           component[:-4],
+                           self.components[component].user_profile.bus, # used to be: component[:-4],
                            (self.components[
                                component].ModelChain.power_plant.nominal_power
                                / 1000)
@@ -609,7 +612,7 @@ class VirtualPowerPlant(object):
                               (str(idx),
                                component,
                                cop.cop[str(idx)],
-                               self.components[component].user_profile.thermal_energy_demand.HeatDemand.loc[str(idx)].item()
+                               self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
                                )
                               )
 
@@ -623,7 +626,7 @@ class VirtualPowerPlant(object):
                               +"VALUES (?, ?, ?)",
                               (str(idx),
                                component,
-                               self.components[component].user_profile.thermal_energy_demand.HeatDemand.loc[str(idx)].item()
+                               self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
                                )
                               )
 
