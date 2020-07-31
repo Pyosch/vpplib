@@ -16,6 +16,7 @@ import time
 import pickle
 from tqdm import tqdm
 import copy
+import os
 
 import simbench as sb
 import pandapower as pp
@@ -24,15 +25,27 @@ from vpplib import VirtualPowerPlant, Environment, UserProfile
 from vpplib import Photovoltaic, WindPower
 
 # define virtual power plant
+#2015
+# nr_bev = 0
+# nr_ahp = 13
+# nr_whp = 10
+# nr_hp = nr_whp + nr_ahp
+# nr_chp = 1
+# nr_pv = 186
+# nr_storage = 40
+
+#2030
 nr_bev = 316
 nr_ahp = 246
 nr_whp = 97
+nr_hp = nr_whp + nr_ahp
 nr_chp = 8
 nr_pv = 557
+nr_storage = 250
 
 # Values for environment
 start = "2015-04-01 00:00:00"
-end = "2015-04-30 23:45:00"
+end = "2015-04-01 23:45:00"
 year = "2015"
 time_freq = "15 min"
 index_year = pd.date_range(
@@ -249,8 +262,12 @@ for idx in tqdm(net.sgen.index):
                     value=0,
                     inplace=True)
 
+        #TODO: Find out why this pv generators profile is wrong
+        if net.sgen.name[idx] == "MV2.101 MV SGen 9":
+            pv.timeseries *= -1
+
         # Add profile to simbench profiles
-        sb_profiles[("sgen", "p_mw")][net.sgen.index[0]] = pv.timeseries
+        sb_profiles[("sgen", "p_mw")][idx] = pv.timeseries
 
         # Add Componentn in vpp
         vpp.add_component(pv)
@@ -292,7 +309,7 @@ for idx in tqdm(net.sgen.index):
 
         wind = WindPower(
             unit="kW",
-            identifier=net.sgen.name[idx],
+            identifier=(net.sgen.name[idx]+"_wea"),
             environment=environment,
             user_profile=user_profile,
             turbine_type=turbine_type,
@@ -312,72 +329,107 @@ for idx in tqdm(net.sgen.index):
         wind.prepare_time_series()
 
         # Add profile to simbench profiles
-        sb_profiles[("sgen", "p_mw")][net.sgen.index[0]] = wind.timeseries
+        sb_profiles[("sgen", "p_mw")][idx] = wind.timeseries
 
         # Add Componentn in vpp
         vpp.add_component(wind)
 
-#%% Assign user_profiles to load buses
 
-print("Assign user_profiles to load buses:\n")
-up_dict = dict()
-for load_idx in tqdm(net.load.index):
-    if "LV" in net.load.name[load_idx]:
+#%% helper functions
 
-        house = random.sample(user_profiles_dict.keys(), 1)[0]
-        bus = net.bus.name[net.load.bus[load_idx]]
-        up_id = bus+'_'+house
-        
-        net.load.profile[load_idx] = house
-        net.load.p_mw[load_idx] = 0.0
-        net.load.q_mvar[load_idx] = 0.0
-        net.load.sn_mva[load_idx] = 0.0
-
-        sb_profiles[('load', 'p_mw')][load_idx] = user_profiles_dict[
-            house
-            ].electric_energy_demand/1000
-
-        # In this place we need a deep copy to recieve independent users.
-        # Otherwise changes in one up would impact multiple up's
-        up_dict[up_id] = copy.deepcopy(user_profiles_dict[house])
-        up_dict[up_id].bus = bus
-
-        # Adjust the identifier of the user_profile itself
-        up_dict[up_id].identifier = up_id
-
-        # Adjust the identifier of the components
-        # Add components to vpp and pandapower network
-        if "pv" in up_dict[up_id].__dict__.keys():
-            up_dict[up_id].pv.identifier = up_id+'_pv'
-
-            vpp.add_component(up_dict[up_id].pv)
-            # Adjust column name of timeseries to match new identifier of 
-            # component
+def add_pv(up_id, up_dict, vpp, net, sb_profiles):
+    up_dict[up_id].pv.identifier = up_id+'_pv'
+    
+    vpp.add_component(up_dict[up_id].pv)
+    # Adjust column name of timeseries to match new identifier of 
+    # component
+    vpp.components[
+        up_dict[up_id].pv.identifier
+        ].timeseries.columns = [
             vpp.components[
-                up_dict[up_id].pv.identifier
-                ].timeseries.columns = [
-                    vpp.components[
-                        up_dict[up_id].pv.identifier].identifier]
+                up_dict[up_id].pv.identifier].identifier]
 
-            pp.create_sgen(
-                net,
-                bus=net.bus[net.bus.name == bus].index[0], #TODO: use net.load.bus[load_idx]
-                p_mw=(
-                    vpp.components[up_id + "_pv"].module.Impo
-                    * vpp.components[up_id + "_pv"].module.Vmpo
-                    / 1000000
-                ),
-                q_mvar = 0,
-                name=(up_id + "_pv"),
-                type="pv",
-            )
+    pp.create_sgen(
+        net,
+        bus=net.bus[net.bus.name == bus].index[0], #TODO: use net.load.bus[load_idx]
+        p_mw=(
+            vpp.components[up_id + "_pv"].module.Impo
+            * vpp.components[up_id + "_pv"].module.Vmpo
+            / 1000000
+        ),
+        q_mvar = 0,
+        name=(up_id + "_pv"),
+        type="pv",
+    )
 
-            sb_profiles[('sgen', 'p_mw')][net.sgen.index[-1]] = vpp.components[up_id + "_pv"].timeseries * -1 #TODO: Check in resluts if correct
+    sb_profiles[('sgen', 'p_mw')][net.sgen.index[-1]] = vpp.components[up_id + "_pv"].timeseries * -1
 
-        if "chp" in up_dict[up_id].__dict__.keys():
+def add_storage(up_id, up_dict, vpp, net, sb_profiles):
+    
+    up_dict[up_id].ees.identifier = up_id+'_ees'
+
+    vpp.add_component(up_dict[up_id].ees)
+
+    pp.create_storage(
+        net,
+        bus=net.bus[net.bus.name == bus].index[0],
+        p_mw=0,
+        q_mvar = 0,
+        max_e_mwh=vpp.components[up_id + "_ees"].capacity / 1000,
+        name=(up_id + "_ees"),
+        type="ees",
+    )
+    # EES recieves timeseries after optimization
+    sb_profiles[('storage', 'p_mw')][net.storage.index[-1]] = 0.0
+
+#%% Assign remaining components to the grid
+if (nr_pv+nr_chp) >0:
+
+    up_dict = dict()
+    unequipped_lst = list() # to catch errors
+    #Assure only lv loads are considered
+    mv_lst = list()
+    for load in net.load.name:
+        if "MV" in load:
+            mv_lst.append(load)
+
+    # Sample lv loads. MV loads are at the end of the list
+    load_bus_lst = random.sample(list(
+        net.load.index[:-(len(mv_lst))]
+        ),
+        (nr_pv+nr_chp))
+    # Shuffle, so components of the same type are not all in one area
+    random.shuffle(load_bus_lst)
+
+    for load_idx in tqdm(load_bus_lst):
+
+        if nr_chp > 0:
+            
+            house = random.sample(user_profiles_dict.keys(), 1)[0]
+            bus = net.bus.name[net.load.bus[load_idx]]
+            up_id = bus+'_'+house
+            
+            net.load.profile[load_idx] = house
+            net.load.p_mw[load_idx] = 0.0
+            net.load.q_mvar[load_idx] = 0.0
+            net.load.sn_mva[load_idx] = 0.0
+    
+            sb_profiles[('load', 'p_mw')][load_idx] = user_profiles_dict[
+                house
+                ].electric_energy_demand/1000
+    
+            # In this place we need a deep copy to recieve independent users.
+            # Otherwise changes in one up would impact multiple up's
+            up_dict[up_id] = copy.deepcopy(user_profiles_dict[house])
+            up_dict[up_id].bus = bus
+    
+            # Adjust the identifier of the user_profile itself
+            up_dict[up_id].identifier = up_id
+
+            #TODO This way, all chps will be in the same district. Improvement?
             up_dict[up_id].chp.identifier = up_id+'_chp'
             vpp.add_component(up_dict[up_id].chp)
-            
+
             pp.create_sgen(
                 net,
                 bus=net.bus[net.bus.name == bus].index[0],
@@ -386,11 +438,10 @@ for load_idx in tqdm(net.load.index):
                 name=(up_id + "_chp"),
                 type="chp",
             )
-            
+
             # CHP recieves timeseries after optimization
             sb_profiles[('sgen', 'p_mw')][net.sgen.index[-1]] = 0.0
 
-        if "hr" in up_dict[up_id].__dict__.keys():
             up_dict[up_id].hr.identifier = up_id+'_hr'
             vpp.add_component(up_dict[up_id].hr)
             
@@ -406,10 +457,66 @@ for load_idx in tqdm(net.load.index):
             sb_profiles[('load', 'p_mw')][net.load.index[-1]] = 0.0
             sb_profiles[('load', 'q_mvar')][net.load.index[-1]] = 0.0
 
-        if "hp" in up_dict[up_id].__dict__.keys():
+            nr_chp -= 1
+            
+            # Thermal Energy Storage
+            up_dict[up_id].tes.identifier = up_id+'_tes'
+            vpp.add_component(up_dict[up_id].tes)
+            # Thermal component, no equivalent in pandapower
+
+            if nr_bev > 0:
+                if random.choice([True, False]):
+                    # bev yes or no
+                
+                    up_dict[up_id].bev.identifier = up_id+'_bev'
+    
+                    vpp.add_component(up_dict[up_id].bev)
+    
+                    pp.create_load(
+                        net,
+                        bus=net.bus[net.bus.name == bus].index[0],
+                        p_mw=(vpp.components[up_id + "_bev"].charging_power / 1000),
+                        q_mvar = 0,
+                        name=(up_id + "_bev"),
+                        type="bev",
+                    )
+                    # BEV recieves timeseries after optimization
+                    sb_profiles[('load', 'p_mw')][net.load.index[-1]] = 0.0
+                    sb_profiles[('load', 'q_mvar')][net.load.index[-1]] = 0.0
+
+                    nr_bev -= 1
+
+            up_dict[up_id].pv = None
+            up_dict[up_id].hp = None
+
+            #### chp end ####
+
+        elif nr_hp > 0:
+
+            house = random.sample(user_profiles_dict.keys(), 1)[0]
+            bus = net.bus.name[net.load.bus[load_idx]]
+            up_id = bus+'_'+house
+
+            net.load.profile[load_idx] = house
+            net.load.p_mw[load_idx] = 0.0
+            net.load.q_mvar[load_idx] = 0.0
+            net.load.sn_mva[load_idx] = 0.0
+
+            sb_profiles[('load', 'p_mw')][load_idx] = user_profiles_dict[
+                house
+                ].electric_energy_demand/1000
+
+            # In this place we need a deep copy to recieve independent users.
+            # Otherwise changes in one up would impact multiple up's
+            up_dict[up_id] = copy.deepcopy(user_profiles_dict[house])
+            up_dict[up_id].bus = bus
+
+            # Adjust the identifier of the user_profile itself
+            up_dict[up_id].identifier = up_id
+
             up_dict[up_id].hp.identifier = up_id+'_hp'
             vpp.add_component(up_dict[up_id].hp)
-            
+
             pp.create_load(
                 net,
                 bus=net.bus[net.bus.name == bus].index[0],
@@ -422,33 +529,74 @@ for load_idx in tqdm(net.load.index):
             sb_profiles[('load', 'p_mw')][net.load.index[-1]] = 0.0
             sb_profiles[('load', 'q_mvar')][net.load.index[-1]] = 0.0
 
-        if "tes" in up_dict[up_id].__dict__.keys():
+            # Thermal Energy Storage
             up_dict[up_id].tes.identifier = up_id+'_tes'
             vpp.add_component(up_dict[up_id].tes)
             # Thermal component, no equivalent in pandapower
 
-        if "ees" in up_dict[up_id].__dict__.keys():
-            up_dict[up_id].ees.identifier = up_id+'_ees'
+            nr_hp -= 1
 
-            vpp.add_component(up_dict[up_id].ees)
+            up_dict[up_id].tes.identifier = up_id+'_tes'
+            vpp.add_component(up_dict[up_id].tes)
+            # Thermal component, no equivalent in pandapower
+            
+            up_dict[up_id].chp = None
+            up_dict[up_id].hr = None
 
-            pp.create_storage(
-                net,
-                bus=net.bus[net.bus.name == bus].index[0],
-                p_mw=0,
-                q_mvar = 0,
-                max_e_mwh=vpp.components[up_id + "_ees"].capacity / 1000,
-                name=(up_id + "_ees"),
-                type="ees",
-            )
-            # EES recieves timeseries after optimization
-            sb_profiles[('storage', 'p_mw')][net.storage.index[-1]] = 0.0
+            if nr_bev > 0:
+                # if random.choice([True, False]):
+                #     # bev yes or no
+                
+                up_dict[up_id].bev.identifier = up_id+'_bev'
 
-        if "bev" in up_dict[up_id].__dict__.keys():
+                vpp.add_component(up_dict[up_id].bev)
+
+                pp.create_load(
+                    net,
+                    bus=net.bus[net.bus.name == bus].index[0],
+                    p_mw=(vpp.components[up_id + "_bev"].charging_power / 1000),
+                    q_mvar = 0,
+                    name=(up_id + "_bev"),
+                    type="bev",
+                )
+                # BEV recieves timeseries after optimization
+                sb_profiles[('load', 'p_mw')][net.load.index[-1]] = 0.0
+                sb_profiles[('load', 'q_mvar')][net.load.index[-1]] = 0.0
+
+                nr_bev -= 1
+
+            if nr_pv > 0:
+                add_pv(up_id, up_dict, vpp, net, sb_profiles)
+                nr_pv -= 1
+
+                if nr_storage > 0:
+                    if random.choice([True, False]):
+                        # storage yes or no
+                        add_storage(up_id, up_dict, vpp, net, sb_profiles)
+                        nr_storage -= 1
+
+                ###### heat pump end #####
+
+        elif nr_bev > 0:
+
+            house = net.load.name[load_idx]
+            bus = net.bus.name[net.load.bus[load_idx]]
+            up_id = bus+'_'+house
+            
+            # In this place we need a deep copy to recieve independent users.
+            # Otherwise changes in one up would impact multiple up's
+            up_dict[up_id] = copy.deepcopy(user_profiles_dict[
+                random.sample(user_profiles_dict.keys(), 1)[0]
+                ])
+            up_dict[up_id].bus = bus
+    
+            # Adjust the identifier of the user_profile itself
+            up_dict[up_id].identifier = up_id
+
             up_dict[up_id].bev.identifier = up_id+'_bev'
 
             vpp.add_component(up_dict[up_id].bev)
-            
+
             pp.create_load(
                 net,
                 bus=net.bus[net.bus.name == bus].index[0],
@@ -461,35 +609,240 @@ for load_idx in tqdm(net.load.index):
             sb_profiles[('load', 'p_mw')][net.load.index[-1]] = 0.0
             sb_profiles[('load', 'q_mvar')][net.load.index[-1]] = 0.0
 
+            nr_bev -= 1
+
+            if nr_pv > 0:
+                add_pv(up_id, up_dict, vpp, net, sb_profiles)
+                nr_pv -= 1
+
+                if nr_storage > 0:
+
+                    add_storage(up_id, up_dict, vpp, net, sb_profiles)
+                    nr_storage -= 1
+            
+            up_dict[up_id].chp = None
+            up_dict[up_id].hr = None
+
+        elif nr_pv > 0:
+
+            house = net.load.name[load_idx]
+            bus = net.bus.name[net.load.bus[load_idx]]
+            up_id = bus+'_'+house
+
+            # In this place we need a deep copy to recieve independent users.
+            # Otherwise changes in one up would impact multiple up's
+            up_dict[up_id] = copy.deepcopy(user_profiles_dict[
+                random.sample(user_profiles_dict.keys(), 1)[0]
+                ])
+            up_dict[up_id].bus = bus
+    
+            # Adjust the identifier of the user_profile itself
+            up_dict[up_id].identifier = up_id
+
+            add_pv(up_id, up_dict, vpp, net, sb_profiles)
+            nr_pv -= 1
+    
+            if nr_storage > 0:
+
+                add_storage(up_id, up_dict, vpp, net, sb_profiles)
+                nr_storage -= 1
+
+            up_dict[up_id].chp = None
+            up_dict[up_id].hr = None
+            up_dict[up_id].tes = None
+            up_dict[up_id].bev = None
+
+        else:
+            unequipped_lst.append(load_idx)
+
+print("Unequippend loadbuses:")
+print(unequipped_lst)
+
+# #%% Assign user_profiles to load buses
+
+# print("Assign user_profiles to load buses:\n")
+# up_dict = dict()
+# for load_idx in tqdm(net.load.index):
+#     if "LV" in net.load.name[load_idx]:
+
+#         house = random.sample(user_profiles_dict.keys(), 1)[0]
+#         bus = net.bus.name[net.load.bus[load_idx]]
+#         up_id = bus+'_'+house
+        
+#         net.load.profile[load_idx] = house
+#         net.load.p_mw[load_idx] = 0.0
+#         net.load.q_mvar[load_idx] = 0.0
+#         net.load.sn_mva[load_idx] = 0.0
+
+#         sb_profiles[('load', 'p_mw')][load_idx] = user_profiles_dict[
+#             house
+#             ].electric_energy_demand/1000
+
+#         # In this place we need a deep copy to recieve independent users.
+#         # Otherwise changes in one up would impact multiple up's
+#         up_dict[up_id] = copy.deepcopy(user_profiles_dict[house])
+#         up_dict[up_id].bus = bus
+
+#         # Adjust the identifier of the user_profile itself
+#         up_dict[up_id].identifier = up_id
+
+#         # Adjust the identifier of the components
+#         # Add components to vpp and pandapower network
+#         if "pv" in up_dict[up_id].__dict__.keys():
+#             up_dict[up_id].pv.identifier = up_id+'_pv'
+
+#             vpp.add_component(up_dict[up_id].pv)
+#             # Adjust column name of timeseries to match new identifier of 
+#             # component
+#             vpp.components[
+#                 up_dict[up_id].pv.identifier
+#                 ].timeseries.columns = [
+#                     vpp.components[
+#                         up_dict[up_id].pv.identifier].identifier]
+
+#             pp.create_sgen(
+#                 net,
+#                 bus=net.bus[net.bus.name == bus].index[0], #TODO: use net.load.bus[load_idx]
+#                 p_mw=(
+#                     vpp.components[up_id + "_pv"].module.Impo
+#                     * vpp.components[up_id + "_pv"].module.Vmpo
+#                     / 1000000
+#                 ),
+#                 q_mvar = 0,
+#                 name=(up_id + "_pv"),
+#                 type="pv",
+#             )
+
+#             sb_profiles[('sgen', 'p_mw')][net.sgen.index[-1]] = vpp.components[up_id + "_pv"].timeseries * -1 #TODO: Check in results if correct
+
+#         if "chp" in up_dict[up_id].__dict__.keys():
+#             up_dict[up_id].chp.identifier = up_id+'_chp'
+#             vpp.add_component(up_dict[up_id].chp)
+            
+#             pp.create_sgen(
+#                 net,
+#                 bus=net.bus[net.bus.name == bus].index[0],
+#                 p_mw=(vpp.components[up_id + "_chp"].el_power / 1000),
+#                 q_mvar = 0,
+#                 name=(up_id + "_chp"),
+#                 type="chp",
+#             )
+            
+#             # CHP recieves timeseries after optimization
+#             sb_profiles[('sgen', 'p_mw')][net.sgen.index[-1]] = 0.0
+
+#         if "hr" in up_dict[up_id].__dict__.keys():
+#             up_dict[up_id].hr.identifier = up_id+'_hr'
+#             vpp.add_component(up_dict[up_id].hr)
+            
+#             pp.create_load(
+#                 net,
+#                 bus=net.bus[net.bus.name == bus].index[0],
+#                 p_mw=(vpp.components[up_id + "_hr"].el_power / 1000),
+#                 q_mvar = 0,
+#                 name=(up_id + "_hr"),
+#                 type="hr",
+#             )
+#             # HR recieves timeseries after optimization
+#             sb_profiles[('load', 'p_mw')][net.load.index[-1]] = 0.0
+#             sb_profiles[('load', 'q_mvar')][net.load.index[-1]] = 0.0
+
+#         if "hp" in up_dict[up_id].__dict__.keys():
+#             up_dict[up_id].hp.identifier = up_id+'_hp'
+#             vpp.add_component(up_dict[up_id].hp)
+            
+#             pp.create_load(
+#                 net,
+#                 bus=net.bus[net.bus.name == bus].index[0],
+#                 p_mw=(vpp.components[up_id + "_hp"].el_power / 1000),
+#                 q_mvar = 0,
+#                 name=(up_id + "_hp"),
+#                 type="hp",
+#             )
+#             # HP recieves timeseries after optimization
+#             sb_profiles[('load', 'p_mw')][net.load.index[-1]] = 0.0
+#             sb_profiles[('load', 'q_mvar')][net.load.index[-1]] = 0.0
+
+#         if "tes" in up_dict[up_id].__dict__.keys():
+#             up_dict[up_id].tes.identifier = up_id+'_tes'
+#             vpp.add_component(up_dict[up_id].tes)
+#             # Thermal component, no equivalent in pandapower
+
+#         if "ees" in up_dict[up_id].__dict__.keys():
+#             up_dict[up_id].ees.identifier = up_id+'_ees'
+
+#             vpp.add_component(up_dict[up_id].ees)
+
+#             pp.create_storage(
+#                 net,
+#                 bus=net.bus[net.bus.name == bus].index[0],
+#                 p_mw=0,
+#                 q_mvar = 0,
+#                 max_e_mwh=vpp.components[up_id + "_ees"].capacity / 1000,
+#                 name=(up_id + "_ees"),
+#                 type="ees",
+#             )
+#             # EES recieves timeseries after optimization
+#             sb_profiles[('storage', 'p_mw')][net.storage.index[-1]] = 0.0
+
+#         if "bev" in up_dict[up_id].__dict__.keys():
+#             up_dict[up_id].bev.identifier = up_id+'_bev'
+
+#             vpp.add_component(up_dict[up_id].bev)
+            
+#             pp.create_load(
+#                 net,
+#                 bus=net.bus[net.bus.name == bus].index[0],
+#                 p_mw=(vpp.components[up_id + "_bev"].charging_power / 1000),
+#                 q_mvar = 0,
+#                 name=(up_id + "_bev"),
+#                 type="bev",
+#             )
+#             # BEV recieves timeseries after optimization
+#             sb_profiles[('load', 'p_mw')][net.load.index[-1]] = 0.0
+#             sb_profiles[('load', 'q_mvar')][net.load.index[-1]] = 0.0
+
 print(time.asctime(time.localtime(time.time())))
 print("Assigned user profiles to vpp and net\n")
 
 
-# %% Export vpp to sql
+#%% Save vpp and net to pickle for later powerflow analysis
 
 savety_timestamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())
 
-vpp.export_components_to_sql(savety_timestamp+"_vpp_export")
-
-print(time.asctime(time.localtime(time.time())))
-print("Exported component values and timeseries to sql\n")
-#%% Save vpp and net to pickle for later powerflow analysis
-
 #TODO: Create Folder for results every time
-with open((r"./Results/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
+newpath = (r'./Results/'+savety_timestamp) 
+if not os.path.exists(newpath):
+    os.makedirs(newpath)
+
+with open((newpath+"/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
     pickle.dump(up_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-with open((r"./Results/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
+with open((newpath+"/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
     pickle.dump(vpp, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-with open((r"./Results/"+savety_timestamp+"_net_export"+".pickle"),"wb") as handle:
+with open((newpath+"/"+savety_timestamp+"_net_export"+".pickle"),"wb") as handle:
     pickle.dump(net, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-with open((r"./Results/"+savety_timestamp+"_sb_profiles"+".pickle"),"wb") as handle:
+with open((newpath+"/"+savety_timestamp+"_sb_profiles"+".pickle"),"wb") as handle:
     pickle.dump(sb_profiles, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-net.load.to_csv(r"./Results/"+savety_timestamp+"_net_load"+".csv")
+net.load.to_csv(newpath+"/"+savety_timestamp+"_net_load"+".csv")
 
 print(time.asctime(time.localtime(time.time())))
 print("Saved vpp and net to pickle\n")
 
+# %% Export vpp to sql
+
+vpp.export_components_to_sql((savety_timestamp+"/"+savety_timestamp+"_vpp_export"))
+
+print(time.asctime(time.localtime(time.time())))
+print("Exported component values and timeseries to sql\n")
+
+# Unnecessary
+# profiles = pd.DataFrame(columns=["load", "load_profile_nr"], index=net.load.index)
+# for idx in net.load.index:
+#     profiles["load"][idx]= net.load.name[idx]
+#     profiles["load_profile_nr"][idx]= idx
+    
+# profiles.to_csv((newpath+"/"+savety_timestamp+"_profilzuordnung.csv"))
