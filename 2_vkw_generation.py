@@ -24,6 +24,15 @@ import pandapower as pp
 from vpplib import VirtualPowerPlant, Environment, UserProfile
 from vpplib import Photovoltaic, WindPower
 
+# Reference grid
+nr_bev = 0
+nr_ahp = 0
+nr_whp = 0
+nr_hp = nr_whp + nr_ahp
+nr_chp = 0
+nr_pv = 0
+nr_storage = 0
+
 # define virtual power plant
 #2015
 # nr_bev = 0
@@ -35,17 +44,17 @@ from vpplib import Photovoltaic, WindPower
 # nr_storage = 40
 
 #2030
-nr_bev = 316
-nr_ahp = 246
-nr_whp = 97
-nr_hp = nr_whp + nr_ahp
-nr_chp = 8
-nr_pv = 557
-nr_storage = 250
+# nr_bev = 316
+# nr_ahp = 246
+# nr_whp = 97
+# nr_hp = nr_whp + nr_ahp
+# nr_chp = 8
+# nr_pv = 557
+# nr_storage = 250
 
 # Values for environment
-start = "2015-04-01 00:00:00"
-end = "2015-04-01 23:45:00"
+start = "2015-03-01 00:00:00"
+end = "2015-3-31 23:45:00"
 year = "2015"
 time_freq = "15 min"
 index_year = pd.date_range(
@@ -78,7 +87,7 @@ hellman_exp = None
 # power and capacity will be randomly assigned during component generation
 battery_min = 4
 battery_usage = 1
-bev_charge_efficiency = 0.98
+bev_charge_efficiency = 0.92
 load_degradation_begin = 0.8
 
 #%% load dicts with electrical and thermal profiles
@@ -383,16 +392,18 @@ def add_storage(up_id, up_dict, vpp, net, sb_profiles):
     sb_profiles[('storage', 'p_mw')][net.storage.index[-1]] = 0.0
 
 #%% Assign remaining components to the grid
+unequipped_lst = list() # to catch errors
+
 if (nr_pv+nr_chp) >0:
 
     up_dict = dict()
-    unequipped_lst = list() # to catch errors
     #Assure only lv loads are considered
     mv_lst = list()
     for load in net.load.name:
         if "MV" in load:
             mv_lst.append(load)
 
+    # TODO: exclude buses which are already equipped with pv systems
     # Sample lv loads. MV loads are at the end of the list
     load_bus_lst = random.sample(list(
         net.load.index[:-(len(mv_lst))]
@@ -815,8 +826,8 @@ newpath = (r'./Results/'+savety_timestamp)
 if not os.path.exists(newpath):
     os.makedirs(newpath)
 
-with open((newpath+"/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
-    pickle.dump(up_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open((newpath+"/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
+#     pickle.dump(up_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 with open((newpath+"/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
     pickle.dump(vpp, handle, protocol=pickle.HIGHEST_PROTOCOL)
