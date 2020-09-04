@@ -24,24 +24,26 @@ import pandapower as pp
 from vpplib import VirtualPowerPlant, Environment, UserProfile
 from vpplib import Photovoltaic, WindPower
 
+random_seed = 2020 #None
+
 # Reference grid
-nr_bev = 0
-nr_ahp = 0
-nr_whp = 0
-nr_hp = nr_whp + nr_ahp
-nr_chp = 0
-nr_pv = 0
-nr_storage = 0
+# nr_bev = 0
+# nr_ahp = 0
+# nr_whp = 0
+# nr_hp = nr_whp + nr_ahp
+# nr_chp = 0
+# nr_pv = 0
+# nr_storage = 0
 
 # define virtual power plant
 #2015
-# nr_bev = 0
-# nr_ahp = 13
-# nr_whp = 10
-# nr_hp = nr_whp + nr_ahp
-# nr_chp = 1
-# nr_pv = 186
-# nr_storage = 40
+nr_bev = 0
+nr_ahp = 13
+nr_whp = 10
+nr_hp = nr_whp + nr_ahp
+nr_chp = 1
+nr_pv = 186
+nr_storage = 40
 
 #2030
 # nr_bev = 316
@@ -397,19 +399,24 @@ unequipped_lst = list() # to catch errors
 if (nr_pv+nr_chp) >0:
 
     up_dict = dict()
-    #Assure only lv loads are considered
-    mv_lst = list()
-    for load in net.load.name:
-        if "MV" in load:
-            mv_lst.append(load)
 
-    # TODO: exclude buses which are already equipped with pv systems
-    # Sample lv loads. MV loads are at the end of the list
-    load_bus_lst = random.sample(list(
-        net.load.index[:-(len(mv_lst))]
-        ),
+    # Sample lv loads
+    load_lst = list()
+    for bus in net.load.bus:
+        if "LV" in net.load.name[net.load.bus == bus].iloc[0]:
+            load_lst.extend(net.load.index[net.load.bus == bus].astype(list))
+
+    #exclude buses which are already equipped with pv systems
+    #set() also deletes the duplicates
+    no_sgen_bus = set([x for x in load_lst if x not in list(net.sgen.bus)])
+
+    random.seed(random_seed)
+    load_bus_lst = random.sample(
+        no_sgen_bus,
         (nr_pv+nr_chp))
+
     # Shuffle, so components of the same type are not all in one area
+    random.seed(random_seed)
     random.shuffle(load_bus_lst)
 
     for load_idx in tqdm(load_bus_lst):
