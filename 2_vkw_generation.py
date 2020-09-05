@@ -37,22 +37,22 @@ random_seed = 2020 #None
 
 # define virtual power plant
 #2015
-nr_bev = 0
-nr_ahp = 13
-nr_whp = 10
-nr_hp = nr_whp + nr_ahp
-nr_chp = 1
-nr_pv = 186
-nr_storage = 40
+# nr_bev = 0
+# nr_ahp = 13
+# nr_whp = 10
+# nr_hp = nr_whp + nr_ahp
+# nr_chp = 1
+# nr_pv = 186
+# nr_storage = 40
 
 #2030
-# nr_bev = 316
-# nr_ahp = 246
-# nr_whp = 97
-# nr_hp = nr_whp + nr_ahp
-# nr_chp = 8
-# nr_pv = 557
-# nr_storage = 250
+nr_bev = 316
+nr_ahp = 246
+nr_whp = 97
+nr_hp = nr_whp + nr_ahp
+nr_chp = 8
+nr_pv = 557
+nr_storage = 250
 
 # Values for environment
 start = "2015-03-01 00:00:00"
@@ -348,7 +348,7 @@ for idx in tqdm(net.sgen.index):
 
 #%% helper functions
 
-def add_pv(up_id, up_dict, vpp, net, sb_profiles):
+def add_pv(up_id, up_dict, vpp, net, sb_profiles, load_idx):
     up_dict[up_id].pv.identifier = up_id+'_pv'
     
     vpp.add_component(up_dict[up_id].pv)
@@ -362,7 +362,7 @@ def add_pv(up_id, up_dict, vpp, net, sb_profiles):
 
     pp.create_sgen(
         net,
-        bus=net.bus[net.bus.name == bus].index[0], #TODO: use net.load.bus[load_idx]
+        bus=net.load.bus[load_idx],#net.bus[net.bus.name == bus].index[0], #TODO: use net.load.bus[load_idx]
         p_mw=(
             vpp.components[up_id + "_pv"].module.Impo
             * vpp.components[up_id + "_pv"].module.Vmpo
@@ -375,7 +375,7 @@ def add_pv(up_id, up_dict, vpp, net, sb_profiles):
 
     sb_profiles[('sgen', 'p_mw')][net.sgen.index[-1]] = vpp.components[up_id + "_pv"].timeseries * -1
 
-def add_storage(up_id, up_dict, vpp, net, sb_profiles):
+def add_storage(up_id, up_dict, vpp, net, sb_profiles, load_idx):
     
     up_dict[up_id].ees.identifier = up_id+'_ees'
 
@@ -383,7 +383,7 @@ def add_storage(up_id, up_dict, vpp, net, sb_profiles):
 
     pp.create_storage(
         net,
-        bus=net.bus[net.bus.name == bus].index[0],
+        bus=net.load.bus[load_idx],#net.bus[net.bus.name == bus].index[0],
         p_mw=0,
         q_mvar = 0,
         max_e_mwh=vpp.components[up_id + "_ees"].capacity / 1000,
@@ -401,25 +401,38 @@ if (nr_pv+nr_chp) >0:
     up_dict = dict()
 
     # Sample lv loads
-    load_lst = list()
-    for bus in net.load.bus:
-        if "LV" in net.load.name[net.load.bus == bus].iloc[0]:
-            load_lst.extend(net.load.index[net.load.bus == bus].astype(list))
+    # load_lst = list()
+    # for bus in net.load.bus:
+    #     if "LV" in net.load.name[net.load.bus == bus].iloc[0]:
+    #         load_lst.extend(net.load.index[net.load.bus == bus].astype(list))
 
-    #exclude buses which are already equipped with pv systems
-    #set() also deletes the duplicates
-    no_sgen_bus = set([x for x in load_lst if x not in list(net.sgen.bus)])
+    # #exclude buses which are already equipped with pv systems
+    # #set() also deletes the duplicates
+    # no_sgen_bus = set([x for x in load_lst if x not in list(net.sgen.bus)])
 
-    random.seed(random_seed)
-    load_bus_lst = random.sample(
-        no_sgen_bus,
+    lv_loads = list()
+    no_sgen = list()
+    for idx in net.load.index:
+        if "LV" in net.load.name[idx]:
+            lv_loads.append(idx)
+            if net.load.bus[idx] not in list(net.sgen.bus):
+                no_sgen.append(idx)
+
+    # random.seed(random_seed)
+    load_bus_index = random.sample(
+        no_sgen,
         (nr_pv+nr_chp))
 
-    # Shuffle, so components of the same type are not all in one area
-    random.seed(random_seed)
-    random.shuffle(load_bus_lst)
+    # get the corresponding load index to the load bus
+    # load_bus_index = list()
+    # for bus in load_bus_lst:
+    #     load_bus_index.append(net.load.index[net.load.bus == bus])
 
-    for load_idx in tqdm(load_bus_lst):
+    # Shuffle, so components of the same type are not all in one area
+    # random.seed(random_seed)
+    random.shuffle(load_bus_index)
+
+    for load_idx in tqdm(load_bus_index):
 
         if nr_chp > 0:
             
@@ -444,13 +457,12 @@ if (nr_pv+nr_chp) >0:
             # Adjust the identifier of the user_profile itself
             up_dict[up_id].identifier = up_id
 
-            #TODO This way, all chps will be in the same district. Improvement?
             up_dict[up_id].chp.identifier = up_id+'_chp'
             vpp.add_component(up_dict[up_id].chp)
 
             pp.create_sgen(
                 net,
-                bus=net.bus[net.bus.name == bus].index[0],
+                bus=net.load.bus[load_idx],#net.bus[net.bus.name == bus].index[0],
                 p_mw=(vpp.components[up_id + "_chp"].el_power / 1000),
                 q_mvar = 0,
                 name=(up_id + "_chp"),
@@ -465,7 +477,7 @@ if (nr_pv+nr_chp) >0:
             
             pp.create_load(
                 net,
-                bus=net.bus[net.bus.name == bus].index[0],
+                bus=net.load.bus[load_idx],#net.bus[net.bus.name == bus].index[0],
                 p_mw=(vpp.components[up_id + "_hr"].el_power / 1000),
                 q_mvar = 0,
                 name=(up_id + "_hr"),
@@ -492,7 +504,7 @@ if (nr_pv+nr_chp) >0:
     
                     pp.create_load(
                         net,
-                        bus=net.bus[net.bus.name == bus].index[0],
+                        bus=net.load.bus[load_idx],#net.bus[net.bus.name == bus].index[0],
                         p_mw=(vpp.components[up_id + "_bev"].charging_power / 1000),
                         q_mvar = 0,
                         name=(up_id + "_bev"),
@@ -537,7 +549,7 @@ if (nr_pv+nr_chp) >0:
 
             pp.create_load(
                 net,
-                bus=net.bus[net.bus.name == bus].index[0],
+                bus=net.load.bus[load_idx],#net.bus[net.bus.name == bus].index[0],
                 p_mw=(vpp.components[up_id + "_hp"].el_power / 1000),
                 q_mvar = 0,
                 name=(up_id + "_hp"),
@@ -571,7 +583,7 @@ if (nr_pv+nr_chp) >0:
 
                 pp.create_load(
                     net,
-                    bus=net.bus[net.bus.name == bus].index[0],
+                    bus=net.load.bus[load_idx],#net.bus[net.bus.name == bus].index[0],
                     p_mw=(vpp.components[up_id + "_bev"].charging_power / 1000),
                     q_mvar = 0,
                     name=(up_id + "_bev"),
@@ -584,19 +596,20 @@ if (nr_pv+nr_chp) >0:
                 nr_bev -= 1
 
             if nr_pv > 0:
-                add_pv(up_id, up_dict, vpp, net, sb_profiles)
+                add_pv(up_id, up_dict, vpp, net, sb_profiles, load_idx)
                 nr_pv -= 1
 
                 if nr_storage > 0:
                     if random.choice([True, False]):
                         # storage yes or no
-                        add_storage(up_id, up_dict, vpp, net, sb_profiles)
+                        add_storage(up_id, up_dict, vpp, net, sb_profiles, load_idx)
                         nr_storage -= 1
 
                 ###### heat pump end #####
 
         elif nr_bev > 0:
 
+            # No thermal demand, therefore use load name for house
             house = net.load.name[load_idx]
             bus = net.bus.name[net.load.bus[load_idx]]
             up_id = bus+'_'+house
@@ -617,7 +630,7 @@ if (nr_pv+nr_chp) >0:
 
             pp.create_load(
                 net,
-                bus=net.bus[net.bus.name == bus].index[0],
+                bus=net.load.bus[load_idx],#net.bus[net.bus.name == bus].index[0],
                 p_mw=(vpp.components[up_id + "_bev"].charging_power / 1000),
                 q_mvar = 0,
                 name=(up_id + "_bev"),
@@ -630,12 +643,12 @@ if (nr_pv+nr_chp) >0:
             nr_bev -= 1
 
             if nr_pv > 0:
-                add_pv(up_id, up_dict, vpp, net, sb_profiles)
+                add_pv(up_id, up_dict, vpp, net, sb_profiles, load_idx)
                 nr_pv -= 1
 
                 if nr_storage > 0:
 
-                    add_storage(up_id, up_dict, vpp, net, sb_profiles)
+                    add_storage(up_id, up_dict, vpp, net, sb_profiles, load_idx)
                     nr_storage -= 1
             
             up_dict[up_id].chp = None
@@ -643,6 +656,7 @@ if (nr_pv+nr_chp) >0:
 
         elif nr_pv > 0:
 
+            # No thermal demand, therefore use load name for house
             house = net.load.name[load_idx]
             bus = net.bus.name[net.load.bus[load_idx]]
             up_id = bus+'_'+house
@@ -657,12 +671,12 @@ if (nr_pv+nr_chp) >0:
             # Adjust the identifier of the user_profile itself
             up_dict[up_id].identifier = up_id
 
-            add_pv(up_id, up_dict, vpp, net, sb_profiles)
+            add_pv(up_id, up_dict, vpp, net, sb_profiles, load_idx)
             nr_pv -= 1
     
             if nr_storage > 0:
 
-                add_storage(up_id, up_dict, vpp, net, sb_profiles)
+                add_storage(up_id, up_dict, vpp, net, sb_profiles, load_idx)
                 nr_storage -= 1
 
             up_dict[up_id].chp = None
@@ -682,36 +696,36 @@ print("Assigned user profiles to vpp and net\n")
 
 #%% Save vpp and net to pickle for later powerflow analysis
 
-savety_timestamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())
+# savety_timestamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())
 
-#TODO: Create Folder for results every time
-newpath = (r'./Results/'+savety_timestamp) 
-if not os.path.exists(newpath):
-    os.makedirs(newpath)
+# #TODO: Create Folder for results every time
+# newpath = (r'./Results/'+savety_timestamp) 
+# if not os.path.exists(newpath):
+#     os.makedirs(newpath)
 
-# with open((newpath+"/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
-#     pickle.dump(up_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# # with open((newpath+"/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
+# #     pickle.dump(up_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-with open((newpath+"/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
-    pickle.dump(vpp, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open((newpath+"/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
+#     pickle.dump(vpp, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-with open((newpath+"/"+savety_timestamp+"_net_export"+".pickle"),"wb") as handle:
-    pickle.dump(net, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open((newpath+"/"+savety_timestamp+"_net_export"+".pickle"),"wb") as handle:
+#     pickle.dump(net, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-with open((newpath+"/"+savety_timestamp+"_sb_profiles"+".pickle"),"wb") as handle:
-    pickle.dump(sb_profiles, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open((newpath+"/"+savety_timestamp+"_sb_profiles"+".pickle"),"wb") as handle:
+#     pickle.dump(sb_profiles, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-net.load.to_csv(newpath+"/"+savety_timestamp+"_net_load"+".csv")
+# net.load.to_csv(newpath+"/"+savety_timestamp+"_net_load"+".csv")
 
-print(time.asctime(time.localtime(time.time())))
-print("Saved vpp and net to pickle\n")
+# print(time.asctime(time.localtime(time.time())))
+# print("Saved vpp and net to pickle\n")
 
-# %% Export vpp to sql
+# # %% Export vpp to sql
 
-vpp.export_components_to_sql((savety_timestamp+"/"+savety_timestamp+"_vpp_export"))
+# vpp.export_components_to_sql((savety_timestamp+"/"+savety_timestamp+"_vpp_export"))
 
-print(time.asctime(time.localtime(time.time())))
-print("Exported component values and timeseries to sql\n")
+# print(time.asctime(time.localtime(time.time())))
+# print("Exported component values and timeseries to sql\n")
 
 # Unnecessary
 # profiles = pd.DataFrame(columns=["load", "load_profile_nr"], index=net.load.index)
