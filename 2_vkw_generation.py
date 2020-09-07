@@ -17,6 +17,7 @@ import pickle
 from tqdm import tqdm
 import copy
 import os
+import sqlite3
 
 import simbench as sb
 import pandapower as pp
@@ -37,26 +38,26 @@ random_seed = 2020 #None
 
 # define virtual power plant
 #2015
-# nr_bev = 0
-# nr_ahp = 13
-# nr_whp = 10
-# nr_hp = nr_whp + nr_ahp
-# nr_chp = 1
-# nr_pv = 186
-# nr_storage = 40
+nr_bev = 0
+nr_ahp = 13
+nr_whp = 10
+nr_hp = nr_whp + nr_ahp
+nr_chp = 1
+nr_pv = 186
+nr_storage = 40
 
 #2030
-nr_bev = 316
-nr_ahp = 246
-nr_whp = 97
-nr_hp = nr_whp + nr_ahp
-nr_chp = 8
-nr_pv = 557
-nr_storage = 250
+# nr_bev = 316
+# nr_ahp = 246
+# nr_whp = 97
+# nr_hp = nr_whp + nr_ahp
+# nr_chp = 8
+# nr_pv = 557
+# nr_storage = 250
 
 # Values for environment
 start = "2015-03-01 00:00:00"
-end = "2015-3-31 23:45:00"
+end = "2015-03-31 12:00:00"
 year = "2015"
 time_freq = "15 min"
 index_year = pd.date_range(
@@ -696,41 +697,49 @@ print("Assigned user profiles to vpp and net\n")
 
 #%% Save vpp and net to pickle for later powerflow analysis
 
-# savety_timestamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())
+savety_timestamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())
 
-# #TODO: Create Folder for results every time
-# newpath = (r'./Results/'+savety_timestamp) 
-# if not os.path.exists(newpath):
-#     os.makedirs(newpath)
+#TODO: Create Folder for results every time
+newpath = (r'./Results/'+savety_timestamp) 
+if not os.path.exists(newpath):
+    os.makedirs(newpath)
 
-# # with open((newpath+"/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
-# #     pickle.dump(up_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open((newpath+"/"+savety_timestamp+"_up_dict"+".pickle"),"wb") as handle:
+#     pickle.dump(up_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# with open((newpath+"/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
-#     pickle.dump(vpp, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open((newpath+"/"+savety_timestamp+"_vpp_export"+".pickle"),"wb") as handle:
+    pickle.dump(vpp, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# with open((newpath+"/"+savety_timestamp+"_net_export"+".pickle"),"wb") as handle:
-#     pickle.dump(net, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open((newpath+"/"+savety_timestamp+"_net_export"+".pickle"),"wb") as handle:
+    pickle.dump(net, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# with open((newpath+"/"+savety_timestamp+"_sb_profiles"+".pickle"),"wb") as handle:
-#     pickle.dump(sb_profiles, handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open((newpath+"/"+savety_timestamp+"_sb_profiles"+".pickle"),"wb") as handle:
+    pickle.dump(sb_profiles, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# net.load.to_csv(newpath+"/"+savety_timestamp+"_net_load"+".csv")
+net.load.to_csv(newpath+"/"+savety_timestamp+"_net_load"+".csv")
 
-# print(time.asctime(time.localtime(time.time())))
-# print("Saved vpp and net to pickle\n")
+print(time.asctime(time.localtime(time.time())))
+print("Saved vpp and net to pickle\n")
 
-# # %% Export vpp to sql
+# %% Export vpp to sql
 
-# vpp.export_components_to_sql((savety_timestamp+"/"+savety_timestamp+"_vpp_export"))
+print(time.asctime(time.localtime(time.time())))
+print("Reshape vpp data in DataFrame\n")
+df_component_values = vpp.export_component_values()
+df_timeseries, no_timeseries_lst = vpp.export_component_timeseries()
 
-# print(time.asctime(time.localtime(time.time())))
-# print("Exported component values and timeseries to sql\n")
+print(time.asctime(time.localtime(time.time())))
+print("Save component_values to sqlite3\n")
+conn = sqlite3.connect((newpath+"/"+savety_timestamp+ "_vpp_export.sqlite"))
+df_component_values.to_sql(name='component_values', con=conn, index=False)
+conn.close()
 
-# Unnecessary
-# profiles = pd.DataFrame(columns=["load", "load_profile_nr"], index=net.load.index)
-# for idx in net.load.index:
-#     profiles["load"][idx]= net.load.name[idx]
-#     profiles["load_profile_nr"][idx]= idx
-    
-# profiles.to_csv((newpath+"/"+savety_timestamp+"_profilzuordnung.csv"))
+print(time.asctime(time.localtime(time.time())))
+print("Save timeseries to sqlite3\n")
+conn = sqlite3.connect((newpath+"/"+savety_timestamp+ "_vpp_export.sqlite"))
+df_timeseries.to_sql(name='timeseries', con=conn, index=False)
+conn.close()
+
+print(time.asctime(time.localtime(time.time())))
+print("Exported component values and timeseries to sql\n")
+
