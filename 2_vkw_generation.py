@@ -743,3 +743,34 @@ conn.close()
 print(time.asctime(time.localtime(time.time())))
 print("Exported component values and timeseries to sql\n")
 
+#%% Add basloads to component_values
+
+# create connection
+conn = sqlite3.connect((newpath+"/"+savety_timestamp+ "_vpp_export.sqlite"))
+
+# create curser object
+c = conn.cursor()
+
+baseloads = list()
+for idx in net.load.index:
+    if "Load" in net.load.name[idx]:
+        baseloads.append(idx)
+
+for idx in baseloads:
+
+    c.execute("INSERT INTO component_values "
+                              +"(name, "
+                              +"technology, "
+                              +"bus) "
+                              +"VALUES (?, ?, ?)",
+                              ((net.load.name[idx]+"_entity"),
+                               "entity",
+                               net.bus.name[net.load.bus[idx]]
+                               )
+                              )
+
+    conn.commit()
+
+# Close the connection
+c.close()
+conn.close()
