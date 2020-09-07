@@ -22,7 +22,7 @@ year = "2015"
 timebase = 15
 
 # Values for user_profile
-yearly_thermal_energy_demand = 15000  # kWh
+yearly_thermal_energy_demand = 25000  # kWh
 building_type = "DE_HEF33"
 t_0 = 40  # °C
 
@@ -75,7 +75,8 @@ tes = ThermalEnergyStorage(
     mass=mass_of_storage,
     hysteresis=hysteresis,
     target_temperature=target_temperature,
-    thermal_energy_loss_per_day=thermal_energy_loss_per_day,
+    #thermal_energy_loss_per_day=thermal_energy_loss_per_day,
+    efficiency_class = "A+"
 )
 
 hp = HeatPump(
@@ -113,6 +114,7 @@ print("mass of tes: " + str(tes.mass) + " [kg]")
 print("electrical power of hp: " + str(hp.el_power) + " [kW]")
 #print("thermal power of hp: " + str(hp.th_power) + " [kW]")
 print("electrical power of hr: " + str(hr.el_power) + " [kW]")
+print(str(tes.efficiency_per_timestep))
 
 for i in tes.user_profile.thermal_energy_demand.loc[start:end].index:
     tes.operate_storage_bivalent(i, hp, hr, t_norm)
@@ -150,3 +152,4 @@ hr.timeseries.el_demand.iloc[0:96].plot(
     figsize=figsize, title="Electrical Loadshape hr Daily View"
 )
 plt.show()
+

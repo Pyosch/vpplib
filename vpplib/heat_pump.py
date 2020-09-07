@@ -546,6 +546,9 @@ class HeatPump(Component):
 # given heat demand
 #------------------------------------------------------------------------------
                 
-    def determine_optimum_thermal_power (self, user_profile):
-        self.th_power = self.user_profile.thermal_energy_demand.max()
+    def determine_optimum_thermal_power (self):
+        self.th_power = float(self.user_profile.thermal_energy_demand.max())
         self.th_power_realistic = int(self.user_profile.thermal_energy_demand.max())+1
+        # muss durch den COP, welcher bei der höchsten Wärmebedarf (kältester Zeitpunkt) herrscht, geteilt werden
+        self.el_power = self.th_power / self.get_current_cop(1)
+        

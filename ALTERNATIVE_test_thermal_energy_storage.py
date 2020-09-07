@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 figsize = (10, 6)
 # Values for environment
 start = "2015-01-05 00:00:00"
-end = "2015-12-31 23:45:00"     # bis 2015-02-04 geht es gut, dann sinkt die Temperatur wieder zu tief! :(
+end = "2015-03-31 23:45:00"     # bis 2015-02-04 geht es gut, dann sinkt die Temperatur wieder zu tief! :(
 year = "2015"
 timebase = 15
 
@@ -28,7 +28,7 @@ target_temperature = 60  # °C
 hysteresis = 5  # °K
 mass_of_storage = 500  # kg
 cp = 4.2
-thermal_energy_loss_per_day = 0.13
+efficiency_class = "A"
 
 # Values for Heatpump
 #el_power = 5  # kW electric
@@ -70,7 +70,7 @@ tes = ThermalEnergyStorage(
     mass=mass_of_storage,
     hysteresis=hysteresis,
     target_temperature=target_temperature,
-    thermal_energy_loss_per_day=thermal_energy_loss_per_day,
+    efficiency_class = efficiency_class
 )
 
 hp = HeatPump(

@@ -17,7 +17,8 @@ class ThermalEnergyStorage(Component):
         hysteresis,
         mass,
         cp,
-        thermal_energy_loss_per_day,
+        #thermal_energy_loss_per_day,
+        efficiency_class,
         unit,
         identifier=None,
         environment=None,
@@ -77,17 +78,51 @@ class ThermalEnergyStorage(Component):
                 name="time",
             ),
         )
+            
+        self.efficiencies_data_APlus = [20.6, 25.4, 28.9, 31.8, 34.4, 36.4, 38.4,
+                                        40.2, 41.9, 43.5, 44.9, 46.3, 47.7, 48.9,
+                                        50.1, 51.3, 52.4, 53.5, 54.6, 55.6]
+        
+        self.efficiencies_data_A = [28.8, 35.3, 40.0, 43.9, 47.2, 50.1, 52.8,
+                                    55.2, 57.4, 59.5, 61.5, 63.4, 65.2, 66.9,
+                                    68.5, 70.1, 71.6, 73.1, 74.5, 75.9]
+        
+        self.efficiencies_data_B = [40.4, 49.4, 56.0, 61.4, 66.0, 70.1, 73.8,
+                                    77.1, 80.3, 83.2, 86.0, 88.6, 91.1, 93.5,
+                                    95.8, 98.0, 100.1, 102.1, 104.1, 106.1]
+        
+        self.efficiencies_data_C = [56.6, 69.2, 78.5, 86.0, 92.5, 98.2, 103.4,
+                                    109.2, 112.6, 116.7, 120.6, 124.3, 127.8,
+                                    131.1, 134.3, 137.4, 140.4, 143.2, 146.0,
+                                    148.7]
+        
+        self.efficiencies_data = [self.efficiencies_data_APlus,
+                                  self.efficiencies_data_A,
+                                  self.efficiencies_data_B,
+                                  self.efficiencies_data_C]
+        
+        self.efficiencies_volumes = [50, 100, 150, 200, 250, 300, 350, 400,
+                                     450, 500, 550, 600, 650, 700, 750, 800,
+                                     850, 900, 950, 1000]
+        
+        self.efficiencies = pd.DataFrame(self.efficiencies_data,
+                                         index =["A+", "A", "B", "C"],
+                                         columns = self.efficiencies_volumes)
+            
         self.hysteresis = hysteresis
         self.mass = mass
         self.cp = cp
+        self.efficiency_class = efficiency_class
         #self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
         self.state_of_charge = mass * cp * (self.current_temperature - (target_temperature +    # somit müsste der Ladestand zu beginn immer = 0 sein
                                                                         - hysteresis))
         # Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10%
         # Bereitschaftsverluste hat (ohne Rohrleitungen!!)
-        self.thermal_energy_loss_per_day = thermal_energy_loss_per_day
+        self.thermal_energy_loss_per_day = self.efficiencies[self.mass].loc[self.efficiency_class] #thermal_energy_loss_per_day
+        self.thermal_energy_loss_per_day *= 24/1000
+        
         self.efficiency_per_timestep = 1 - (
-            thermal_energy_loss_per_day
+            self.thermal_energy_loss_per_day
             / (24 * (60 / self.environment.timebase))
         )
         self.needs_loading = None
@@ -464,7 +499,10 @@ class ThermalEnergyStorage(Component):
         
         # mass is multiple of 10
         self.mass = hp.th_power * factor * density
-        self.mass = self.mass / 10
-        self.mass = round(self.mass, 0)
-        self.mass = self.mass * 10 + 10
+        mult_50 = self.mass / 50
+        mult_50 = int(mult_50) + 1
+        self.mass = mult_50 * 50
+        #self.mass = self.mass / 100
+        #self.mass = round(self.mass, 0)
+        #self.mass = self.mass * 100 + 50
 
