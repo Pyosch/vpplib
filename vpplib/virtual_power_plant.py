@@ -310,6 +310,246 @@ class VirtualPowerPlant(object):
         return df_component_values, df_timeseries
 
 
+    def export_component_values(self):
+
+        """
+        Info
+        ----
+        This function returns two DataFrames with the component values and
+        the timeseries of the components of the virtual power plant.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+
+        # dataframe for exporting component values
+
+        df_component_values = pd.DataFrame(
+            columns=("name",
+                     "technology",
+                     "bus",
+                     "arrival_soc",
+                     "capacity_kWh",
+                     "power_kW",
+                     "th_power_kW",
+                     "efficiency_el",
+                     "efficiency_th"))
+
+        print("Exporting component values:")
+        
+        for component in tqdm(self.components.keys()):
+            if '_pv' in component:
+                df_component_values = df_component_values.append(
+                    {"name": component,
+                     "technology": "pv",
+                     "bus": self.components[component].user_profile.bus,
+                     "power_kW": (self.components[component].module.Impo
+                     * self.components[component].module.Vmpo
+                     / 1000
+                     * self.components[component].system.modules_per_string
+                     * self.components[component].system.strings_per_inverter)},
+                    ignore_index=True)
+
+            elif '_ees' in component:
+                df_component_values = df_component_values.append(
+                    {"name": component,
+                     "technology": "ees",
+                     "bus": self.components[component].user_profile.bus,
+                     "capacity_kWh": self.components[component].capacity,
+                     "power_kW": self.components[component].max_power,
+                     "efficiency_el": self.components[component].charge_efficiency},
+                    ignore_index=True)
+
+
+            elif '_wea' in component:
+                df_component_values = df_component_values.append(
+                    {"name": component,
+                     "technology": "wea",
+                     "bus": self.components[component].user_profile.bus,
+                     "power_kW": self.components[component].ModelChain.power_plant.nominal_power
+                    / 1000},
+                    ignore_index=True)
+
+
+            elif '_bev' in component:
+                df_component_values = df_component_values.append(
+                    {"name": component,
+                     "technology": "bev",
+                     "bus": self.components[component].user_profile.bus,
+                     "arrival_soc": random.uniform(
+                         self.components[component].battery_min,
+                         self.components[component].battery_max
+                         ),
+                     "capacity_kWh": self.components[component].capacity,
+                     "power_kW": self.components[component].max_power,
+                     "efficiency_el": self.components[component].charge_efficiency},
+                    ignore_index=True)
+
+            elif '_hp' in component:
+                df_component_values = df_component_values.append(
+                    {"name": component,
+                     "technology": "hp",
+                     "bus": self.components[component].user_profile.bus,
+                     "power_kW": self.components[component].el_power},
+                    ignore_index=True)
+
+            elif '_tes' in component:
+                # Formula: E = m * cp * dT
+                df_component_values = df_component_values.append(
+                    {"name": component,
+                     "technology": "tes",
+                     "bus": self.components[component].user_profile.bus,
+                     "capacity_kWh": (self.components[component].mass
+                            * self.components[component].cp
+                            * (self.components[component].hysteresis * 2)  #dT
+                            / 3600),  # convert KJ to kW,
+                     "efficiency_th": self.components[component].efficiency_th},
+                    ignore_index=True)
+
+            elif '_chp' in component:
+                df_component_values = df_component_values.append(
+                    {"name": component,
+                     "technology": "chp",
+                     "bus": self.components[component].user_profile.bus,
+                     "power_kW": self.components[component].el_power,
+                     "th_power_kW": self.components[component].th_power,
+                     "efficiency_el": self.components[component].efficiency_el,
+                     "efficiency_th": self.components[component].efficiency_th},
+                    ignore_index=True)
+
+            elif '_hr' in component:
+                df_component_values = df_component_values.append(
+                    {"name": component,
+                     "technology": "hr",
+                     "bus": self.components[component].user_profile.bus,
+                     "th_power_kW": self.components[component].el_power, #TODO: change to power_kW after the Project
+                     "efficiency_th": self.components[component].efficiency}, #TODO: Change to el_efficiency after the Project
+                    ignore_index=True)
+
+
+        return df_component_values
+
+    def export_component_timeseries(self):
+
+        df_timeseries = pd.DataFrame(
+            columns=("time",
+                     "name",
+                     "cop",
+                     "feed_in",
+                     "th_energy")
+        )
+        
+        rows_list = list()
+
+        #List to catch components without timeseries. Usually only tes
+        no_timeseries_lst = list()
+
+        print("Export component timeseries:")
+        for idx in tqdm(self.components[next(iter(self.components.keys()))].timeseries.index):
+            for component in self.components.keys():
+
+                if '_pv' in component:
+
+                    #df_timeseries = df_timeseries
+                    rows_list.append(
+                    {"time": str(idx),
+                     "name": component,
+                     "feed_in": (self.components[component].value_for_timestamp(str(idx)) * -1)
+                     })#,
+                     #ignore_index=True)
+
+                elif '_wea' in component:
+
+                    #df_timeseries = df_timeseries
+                    rows_list.append(
+                    {"time": str(idx),
+                     "name": component,
+                     "feed_in": (self.components[component].value_for_timestamp(str(idx)) * -1)
+                     })#,
+                     #ignore_index=True
+                     #)
+
+                elif '_bev' in component:
+
+                    #df_timeseries = df_timeseries
+                    rows_list.append(
+                        {"time": str(idx),
+                         "name": component,
+                         "feed_in": float(self.components[component].timeseries["at_home"][str(idx)])
+                         })#,
+                     #ignore_index=True
+                     #)
+
+                elif '_hp' in component:
+
+                    # Check if the variable cop exists.
+                    # COP is the same for all heat pumps!
+                    if 'cop' not in locals():
+                        cop = pd.DataFrame(
+                            index = self.components[
+                                next(iter(self.components.keys()))
+                                ].timeseries.index,
+                            columns=["cop"])
+
+                        cop.cop = self.components[component].get_cop().cop
+                        cop.interpolate(inplace=True)
+                        
+                    #df_timeseries = df_timeseries
+                    rows_list.append(
+                        {"time": str(idx),
+                         "name": component,
+                         "cop": cop.cop[str(idx)],
+                         "th_energy": self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
+                         })#,
+                     #ignore_index=True
+                     #)
+
+                elif '_chp' in component:
+
+                    #df_timeseries = df_timeseries
+                    rows_list.append(
+                        {"time": str(idx),
+                         "name": component,
+                         "th_energy": self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
+                         })#,
+                     #ignore_index=True
+                     #)
+
+                elif '_tes' in component:
+                    # Thermal energy storage has no timeseries
+                    no_timeseries_lst.append(component)
+
+                else:
+                    no_timeseries_lst.append(component)
+
+        df_timeseries = pd.DataFrame(rows_list)
+
+        return df_timeseries, no_timeseries_lst
+
+
     def export_components_to_sql(self, name = "export"):
 
         """
