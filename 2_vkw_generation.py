@@ -38,26 +38,26 @@ random_seed = 2020 #None
 
 # define virtual power plant
 #2015
-nr_bev = 0
-nr_ahp = 13
-nr_whp = 10
-nr_hp = nr_whp + nr_ahp
-nr_chp = 1
-nr_pv = 186
-nr_storage = 40
+# nr_bev = 0
+# nr_ahp = 13
+# nr_whp = 10
+# nr_hp = nr_whp + nr_ahp
+# nr_chp = 1
+# nr_pv = 186
+# nr_storage = 40
 
 #2030
-# nr_bev = 316
-# nr_ahp = 246
-# nr_whp = 97
-# nr_hp = nr_whp + nr_ahp
-# nr_chp = 8
-# nr_pv = 557
-# nr_storage = 250
+nr_bev = 316
+nr_ahp = 246
+nr_whp = 97
+nr_hp = nr_whp + nr_ahp
+nr_chp = 8
+nr_pv = 557
+nr_storage = 250
 
 # Values for environment
-start = "2015-03-01 00:00:00"
-end = "2015-03-31 12:00:00"
+start = "2015-01-01 00:00:00"
+end = "2015-12-31 23:45:00"
 year = "2015"
 time_freq = "15 min"
 index_year = pd.date_range(
@@ -96,6 +96,12 @@ load_degradation_begin = 0.8
 #%% load dicts with electrical and thermal profiles
 with open(r'Results/20200730-151519_up_dena_profiles.pickle', 'rb') as handle:
     user_profiles_dict = pickle.load(handle)
+
+for key in user_profiles_dict.keys():
+    
+    user_profiles_dict[key].thermal_energy_demand = user_profiles_dict[key].thermal_energy_demand.append([{"Heat_load_kWh": None},{"Heat_load_kWh": None}, {"Heat_load_kWh": None}])
+    user_profiles_dict[key].thermal_energy_demand.index = pd.date_range(start=start, end = end, freq=time_freq)
+    user_profiles_dict[key].thermal_energy_demand.interpolate(inplace=True)
 
 print(time.asctime( time.localtime(time.time()) ))
 print("Loaded input\n")
@@ -401,36 +407,22 @@ if (nr_pv+nr_chp) >0:
 
     up_dict = dict()
 
-    # Sample lv loads
-    # load_lst = list()
-    # for bus in net.load.bus:
-    #     if "LV" in net.load.name[net.load.bus == bus].iloc[0]:
-    #         load_lst.extend(net.load.index[net.load.bus == bus].astype(list))
-
-    # #exclude buses which are already equipped with pv systems
-    # #set() also deletes the duplicates
-    # no_sgen_bus = set([x for x in load_lst if x not in list(net.sgen.bus)])
-
-    lv_loads = list()
     no_sgen = list()
     for idx in net.load.index:
+        # Components will only be allocated to lv buses
         if "LV" in net.load.name[idx]:
-            lv_loads.append(idx)
+            #exclude buses which are already equipped with pv systems
             if net.load.bus[idx] not in list(net.sgen.bus):
                 no_sgen.append(idx)
 
-    # random.seed(random_seed)
+    # Sample lv loads for component allocation
+    random.seed(random_seed)
     load_bus_index = random.sample(
         no_sgen,
         (nr_pv+nr_chp))
 
-    # get the corresponding load index to the load bus
-    # load_bus_index = list()
-    # for bus in load_bus_lst:
-    #     load_bus_index.append(net.load.index[net.load.bus == bus])
-
     # Shuffle, so components of the same type are not all in one area
-    # random.seed(random_seed)
+    random.seed(random_seed)
     random.shuffle(load_bus_index)
 
     for load_idx in tqdm(load_bus_index):
@@ -743,7 +735,7 @@ conn.close()
 print(time.asctime(time.localtime(time.time())))
 print("Exported component values and timeseries to sql\n")
 
-#%% Add basloads to component_values
+#%% Add baseloads to component_values
 
 # create connection
 conn = sqlite3.connect((newpath+"/"+savety_timestamp+ "_vpp_export.sqlite"))
