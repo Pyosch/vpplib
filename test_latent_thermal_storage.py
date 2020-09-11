@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 figsize = (10, 6)
 # Values for environment
 start = "2015-01-01 00:00:00"
-end = "2015-12-31 23:45:00"
+end = "2015-03-31 23:45:00"
 year = "2015"
 timebase = 15
 
