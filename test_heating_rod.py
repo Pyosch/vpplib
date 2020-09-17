@@ -2,7 +2,7 @@
 """
 Info
 ----
-In this testfile the basic functionalities of the VPPHeatPump class are tested.
+In this testfile the basic functionalities of the VPPHeatingRod class are tested.
 Run each time you make changes on an existing function.
 Adjust if a new function is added or 
 parameters in an existing function are changed.
@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 #Values for environment
 start = '2015-01-01 00:00:00'
-end = '2015-01-31 23:45:00'
+end = '2015-12-31 23:45:00'
 year = '2015'
 time_freq = "15 min"
 timestamp_int = 48
@@ -24,7 +24,7 @@ timestamp_str = '2015-01-01 12:00:00'
 timebase = 15
 
 #Values for user_profile
-thermal_energy_demand_yearly= 12500
+thermal_energy_demand_yearly= 15000
 building_type = 'DE_HEF33'
 t_0 = 40
 
@@ -72,13 +72,13 @@ def test_prepareTimeseries(hr):
 def test_valueForTimestamp(hr, timestamp):
     
     print('valueForTimestamp:')
-    demand= hr.valueForTimestamp(timestamp)
+    demand= hr.value_for_timestamp(timestamp)
     print("El. Demand: ",demand, '\n')
     
 def test_observationsForTimestamp(hr, timestamp):
     
     print('observationsForTimestamp:')
-    observation = hr.observationsForTimestamp(timestamp)
+    observation = hr.observations_for_timestamp(timestamp)
     print(observation, '\n')
   
 test_prepareTimeseries(hr)  
@@ -88,3 +88,6 @@ test_observationsForTimestamp(hr, timestamp_int)
 
 test_valueForTimestamp(hr, timestamp_str)
 test_observationsForTimestamp(hr, timestamp_str)
+
+sum_el_dem = hr.timeseries["el_demand"].sum() * 0.25
+print("electrical demand hr: " + str(sum_el_dem) + " [kWh]")

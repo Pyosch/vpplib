@@ -33,6 +33,8 @@ temps_ST_df = pd.DataFrame(
 max_irr = pv_data_df["dni"].max()
 
 for i, data in pv_data_df.iterrows():
+    # temperature of solar fluid equals environment temperature plus a part from
+    # the solar radiation
     temps_ST_df["temperatures_fluid"][i] = temps_env_df["temperature"][i] + (
             pv_data_df["dni"][i] / max_irr * max_diff_T)
 
@@ -48,3 +50,5 @@ print(temps_env_df)
 temps_df = pd.concat([temps_env_df, temps_ST_df], axis = 1)
 print(temps_df)
 temps_df[start:end].plot()
+
+temps_ST_df.to_csv("./input/pv/calculated_ST_temps_2015.csv")

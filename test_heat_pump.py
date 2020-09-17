@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 #Values for environment
 start = '2015-01-01 00:00:00'
-end = '2015-01-14 23:45:00'
+end = '2015-03-31 23:45:00'
 year = '2015'
 time_freq = "15 min"
 timestamp_int = 48
@@ -24,7 +24,7 @@ timestamp_str = '2015-01-01 12:00:00'
 timebase = 15
 
 #Values for user_profile
-thermal_energy_demand_yearly = 10000
+thermal_energy_demand_yearly = 15000
 building_type = 'DE_HEF33'
 t_0 = 40
 
@@ -101,7 +101,20 @@ test_observations_for_timestamp(hp, timestamp_int)
 test_value_for_timestamp(hp, timestamp_str)
 test_observations_for_timestamp(hp, timestamp_str)
 
-hp.determine_optimum_thermal_power (user_profile)
-print(str(hp.th_power))
-print("thermal power hp " + str(hp.th_power_realistic))
+hp.determine_optimum_thermal_power()
+print("thermal power hp: " + str(hp.th_power) + " [kW]")
+print("electrical power hp: " + str(hp.el_power) + " [kW]")
+#print("thermal power hp: " + str(hp.th_power_realistic) + " [kW]")
+
+sum_el_dem = hp.timeseries.el_demand.sum() * 0.25
+print("electrical demand hp: " + str(sum_el_dem) + " [kWh]")
+
+sum_output = hp.timeseries.thermal_energy_output.sum() * 0.25
+print("thermal output hp: " + str(sum_output) + " [kWh]")
+
+print(hp.timeseries)
+
+
+
+
 

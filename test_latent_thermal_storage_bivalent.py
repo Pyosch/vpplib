@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Aug  4 11:56:37 2020
+Created on Thu Sep 17 09:28:44 2020
 
 @author: andre
-test the latent storage!
+test real using case of lts (charged by solar thermal, discharged by heat pump)
 """
 from tqdm import tqdm
 from vpplib.user_profile import UserProfile
@@ -84,7 +84,7 @@ hp = HeatPump(
     min_stop_time=min_stop_time,
     heat_pump_type=heat_pump_type,
     heat_sys_temp=heat_sys_temp,
-)
+    )
 
 
 hp.determine_optimum_thermal_power()
@@ -99,37 +99,11 @@ print("capacity phase change: " + str(lts.capacity_phaseChange) + "kWh")
 print("capacity fluid: " + str(lts.capacity_fluid) + "kWh")
 
 print(lts.timeseries)
-#print(str(isinstance(lts.timeseries, pd.DataFrame)))
 
-# =============================================================================
-# x_axis = []
-# charge_axis = [0]
-# temp_axis =[0]
-# ice_axis = [1]
-# j = 0
-# =============================================================================
 
 for i in tqdm(user_profile.thermal_energy_demand.loc[start:end].index):
-    lts.operate_storage(i, hp)
+    lts.operate_storage_bivalent(i, hp)
 
-# =============================================================================
-#     x_axis.append(j)
-#     lts.state_of_charge += 0.25
-#     charge_axis.append(lts.state_of_charge)
-#     lts.get_current_state()
-#     lts.get_current_temp()
-#     temp_axis.append(lts.current_temp)
-#     lts.get_phase_state()
-#     ice_axis.append(lts.m_ice/lts.mass)
-#     print("current state of charge: " + str(lts.state_of_charge) + " kWh")
-#     print("current state: " + str(lts.current_state))
-#     print("current temperature: " + str(lts.current_temp) + " °C")
-#     print("fraction of ice: " + str(lts.m_ice/lts.mass*100) + " %")
-#     print("------------------------------------------------------")
-#     j += 1
-#     if lts.state_of_charge >= lts.capacity:
-#         break
-# =============================================================================
 
 print(lts.timeseries)
 print(hp.timeseries)
@@ -141,7 +115,3 @@ el_demand = hp.timeseries.el_demand.loc[start:end].sum() * environment.timebase 
 print("energy demand hp: " + str(el_demand) + " kWh")
 print("for t_over: " + str(t_over) + " K, and")
 print("for t_under: " + str(t_under) + " K")
-
-    
-
-    

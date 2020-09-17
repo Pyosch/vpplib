@@ -175,7 +175,7 @@ class HeatingRod(Component):
     # =========================================================================
 
     # Override balancing function from super class.
-    def valueForTimestamp(self, timestamp):
+    def value_for_timestamp(self, timestamp):
 
         if type(timestamp) == int:
             
@@ -202,7 +202,7 @@ class HeatingRod(Component):
                 
                 if self.is_running: 
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
+                    #temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
                     efficiency = self.efficiency                   
                     thermal_energy_output = el_demand * efficiency
                 else: 
@@ -217,7 +217,7 @@ class HeatingRod(Component):
                 
                 if self.is_running: 
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp]
+                    #temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp]
                     efficiency = self.efficiency                  
                     thermal_energy_output = el_demand * efficiency
                 else: 
@@ -233,7 +233,7 @@ class HeatingRod(Component):
                 
                 if self.is_running: 
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
+                    #temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
                     efficiency = self.efficiency                  
                     thermal_energy_output = el_demand * efficiency
                 else: 

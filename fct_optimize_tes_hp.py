@@ -31,3 +31,4 @@ def optimize_tes_hp(tes, hp, mode, user_profile):
     density = 1  #kg/l
         
     tes.mass = hp.th_power * factor * density
+    

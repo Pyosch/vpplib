@@ -99,9 +99,21 @@ class LatentThermalStorage(Component):
                         )
                 )
                 
+        # for the solar thermal part
+        self.timeseries_ST = pd.read_csv("./input/pv/calculated_ST_temps_2015.csv",
+                                         index_col = "time")
+                
         self.state_of_charge = 0.0        # water frozen, energy = 0 at beginning
         self.m_ice = self.mass          # water completely frozen
-        self.m_water = None             # see above
+        self.m_water = 0#None             # see above
+        
+        self.a_heat_exchanger_reg = None    # regeneration heat exchanger
+        self.a_heat_exchanger_depr = None   # deprevation heat exchanger
+        self.heat_transfer_coefficient = 0.58    # [kW/(m2*K)]
+        self.vol_heat_exchanger_reg = None
+        self.vol_heat_exchanger_depr = None
+        self.cp_tyfocor = 3.6   # [kj/(kg*K)]
+        self.density_tyfocor = 1.123     # [kg/l]; https://tyfo.de/downloads/TYFOCOR_de_TI.pdf
         
     def layout_storage (self, hp_dimensionized):
         if hp_dimensionized.th_power <= 10:
@@ -112,17 +124,21 @@ class LatentThermalStorage(Component):
         self.mass = vol * 1000 * self.density_ice
         
         self.get_capacity()
-# =============================================================================
-#         density = 1  # kg/l
-#         max_demand = self.user_profile.thermal_energy_demand.thermal_energy_demand.max()
-#         # layout according to formula used for TES
-#         mass = max_demand * 20 * density
-#         mult_50 = mass / 50
-#         mult_50 = int(mult_50) + 1
-#         self.mass = mult_50 * 50
-#         # calculate capacity [kWh] for later use
-#         self.get_capacity()
-# =============================================================================
+        self.get_heat_exchanger_volumes(hp_dimensionized)
+        self.get_heat_exchanger_areas()
+        
+    def get_heat_exchanger_volumes(self, hp_dimensionized):
+        if hp_dimensionized.th_power <= 10:
+            self.vol_heat_exchanger_reg = 0.077 # m3
+            self.vol_heat_exchanger_depr = 0.136 # m3
+        elif hp_dimensionized.th_power > 10:
+            self.vol_heat_exchanger_reg = 0.154 # m3
+            self.vol_heat_exchanger_depr = 0.272 # m3
+        
+    def get_heat_exchanger_areas(self):
+        # A = 2V/r; values from Vissman
+        self.a_heat_exchanger_reg = 2 * self.vol_heat_exchanger_reg / 0.032 # m2
+        self.a_heat_exchanger_depr = 2 * self.vol_heat_exchanger_depr / 0.032 # m2
         
     def get_capacity(self):
         # calculate capacity [kWh]
@@ -130,17 +146,6 @@ class LatentThermalStorage(Component):
         self.capacity_phaseChange = self.mass * self.h_crist / 3600
         self.capacity_fluid = self.mass * self.cp_water * self.t_over / 3600
         self.capacity = self.capacity_solid + self.capacity_phaseChange + self.capacity_fluid
-        
-# =============================================================================
-#     def get_capacity_solid(self):
-#         return self.mass * self.cp_ice * self.t_under / 3600
-#     
-#     def get_capacity_phaseChange(self):
-#         return self.mass * self.h_crist / 3600
-#     
-#     def get_capacity_fluid(self):
-#         return self.mass * self.cp_water * self.t_over / 3600
-# =============================================================================
         
     def needs_loading(self):
         if self.current_temp <= self.t_nuc + self.t_under:
@@ -175,6 +180,23 @@ class LatentThermalStorage(Component):
             self.current_temp = self.t_nuc
         elif self.current_state == "fluid":
             self.current_temp = self.t_nuc + (self.state_of_charge - self.capacity_phaseChange - self.capacity_solid) / (self.mass * self.cp_water) * 3600
+            
+    def get_transferred_heat_reg(self, timestamp):
+        # Q=alpha*A*(delta_T)*timestep
+        self.get_current_temp()
+        transferred_heat = self.heat_transfer_coefficient * self.a_heat_exchanger_reg * (self.timeseries_ST["temperatures_fluid"].loc[timestamp] - self.current_temp) * self.environment.timebase / 60
+        return transferred_heat
+    
+    def get_transferred_heat_depr(self, timestamp):  # heat_pump als paramater?
+        # only called, if ST fluid flows throug lts due to ST temperature below lts temperature
+        transferred_heat = self.heat_transfer_coefficient * self.a_heat_exchanger_depr * (self.current_temp - self.timeseries_ST["temperatures_fluid"]) * self.environment.timebase / 60
+        return transferred_heat
+    
+    def get_temperature_ST(self, heat, timestamp):  #3.2 kJ/(kg*K), heat aber in kWh gegeben => 1 kJ = 1/3600 kWh
+        # calculate temperature of fluid after depriving heat from lts: Q=c*m*delta_T
+        temperature = heat / (self.cp_tyfocor * self.vol_heat_exchanger_depr * self.density_tyfocor * 1000) / 3600 + self.timeseries_ST["temperatures_fluid"].loc[timestamp]
+        return temperature
+        
         
     # Anmerkung für Betrieb: HP bezieht Wärme eigentlich nur von Solar-Luft-Absorber (größtenteils Luft)
     # Nur wenn die Lufttemperatur unter einen gewissen wert fällt, wird zusätzlich wärme aus dem lts bezogen
@@ -211,8 +233,35 @@ class LatentThermalStorage(Component):
         self.timeseries.state_of_charge.loc[timestamp] = self.state_of_charge
         self.timeseries.m_ice.loc[timestamp] = self.m_ice /self.mass
         self.timeseries.m_water.loc[timestamp] = self.m_water / self.mass
-                
-                
+    
+    # solar thermal is implied by call
+    def operate_storage_bivalent(self, timestamp, heat_pump):
+        if self.timeseries_ST["temperatures_fluid"].loc[timestamp] < self.current_temp:
+            # if temperature of fluid is below temperature in lts, than fluid flowing
+            # through lts, gaining temperature
+            deprived_heat = self.get_transferred_heat_depr(timestamp)
+            # heat pump discharging lts
+            self.state_of_charge -= deprived_heat
+            # temperature of fluid after flowing throug lts (for calculating new COP)
+            fluid_temp = self.get_temperature_ST(deprived_heat, timestamp)
+            # command for hp to switch heat source (like heat_pump.set_heat_source())
+            # or: heat_pump.override_current_cop(temp, timestamp) a function 
+            # overriding the cop stored in heat_pump.timeseries
+            # or: closure(?)
+            cop = heat_pump.get_current_cop(fluid_temp)
+            # override cop in heat_pump
+            heat_pump.timeseries.cop.loc[timestamp] = cop
+            
+        elif self.timeseries_ST["temperatures_fluid"].loc[timestamp] >= self.current_temp:
+            # solar thermal charging lts (only if T_ST > T_lts)
+            self.state_of_charge += self.get_transferred_heat_reg(timestamp)
+            # heat_pump directly takes ST fluid
+            cop = heat_pump.get_current_cop(self.timeseries_ST["temperatures_fluid"].loc[timestamp])
+            # override cop in heat pump
+            heat_pump.timeseries.cop.loc[timestamp] = cop
+            
+        
+        
     
     
         
