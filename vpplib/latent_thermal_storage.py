@@ -189,7 +189,7 @@ class LatentThermalStorage(Component):
     
     def get_transferred_heat_depr(self, timestamp):  # heat_pump als paramater?
         # only called, if ST fluid flows throug lts due to ST temperature below lts temperature
-        transferred_heat = self.heat_transfer_coefficient * self.a_heat_exchanger_depr * (self.current_temp - self.timeseries_ST["temperatures_fluid"]) * self.environment.timebase / 60
+        transferred_heat = self.heat_transfer_coefficient * self.a_heat_exchanger_depr * (self.current_temp - self.timeseries_ST["temperatures_fluid"].loc[timestamp]) * self.environment.timebase / 60
         return transferred_heat
     
     def get_temperature_ST(self, heat, timestamp):  #3.2 kJ/(kg*K), heat aber in kWh gegeben => 1 kJ = 1/3600 kWh
@@ -236,6 +236,8 @@ class LatentThermalStorage(Component):
     
     # solar thermal is implied by call
     def operate_storage_bivalent(self, timestamp, heat_pump):
+        thermal_demand = self.user_profile.thermal_energy_demand.thermal_energy_demand.loc[timestamp]
+        #print(thermal_demand)
         if self.timeseries_ST["temperatures_fluid"].loc[timestamp] < self.current_temp:
             # if temperature of fluid is below temperature in lts, than fluid flowing
             # through lts, gaining temperature
@@ -251,6 +253,17 @@ class LatentThermalStorage(Component):
             cop = heat_pump.get_current_cop(fluid_temp)
             # override cop in heat_pump
             heat_pump.timeseries.cop.loc[timestamp] = cop
+            heat_pump.timeseries.thermal_energy_output.loc[timestamp] = thermal_demand
+            heat_pump.timeseries.el_demand.loc[timestamp] = thermal_demand / cop
+            
+            self.get_current_state()
+            self.get_current_temp()
+            self.get_phase_state()
+            
+            self.timeseries.temperature.loc[timestamp] = self.current_temp
+            self.timeseries.state_of_charge.loc[timestamp] = self.state_of_charge
+            self.timeseries.m_ice.loc[timestamp] = self.m_ice /self.mass
+            self.timeseries.m_water.loc[timestamp] = self.m_water / self.mass
             
         elif self.timeseries_ST["temperatures_fluid"].loc[timestamp] >= self.current_temp:
             # solar thermal charging lts (only if T_ST > T_lts)
@@ -259,6 +272,17 @@ class LatentThermalStorage(Component):
             cop = heat_pump.get_current_cop(self.timeseries_ST["temperatures_fluid"].loc[timestamp])
             # override cop in heat pump
             heat_pump.timeseries.cop.loc[timestamp] = cop
+            heat_pump.timeseries.thermal_energy_output.loc[timestamp] = thermal_demand
+            heat_pump.timeseries.el_demand.loc[timestamp] = thermal_demand / cop
+            
+            self.get_current_state()
+            self.get_current_temp()
+            self.get_phase_state()
+            
+            self.timeseries.temperature.loc[timestamp] = self.current_temp
+            self.timeseries.state_of_charge.loc[timestamp] = self.state_of_charge
+            self.timeseries.m_ice.loc[timestamp] = self.m_ice /self.mass
+            self.timeseries.m_water.loc[timestamp] = self.m_water / self.mass
             
         
         

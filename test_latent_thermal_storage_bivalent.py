@@ -54,6 +54,7 @@ user_profile = UserProfile(
 
 user_profile.get_thermal_energy_demand()    # steht ja eigentlich in funktion unten
 
+
 def test_get_thermal_energy_demand(user_profile):
 
     user_profile.get_thermal_energy_demand()
@@ -86,6 +87,8 @@ hp = HeatPump(
     heat_sys_temp=heat_sys_temp,
     )
 
+lts.timeseries_ST.index = user_profile.thermal_energy_demand.index
+
 
 hp.determine_optimum_thermal_power()
 lts.layout_storage(hp)
@@ -97,8 +100,6 @@ print("capacity lts: " + str(lts.capacity) + "kWh")
 print("capacity solid: " + str(lts.capacity_solid) + "kWh")
 print("capacity phase change: " + str(lts.capacity_phaseChange) + "kWh")
 print("capacity fluid: " + str(lts.capacity_fluid) + "kWh")
-
-print(lts.timeseries)
 
 
 for i in tqdm(user_profile.thermal_energy_demand.loc[start:end].index):

@@ -9,9 +9,28 @@ according to dwd_pv_data_2015.
 """
 
 import pandas as pd
+from vpplib.user_profile import UserProfile
+
+# create user_profile to get its index (to set index of temps_ST_df equal to)
+# Values for user_profile
+yearly_thermal_energy_demand = 15000  # kWh
+building_type = "DE_HEF33"
+t_0 = 40  # °C
+
+user_profile = UserProfile(
+    identifier=None,
+    latitude=None,
+    longitude=None,
+    thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+    building_type=building_type,
+    comfort_factor=None,
+    t_0=t_0,
+    )
+
+user_profile.get_thermal_energy_demand()
 
 # maximum difference between ambient temperature and heat carrier temperature
-max_diff_T = 5
+max_diff_T = 10
 
 # for visualizing
 start = "2015-01-01 00:00:00"
@@ -27,7 +46,7 @@ temps_env_df = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv",
 
 temps_ST_df = pd.DataFrame(
         columns = ["temperatures_fluid"],
-        index = temps_env_df.index
+        index = user_profile.thermal_energy_demand.index
         )
         
 max_irr = pv_data_df["dni"].max()
@@ -40,7 +59,7 @@ for i, data in pv_data_df.iterrows():
 
 print(temps_ST_df)
 print(temps_env_df)
-
+print(user_profile.thermal_energy_demand)
         
 # =============================================================================
 # print(pv_data_df)

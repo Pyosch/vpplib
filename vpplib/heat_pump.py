@@ -65,8 +65,8 @@ class HeatPump(Component):
         self.el_power = el_power
         self.th_power = th_power
         self.limit = 1
-        self.heat_source = "environment"
-        self.storage = storage
+        #self.heat_source = "environment"
+        #self.storage = storage
         
         #Ramp parameters
         self.ramp_up_time = ramp_up_time
