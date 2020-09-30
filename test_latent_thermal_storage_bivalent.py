@@ -11,16 +11,17 @@ from vpplib.environment import Environment
 from vpplib.latent_thermal_storage import LatentThermalStorage
 from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
+import pandas as pd
 
 figsize = (10, 6)
 # Values for environment
 start = "2015-01-01 00:00:00"
-end = "2015-03-31 23:45:00"
+end = "2015-12-31 23:45:00"
 year = "2015"
 timebase = 15
 
 # Values for user_profile
-yearly_thermal_energy_demand = 15000  # kWh
+yearly_thermal_energy_demand = 10000  # kWh
 building_type = "DE_HEF33"
 t_0 = 40  # °C
 
@@ -110,9 +111,16 @@ print(lts.timeseries)
 print(hp.timeseries)
 
 lts.timeseries.plot(figsize=figsize, title="Temperature of Storage")
+hp.timeseries.plot(figsize = figsize, title = "Heat Pump Performance")
 
 el_demand = hp.timeseries.el_demand.loc[start:end].sum() * environment.timebase / 60
 
 print("energy demand hp: " + str(el_demand) + " kWh")
 print("for t_over: " + str(t_over) + " K, and")
 print("for t_under: " + str(t_under) + " K")
+
+#lts.timeseries.index =hp.timeseries.index
+
+df_complete = pd.concat([lts.timeseries, hp.timeseries], axis = 1)
+print(df_complete)
+df_complete.to_csv("./input/pv/HP_LTS.csv")

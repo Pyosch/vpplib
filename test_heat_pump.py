@@ -13,10 +13,13 @@ from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import host_subplot
+import mpl_toolkits.axisartist as AA
+import pandas as pd
 
 #Values for environment
 start = '2015-01-01 00:00:00'
-end = '2015-03-31 23:45:00'
+end = '2015-12-31 23:45:00'
 year = '2015'
 time_freq = "15 min"
 timestamp_int = 48
@@ -24,7 +27,7 @@ timestamp_str = '2015-01-01 12:00:00'
 timebase = 15
 
 #Values for user_profile
-thermal_energy_demand_yearly = 15000
+thermal_energy_demand_yearly = 10000
 building_type = 'DE_HEF33'
 t_0 = 40
 
@@ -33,7 +36,7 @@ ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
-typeHP = "Ground"
+typeHP = "Air"
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year,
                           time_freq=time_freq)
@@ -113,6 +116,7 @@ sum_output = hp.timeseries.thermal_energy_output.sum() * 0.25
 print("thermal output hp: " + str(sum_output) + " [kWh]")
 
 print(hp.timeseries)
+
 
 
 

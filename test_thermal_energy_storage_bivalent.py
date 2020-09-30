@@ -13,16 +13,17 @@ from vpplib.heat_pump import HeatPump
 from vpplib.heating_rod import HeatingRod
 import matplotlib.pyplot as plt
 from fct_optimize_bivalent import optimize_bivalent
+import pandas as pd
 
 figsize = (10, 6)
 # Values for environment
 start = "2015-01-01 00:00:00"
-end = "2015-01-31 23:45:00"     
+end = "2015-12-31 23:45:00"     
 year = "2015"
 timebase = 15
 
 # Values for user_profile
-yearly_thermal_energy_demand = 25000  # kWh
+yearly_thermal_energy_demand = 10000  # kWh
 building_type = "DE_HEF33"
 t_0 = 40  # °C
 
@@ -153,3 +154,10 @@ hr.timeseries.el_demand.iloc[0:96].plot(
 )
 plt.show()
 
+#print(hr.timeseries)
+#print(hp.timeseries)
+#print(tes.timeseries)
+#
+#df_complete = pd.concat([hr.timeseries, hp.timeseries, tes.timeseries], axis = 1)
+#
+#df_complete.to_csv("./input/pv/HP_ground_HR_TES.csv")

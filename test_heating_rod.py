@@ -24,7 +24,7 @@ timestamp_str = '2015-01-01 12:00:00'
 timebase = 15
 
 #Values for user_profile
-thermal_energy_demand_yearly= 15000
+thermal_energy_demand_yearly= 10000
 building_type = 'DE_HEF33'
 t_0 = 40
 
@@ -91,3 +91,5 @@ test_observationsForTimestamp(hr, timestamp_str)
 
 sum_el_dem = hr.timeseries["el_demand"].sum() * 0.25
 print("electrical demand hr: " + str(sum_el_dem) + " [kWh]")
+
+hr.timeseries.to_csv("./input/pv/HR.csv")

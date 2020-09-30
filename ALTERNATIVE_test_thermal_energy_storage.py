@@ -10,16 +10,17 @@ from vpplib.environment import Environment
 from vpplib.ALTERNATIVE_thermal_energy_storage import ThermalEnergyStorage
 from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
+import pandas as pd
 
 figsize = (10, 6)
 # Values for environment
-start = "2015-01-05 00:00:00"
-end = "2015-03-31 23:45:00"     # bis 2015-02-04 geht es gut, dann sinkt die Temperatur wieder zu tief! :(
+start = "2015-01-01 00:00:00"
+end = "2015-12-31 23:45:00"     # bis 2015-02-04 geht es gut, dann sinkt die Temperatur wieder zu tief! :(
 year = "2015"
 timebase = 15
 
 # Values for user_profile
-yearly_thermal_energy_demand = 5000  # kWh
+yearly_thermal_energy_demand = 10000  # kWh
 building_type = "DE_HEF33"
 t_0 = 40  # °C
 
@@ -120,3 +121,11 @@ hp.timeseries.el_demand.iloc[0:96].plot(
     figsize=figsize, title="Electrical Loadshape Daily View"
 )
 plt.show()
+
+print(hp.timeseries)
+print(tes.timeseries)
+
+#df_complete = pd.concat([hp.timeseries, tes.timeseries], axis = 1)
+#print(df_complete)
+#
+#df_complete.to_csv("./input/pv/HP_ground_TES.csv")
