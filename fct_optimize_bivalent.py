@@ -39,9 +39,9 @@ def optimize_bivalent(heat_pump, heating_rod, mode, norm_temp, user_profile):
     T_p0 = round(float(temperature['temperature'].min()), 1)
     P_p0 = round(float(heat_demand['thermal_energy_demand'].max()), 1)
     
-    # get point p1 (heatstop temperature and corrsponding (0kW) heat demand)
-    T_p1 = 20   # choose reasonable value
-    P_p1 = 0
+    # get point p1 (heatstop temperature (20°C) and corrsponding (0kW) heat demand)
+    T_p1 = round(float(temperature['temperature'].max()), 1)   # choose reasonable value
+    P_p1 = round(float(heat_demand['thermal_energy_demand'].min()), 1)
     
     # assume linear function P(T)=a*T+b between p0 and p1
     # calculate parameter a: gradient triangle

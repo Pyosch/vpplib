@@ -18,7 +18,7 @@ import pandas as pd
 
 #Values for environment
 start = '2015-01-01 00:00:00'
-end = '2015-01-14 23:45:00'
+end = '2015-12-31 23:45:00'
 year = '2015'
 time_freq = "15 min"
 timestamp_int1 = 48
@@ -38,7 +38,7 @@ ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
-heat_pump_type = "Ground" #nur "Ground" oder "Air"!
+heat_pump_type = "Air" #nur "Ground" oder "Air"!
 
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year,
@@ -94,8 +94,10 @@ data = run_hp_hr(hp, hr, mode, user_profile, norm_temp)
 ratio = determin_heating_ratio(data)
 print("share of heating rod: " + (str(ratio * 100)) + " %")
 
+#i_data = pd.concat([data.th_output_hp, data.thermal_energy_demand], axis = 1)
+
 print(str(data))
-data[:(24*4*7*4)].plot(figsize = (16, 9))
+data[:].plot(figsize = (16, 9))
 plt.show()
 
-data.to_csv("./input/pv/HP_ground_HR.csv")
+#data.to_csv("./input/pv/HP_air_HR_eff1_alternative.csv")

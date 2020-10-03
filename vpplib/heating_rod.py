@@ -14,7 +14,7 @@ class HeatingRod(Component):
                  environment=None, user_profile=None,
                  cost = None, el_power=None,
                  rampUpTime=0, rampDownTime=0,
-                 min_runtime=0, min_stop_time=0, efficiency=0.95):
+                 min_runtime=0, min_stop_time=0, efficiency=1):
 
         
         # Call to super class

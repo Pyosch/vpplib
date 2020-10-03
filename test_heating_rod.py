@@ -92,4 +92,4 @@ test_observationsForTimestamp(hr, timestamp_str)
 sum_el_dem = hr.timeseries["el_demand"].sum() * 0.25
 print("electrical demand hr: " + str(sum_el_dem) + " [kWh]")
 
-hr.timeseries.to_csv("./input/pv/HR.csv")
+hr.timeseries.to_csv("./input/pv/HR_eff1.csv")

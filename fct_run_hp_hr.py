@@ -39,29 +39,55 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     output_hr = []
     demand_hr = []
     
+    hp_capable = []
+    
     # to iterate over
     th_energy_demand = dataframe['thermal_energy_demand'].values
     temperature = dataframe['temperature'].values
     
+#    # parallel mode
+#    if mode == "parallel":
+#        # determine heat pump thermal output (heat pump allways running)
+#        for i in range(len(dataframe)):
+#            if th_energy_demand[i] <= hp.el_power * hp.get_current_cop(temperature[i]):
+#                output_hp.append(th_energy_demand[i])
+#            else:
+#                output_hp.append(hp.th_power)#hp.el_power * hp.get_current_cop(temperature[i]))
+#                
+#        # determine heating rod thermal output
+#        for i in range(len(dataframe)):
+#            if th_energy_demand[i] > output_hp[i]:   # if bools_temp[i] == True
+#                diff = th_energy_demand[i] - output_hp[i]
+#                if diff <= hr.el_power + hr.efficiency:
+#                    output_hr.append(diff)
+#                else:
+#                    output_hr.append(hr.el_power + hr.efficiency)
+#            else:
+#                output_hr.append(0)
+    
     # parallel mode
     if mode == "parallel":
-        # determine heat pump thermal output (heat pump allways running)
         for i in range(len(dataframe)):
-            if th_energy_demand[i] <= hp.el_power * hp.get_current_cop(temperature[i]):
+            # thermal output hp
+            curr_th_power_hp = hp.el_power * hp.get_current_cop(temperature[i])
+            if th_energy_demand[i] <= curr_th_power_hp:
                 output_hp.append(th_energy_demand[i])
+                hp_capable.append(True)
             else:
-                output_hp.append(hp.th_power)#hp.el_power * hp.get_current_cop(temperature[i]))
-                
-        # determine heating rod thermal output
+                output_hp.append(curr_th_power_hp)
+                hp_capable.append(False)
+            
         for i in range(len(dataframe)):
-            if th_energy_demand[i] > output_hp[i]:   # if bools_temp[i] == True
+            # thermal output hr
+            if bools_temp[i] or not hp_capable[i]:
                 diff = th_energy_demand[i] - output_hp[i]
-                if diff <= hr.el_power + hr.efficiency:
+                if diff <= hr.el_power * hr.efficiency:
                     output_hr.append(diff)
                 else:
-                    output_hr.append(hr.el_power + hr.efficiency)
+                    output_hr.append(hr.el_power * hr.efficiency)
             else:
                 output_hr.append(0)
+                
                 
     # alternative mode
     if mode == "alternative":

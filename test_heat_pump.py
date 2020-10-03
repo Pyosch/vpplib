@@ -112,12 +112,22 @@ print("electrical power hp: " + str(hp.el_power) + " [kW]")
 sum_el_dem = hp.timeseries.el_demand.sum() * 0.25
 print("electrical demand hp: " + str(sum_el_dem) + " [kWh]")
 
+mean_el_dem = hp.timeseries.el_demand.mean()
+print("mean electrical demand: " + str(mean_el_dem) + " [kWh]")
+
 sum_output = hp.timeseries.thermal_energy_output.sum() * 0.25
 print("thermal output hp: " + str(sum_output) + " [kWh]")
 
+year_num = sum_output / sum_el_dem
+year_num_alt = hp.timeseries.cop.mean()#sum()/len(hp.timeseries.cop)
+print("year number hp: " + str(year_num))
+print("year number hp alternativ: " + str(year_num_alt))
+
 print(hp.timeseries)
-
-
+max_cop = hp.timeseries.cop.max()
+min_cop = hp.timeseries.cop.min()
+print("max cop: " + str(max_cop))
+print("min cop: " + str(min_cop))
 
 
 
