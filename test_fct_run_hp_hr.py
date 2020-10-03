@@ -81,7 +81,7 @@ hr = HeatingRod(identifier='hr1',
 
 # parameters for running hp and hr
 norm_temp = -14.0    # biv_temp = -3.0
-mode = "parallel"
+mode = "alternative"
 
 # layout hr and hp
 optimize_bivalent(hp, hr, mode, norm_temp, user_profile)
@@ -100,4 +100,4 @@ print(str(data))
 data[:].plot(figsize = (16, 9))
 plt.show()
 
-#data.to_csv("./input/pv/HP_air_HR_eff1_alternative.csv")
+data.to_csv("./input/pv/HP_air_HR_eff1_alternative.csv")

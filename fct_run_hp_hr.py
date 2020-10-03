@@ -40,6 +40,7 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     demand_hr = []
     
     hp_capable = []
+    hr_working = []
     
     # to iterate over
     th_energy_demand = dataframe['thermal_energy_demand'].values
@@ -94,22 +95,38 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
         # determine heat pump thermal output (heat pump running if t >= t_biv)
         for i in range(len(dataframe)):
             if bools_temp[i] == False:
-                if th_energy_demand[i] <= hp.el_power * hp.get_current_cop(temperature[i]):
+                curr_th_power_hp = hp.el_power * hp.get_current_cop(temperature[i])
+                if th_energy_demand[i] <= curr_th_power_hp:
                     output_hp.append(th_energy_demand[i])
+                    hp_capable.append(True)
                 else:
-                    output_hp.append(hp.th_power)#hp.el_power * hp.get_current_cop(temperature[i]))
+                    output_hp.append(curr_th_power_hp)#hp.el_power * hp.get_current_cop(temperature[i]))
+                    hp_capable.append(False)
             else:
                 output_hp.append(0)
+                hp_capable.append(False)
                 
         # determine heating rod thermal output
         for i in range(len(dataframe)):
-            if bools_temp[i] == True:
+            if bools_temp[i]:
                 if th_energy_demand[i] <= hr.el_power * hr.efficiency:
                     output_hr.append(th_energy_demand[i])
+                    hr_working.append(True)
                 else:
                     output_hr.append(hr.el_power * hr.efficiency)
+                    hr_working.append(True)
             else:
                 output_hr.append(0)
+                hr_working.append(False)
+                
+        for i in range(len(dataframe)):
+            if not hp_capable[i] or not hr_working[i]:
+                diff = th_energy_demand[i] - output_hp[i]
+                if diff <= hr.el_power * hr.efficiency:
+                    output_hr[i] = diff
+                else:
+                    output_hr[i] = hr.el_power * hr.efficiency
+
                 
     th_output_hp = pd.DataFrame(data = output_hp, columns = ['th_output_hp'],
                                 index = dataframe.index)
