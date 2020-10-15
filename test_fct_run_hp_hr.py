@@ -38,7 +38,7 @@ ramp_up_time = 1 / 15 #timesteps
 ramp_down_time = 1 / 15 #timesteps
 min_runtime = 1 #timesteps
 min_stop_time = 2 #timesteps
-heat_pump_type = "Air" #nur "Ground" oder "Air"!
+heat_pump_type = "Ground" #nur "Ground" oder "Air"!
 
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year,
@@ -81,13 +81,13 @@ hr = HeatingRod(identifier='hr1',
 
 # parameters for running hp and hr
 norm_temp = -14.0    # biv_temp = -3.0
-mode = "parallel"
+mode = "alternative"
 
 # layout hr and hp
 optimize_bivalent(hp, hr, mode, norm_temp, user_profile)
 
 # show results of layout
-print("thermal power hp: " + str(hp.th_power) + "[kW]")
+print("electrical power hp: " + str(hp.el_power) + "[kW]")
 print("electrical power hr: " + str(hr.el_power) + "[kW]")
 
 data = run_hp_hr(hp, hr, mode, user_profile, norm_temp)
@@ -100,5 +100,33 @@ print(str(data))
 data[:].plot(figsize = (16, 9))
 plt.show()
 
-data.to_csv("./input/pv/HP_air_HR_eff1_parallel.csv")
+data.to_csv("./input/pv/HP_ground_HR_eff1_alternative.csv")
 
+th_output_hp = data.th_output_hp.sum() / 4
+th_output_hr = data.th_output_hr.sum() / 4
+
+print("thermal output heatpump [kWh]: " + str(th_output_hp))
+print("thermal output heating rod [kWh]: " + str(th_output_hr))
+
+max_dem_hp = data.el_demand_hp.max()
+max_dem_hr = data.el_demand_hr.max()
+
+mean_dem_hp = data.el_demand_hp.mean()
+mean_dem_hr = data.el_demand_hr.mean()
+
+sum_dem_hp = data.el_demand_hp.sum() / 4
+sum_dem_hr = data.el_demand_hr.sum() / 4
+
+print("maximum electrical demand heatpump [kW]: " + str(max_dem_hp))
+print("maximum electrical demand heating rod [kW]: " + str(max_dem_hr))
+
+print("mean electrical demand heatpump [kW]: " + str(mean_dem_hp))
+print("mean electrical demand heating rod [kW]: " + str(mean_dem_hr))
+
+print("total electrical demand heatpump [kW]: " + str(sum_dem_hp))
+print("total electrical demand heating rod [kW]: " + str(sum_dem_hr))
+print("total electrical demand [kW]: " + str(sum_dem_hr + sum_dem_hp))
+
+scop = th_output_hp / sum_dem_hp
+
+print("SCOP of heat pump: " + str(scop))

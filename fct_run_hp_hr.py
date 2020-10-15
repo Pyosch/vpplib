@@ -39,6 +39,8 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     output_hr = []
     demand_hr = []
     
+    cops_hp = []
+    
     hp_capable = []
     hr_working = []
     
@@ -147,6 +149,11 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     el_demand_hr = pd.DataFrame(data = demand_hr, columns = ['el_demand_hr'],
                                 index = dataframe.index)
     
-    dataframe = pd.concat([dataframe, el_demand_hp, el_demand_hr], axis = 1)
+    for i in range(len(dataframe)):
+        cops_hp.append(hp.get_current_cop(temperature[i]))
+        
+    cops = pd.DataFrame(data = cops_hp, columns = ['cop'], index = dataframe.index)
+    
+    dataframe = pd.concat([dataframe, el_demand_hp, el_demand_hr, cops], axis = 1)
     
     return dataframe

@@ -121,43 +121,83 @@ for i in tes.user_profile.thermal_energy_demand.loc[start:end].index:
     tes.operate_storage_bivalent(i, hp, hr, t_norm)
 
 
-tes.timeseries.plot(figsize=figsize, title="Temperature of Storage")
-plt.show()
-tes.timeseries.iloc[0:960].plot(
-    figsize=figsize, title="Temperature of Storage 10-Day View"
-)
-plt.show()
-tes.timeseries.iloc[0:96].plot(
-    figsize=figsize, title="Temperature of Storage Daily View"
-)
-plt.show()
-
-hp.timeseries.el_demand.plot(figsize=figsize, title="Electrical Loadshape hp")
-plt.show()
-hp.timeseries.el_demand.iloc[0:960].plot(
-    figsize=figsize, title="Electrical Loadshape hp 10-Day View"
-)
-plt.show()
-hp.timeseries.el_demand.iloc[0:96].plot(
-    figsize=figsize, title="Electrical Loadshape hp Daily View"
-)
-plt.show()
-
-hr.timeseries.el_demand.plot(figsize=figsize, title="Electrical Loadshape hr")
-plt.show()
-hr.timeseries.el_demand.iloc[0:960].plot(
-    figsize=figsize, title="Electrical Loadshape hr 10-Day View"
-)
-plt.show()
-hr.timeseries.el_demand.iloc[0:96].plot(
-    figsize=figsize, title="Electrical Loadshape hr Daily View"
-)
-plt.show()
-
-#print(hr.timeseries)
-#print(hp.timeseries)
-#print(tes.timeseries)
+#tes.timeseries.plot(figsize=figsize, title="Temperature of Storage")
+#plt.show()
+#tes.timeseries.iloc[0:960].plot(
+#    figsize=figsize, title="Temperature of Storage 10-Day View"
+#)
+#plt.show()
+#tes.timeseries.iloc[0:96].plot(
+#    figsize=figsize, title="Temperature of Storage Daily View"
+#)
+#plt.show()
 #
-#df_complete = pd.concat([hr.timeseries, hp.timeseries, tes.timeseries], axis = 1)
+#hp.timeseries.el_demand.plot(figsize=figsize, title="Electrical Loadshape hp")
+#plt.show()
+#hp.timeseries.el_demand.iloc[0:960].plot(
+#    figsize=figsize, title="Electrical Loadshape hp 10-Day View"
+#)
+#plt.show()
+#hp.timeseries.el_demand.iloc[0:96].plot(
+#    figsize=figsize, title="Electrical Loadshape hp Daily View"
+#)
+#plt.show()
 #
-#df_complete.to_csv("./input/pv/HP_ground_HR_TES.csv")
+#hr.timeseries.el_demand.plot(figsize=figsize, title="Electrical Loadshape hr")
+#plt.show()
+#hr.timeseries.el_demand.iloc[0:960].plot(
+#    figsize=figsize, title="Electrical Loadshape hr 10-Day View"
+#)
+#plt.show()
+#hr.timeseries.el_demand.iloc[0:96].plot(
+#    figsize=figsize, title="Electrical Loadshape hr Daily View"
+#)
+#plt.show()
+
+print(hr.timeseries)
+print(hp.timeseries)
+print(tes.timeseries)
+
+hp.timeseries.plot()
+hr.timeseries.plot()
+tes.timeseries.plot()
+
+min_dem_hp = hp.timeseries.el_demand.min()
+max_dem_hp = hp.timeseries.el_demand.max()
+mean_dem_hp = hp.timeseries.el_demand.mean()
+sum_dem_hp  = hp.timeseries.el_demand.sum() / 4
+
+min_dem_hr = hr.timeseries.el_demand.min()
+max_dem_hr = hr.timeseries.el_demand.max()
+mean_dem_hr = hr.timeseries.el_demand.mean()
+sum_dem_hr  = hr.timeseries.el_demand.sum() / 4
+
+min_cop = hp.timeseries.cop.min()
+max_cop = hp.timeseries.cop.max()
+mean_cop = hp.timeseries.cop.mean()
+
+max_output_hp = hp.timeseries.thermal_energy_output.max()
+sum_output_hp = hp.timeseries.thermal_energy_output.sum() / 4
+scop = sum_output_hp / sum_dem_hp
+
+max_output_hr = hr.timeseries.thermal_energy_output.max()
+sum_output_hr = hr.timeseries.thermal_energy_output.sum() / 4
+
+print("min dem hp [kW]: " + str(min_dem_hp))
+print("max dem hp [kW]: " + str(max_dem_hp))
+print("mean dem hp [kW]: " + str(mean_dem_hp))
+print("sum dem hp [kWh]: " + str(sum_dem_hp))
+
+print("min dem hr [kW]: " + str(min_dem_hr))
+print("max dem hr [kW]: " + str(max_dem_hr))
+print("mean dem hr [kW]: " + str(mean_dem_hr))
+print("sum dem hr [kWh]: " + str(sum_dem_hr))
+
+print("sum output hp [kWh]: " + str(sum_output_hp))
+print("scop hp [-]: " + str(scop))
+print("sum output hr [kWh]: " + str(sum_output_hr))
+
+
+df_complete = pd.concat([hr.timeseries, hp.timeseries, tes.timeseries], axis = 1)
+
+df_complete.to_csv("./input/pv/HP_ground_HR_eff1_TES.csv")

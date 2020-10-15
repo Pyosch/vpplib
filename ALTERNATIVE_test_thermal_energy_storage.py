@@ -29,7 +29,7 @@ target_temperature = 60  # °C
 hysteresis = 5  # °K
 mass_of_storage = 500  # kg
 cp = 4.2
-efficiency_class = "A"
+efficiency_class = "C"
 
 # Values for Heatpump
 #el_power = 5  # kW electric
@@ -95,37 +95,70 @@ tes.optimize_tes_hp(hp, mode)
 print("mass of tes: " + str(tes.mass) + " [kg]")
 print("electrical power of hp: " + str(hp.el_power) + " [kW]")
 #print("thermal power of hp: " + str(hp.th_power) + " [kW]")
-hp.el_power = 1.3
+#hp.el_power = 1.3
 
 for i in tes.user_profile.thermal_energy_demand.loc[start:end].index:
     tes.operate_storage(i, hp)
 
 
-tes.timeseries.plot(figsize=figsize, title="Temperature of Storage")
-plt.show()
-tes.timeseries.iloc[0:960].plot(
-    figsize=figsize, title="Temperature of Storage 10-Day View"
-)
-plt.show()
-tes.timeseries.iloc[0:96].plot(
-    figsize=figsize, title="Temperature of Storage Daily View"
-)
-plt.show()
-hp.timeseries.el_demand.plot(figsize=figsize, title="Electrical Loadshape")
-plt.show()
-hp.timeseries.el_demand.iloc[0:960].plot(
-    figsize=figsize, title="Electrical Loadshape 10-Day View"
-)
-plt.show()
-hp.timeseries.el_demand.iloc[0:96].plot(
-    figsize=figsize, title="Electrical Loadshape Daily View"
-)
-plt.show()
+#tes.timeseries.plot(figsize=figsize, title="Temperature of Storage")
+#plt.show()
+#tes.timeseries.iloc[0:960].plot(
+#    figsize=figsize, title="Temperature of Storage 10-Day View"
+#)
+#plt.show()
+#tes.timeseries.iloc[0:96].plot(
+#    figsize=figsize, title="Temperature of Storage Daily View"
+#)
+#plt.show()
+#hp.timeseries.el_demand.plot(figsize=figsize, title="Electrical Loadshape")
+#plt.show()
+#hp.timeseries.el_demand.iloc[0:960].plot(
+#    figsize=figsize, title="Electrical Loadshape 10-Day View"
+#)
+#plt.show()
+#hp.timeseries.el_demand.iloc[0:96].plot(
+#    figsize=figsize, title="Electrical Loadshape Daily View"
+#)
+#plt.show()
 
 print(hp.timeseries)
 print(tes.timeseries)
+hp.timeseries.plot()
+tes.timeseries.plot()
 
-#df_complete = pd.concat([hp.timeseries, tes.timeseries], axis = 1)
-#print(df_complete)
-#
-#df_complete.to_csv("./input/pv/HP_ground_TES.csv")
+min_dem = hp.timeseries.el_demand.min()
+max_dem = hp.timeseries.el_demand.max()
+mean_dem = hp.timeseries.el_demand.mean()
+sum_dem  = hp.timeseries.el_demand.sum() / 4
+
+min_cop = hp.timeseries.cop.min()
+max_cop = hp.timeseries.cop.max()
+mean_cop = hp.timeseries.cop.mean()
+
+max_output = hp.timeseries.thermal_energy_output.max()
+sum_output  = hp.timeseries.thermal_energy_output.sum() / 4
+scop = sum_output / sum_dem
+
+hrs = hp.timeseries.el_demand > 0
+hrs_count = 0
+for i in hrs:
+    if i:
+        hrs_count += 1
+    
+hours_active = hrs_count / 4
+
+print("min el dem: " + str(min_dem))
+print("max el dem: " + str(max_dem))
+print("mean el dem: " + str(mean_dem))
+print("sum el dem: " + str(sum_dem))
+print("hours active: " + str(hours_active))
+print("max th output: " + str(max_output))
+print("sum th output: " + str(sum_output))
+print("mean cop: " + str(mean_cop))
+print("scop: " + str(scop))
+
+df_complete = pd.concat([hp.timeseries, tes.timeseries], axis = 1)
+print(df_complete)
+
+df_complete.to_csv("./input/pv/HP_ground_TES.csv")
