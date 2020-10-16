@@ -383,7 +383,10 @@ class HeatPump(Component):
                 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
+                    if self.heat_pump_type == "Air":
+                        temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
+                    if self.heat_pump_type == "Ground":
+                        temp = self.user_profile.mean_ground_temp_quarter_hours.ground_temperature.iloc[timestamp]
                     cop = self.get_current_cop(temp)                   
                     thermal_energy_output = el_demand * cop
                 else: 
@@ -398,7 +401,10 @@ class HeatPump(Component):
                 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp]
+                    if self.heat_pump_type == "Air":
+                        temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp]
+                    if self.heat_pump_type == "Ground":
+                        temp = self.user_profile.mean_ground_temp_quarter_hours.ground_temperature.loc[timestamp]
                     cop = self.get_current_cop(temp)                   
                     thermal_energy_output = el_demand * cop
                 else: 
@@ -414,7 +420,10 @@ class HeatPump(Component):
                 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
+                    if self.heat_pump_type == "Air":
+                        temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
+                    if self.heat_pump_type == "Ground":
+                        temp = self.user_profile.mean_ground_temp_quarter_hours.ground_temperature.loc[str(timestamp)]
                     cop = self.get_current_cop(temp)                   
                     thermal_energy_output = el_demand * cop
                 else: 
