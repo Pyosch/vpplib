@@ -19,11 +19,19 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     elif norm_temp > -10:
         biv_temp = -2
         
+    temp_air = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv",
+                              index_col="time")
+    
+        
     # temperature and heat demand over time
     heat_demand = user_profile.thermal_energy_demand
-    temperature = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv",
+    if hp.heat_pump_type == "Air":
+        temperature = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv",
                               index_col="time")
-    dataframe = pd.concat([heat_demand, temperature], axis = 1)
+    if hp.heat_pump_type == "Ground":
+        temperature = pd.read_csv("./input/thermal/pik_temp_15min_ground_2015.csv",
+                              index_col="time")
+    dataframe = pd.concat([heat_demand, temperature, temp_air ], axis = 1)
     
     # times where actual temp is below bivalence temp
     filter_temp = dataframe['temperature'] < biv_temp
@@ -46,8 +54,10 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     
     # to iterate over
     th_energy_demand = dataframe['thermal_energy_demand'].values
-    temperature = dataframe['temperature'].values
-    
+    if hp.heat_pump_type == "Ground":
+        temperature = dataframe['ground_temperature'].values
+    if hp.heat_pump_type == "Air":
+        temperature = dataframe['temperature'].values
 #    # parallel mode
 #    if mode == "parallel":
 #        # determine heat pump thermal output (heat pump allways running)

@@ -41,7 +41,7 @@ ramp_up_time = 1 / 15  # timesteps
 ramp_down_time = 1 / 15  # timesteps
 min_runtime = 1  # timesteps
 min_stop_time = 2  # timesteps
-heat_pump_type = "Ground"
+heat_pump_type = "Air"
 heat_sys_temp = 60
 
 t_norm = -12
@@ -200,4 +200,4 @@ print("sum output hr [kWh]: " + str(sum_output_hr))
 
 df_complete = pd.concat([hr.timeseries, hp.timeseries, tes.timeseries], axis = 1)
 
-df_complete.to_csv("./input/pv/HP_ground_HR_eff1_TES.csv")
+df_complete.to_csv("./output/HP_air_HR_eff1_TES.csv")

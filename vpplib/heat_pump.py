@@ -133,6 +133,9 @@ class HeatPump(Component):
         if len(self.environment.mean_temp_hours) == 0:
             self.environment.get_mean_temp_hours()
             
+        if len(self.environment.mean_ground_temp_hours) == 0:
+            self.environment.get_mean_ground_temp_hours()
+            
         cop_lst = []
         
         if self.heat_pump_type == "Air":
@@ -142,7 +145,7 @@ class HeatPump(Component):
                 cop_lst.append(cop)
         
         elif self.heat_pump_type == "Ground":
-            for i, tmp in self.environment.mean_temp_hours.iterrows():
+            for i, tmp in self.environment.mean_ground_temp_hours.iterrows():
                 cop = (8.77 - 0.15 * (self.heat_sys_temp - tmp)
                        + 0.000734 * (self.heat_sys_temp - tmp)**2)
                 cop_lst.append(cop)
@@ -208,21 +211,21 @@ class HeatPump(Component):
         return cop
     
 
-    def get_current_cop_alt(self, tmp):
+    # def get_current_cop_alt(self, tmp):
 
-        if self.heat_pump_type == "Air":
-            cop = (6.81 - 0.121 * (self.heat_sys_temp - tmp)
-                       + 0.00063 * (self.heat_sys_temp - tmp)**2)
+    #     if self.heat_pump_type == "Air":
+    #         cop = (6.81 - 0.121 * (self.heat_sys_temp - tmp)
+    #                    + 0.00063 * (self.heat_sys_temp - tmp)**2)
         
-        elif self.heat_pump_type == "Ground":
-            cop = (8.77 - 0.15 * (self.heat_sys_temp - tmp)
-                       + 0.000734 * (self.heat_sys_temp - tmp)**2)
+    #     elif self.heat_pump_type == "Ground":
+    #         cop = (8.77 - 0.15 * (self.heat_sys_temp - tmp)
+    #                    + 0.000734 * (self.heat_sys_temp - tmp)**2)
         
-        else:
-            print("Heatpump type is not defined")
-            return -9999
+    #     else:
+    #         print("Heatpump type is not defined")
+    #         return -9999
 
-        return cop
+    #     return cop
      
     #from VPPComponents
     def prepare_time_series(self):

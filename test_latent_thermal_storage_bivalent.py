@@ -141,4 +141,4 @@ print("scop: " + str(scop))
 
 df_complete = pd.concat([lts.timeseries, hp.timeseries], axis = 1)
 print(df_complete)
-df_complete.to_csv("./input/pv/HP_air_LTS.csv")
+df_complete.to_csv("./output/HP_air_LTS.csv")

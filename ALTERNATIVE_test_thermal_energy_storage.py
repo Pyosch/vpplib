@@ -161,4 +161,4 @@ print("scop: " + str(scop))
 df_complete = pd.concat([hp.timeseries, tes.timeseries], axis = 1)
 print(df_complete)
 
-df_complete.to_csv("./input/pv/HP_ground_TES.csv")
+df_complete.to_csv("./output/HP_ground_TES.csv")

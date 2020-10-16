@@ -94,6 +94,7 @@ class UserProfile(object):
         self.mean_temp_quarter_hours.index = pd.to_datetime(
                 self.mean_temp_quarter_hours.index)
         
+        
         self.demand_daily = pd.read_csv("./input/thermal/demand_daily.csv")
         self.t_0 = t_0  #°C
         

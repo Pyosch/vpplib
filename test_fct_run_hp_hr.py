@@ -89,6 +89,7 @@ optimize_bivalent(hp, hr, mode, norm_temp, user_profile)
 # show results of layout
 print("electrical power hp: " + str(hp.el_power) + "[kW]")
 print("electrical power hr: " + str(hr.el_power) + "[kW]")
+print("thermal power hp: " + str(hp.th_power) + "[kW]")
 
 data = run_hp_hr(hp, hr, mode, user_profile, norm_temp)
 ratio = determin_heating_ratio(data)
@@ -96,11 +97,6 @@ print("share of heating rod: " + (str(ratio * 100)) + " %")
 
 #i_data = pd.concat([data.th_output_hp, data.thermal_energy_demand], axis = 1)
 
-print(str(data))
-data[:].plot(figsize = (16, 9))
-plt.show()
-
-data.to_csv("./input/pv/HP_ground_HR_eff1_alternative.csv")
 
 th_output_hp = data.th_output_hp.sum() / 4
 th_output_hr = data.th_output_hr.sum() / 4
@@ -130,3 +126,9 @@ print("total electrical demand [kW]: " + str(sum_dem_hr + sum_dem_hp))
 scop = th_output_hp / sum_dem_hp
 
 print("SCOP of heat pump: " + str(scop))
+
+print(str(data))
+data[:].plot(figsize = (16, 9))
+plt.show()
+
+data.to_csv("./output/HP_ground_HR_eff1_alternative.csv")

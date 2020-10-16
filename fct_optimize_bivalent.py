@@ -48,7 +48,7 @@ def optimize_bivalent(heat_pump, heating_rod, mode, norm_temp, user_profile):
     a = (P_p1 - P_p0) / (T_p1 - T_p0)
     
     # calculate parameter b: b=P(T)-a*T
-    b = 0 - a * 20
+    b = 0 - a * 20 # Annahme bei 20 Grad keine Energie für Raumwärme notwendig
     
     # bivalence temerature (determine with tabels in Vaillant hand book)
     T_biv = biv_temp

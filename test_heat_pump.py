@@ -130,5 +130,4 @@ print("max cop: " + str(max_cop))
 print("min cop: " + str(min_cop))
 
 
-
-
+hp.timeseries.to_csv("./output/HP_air.csv")
