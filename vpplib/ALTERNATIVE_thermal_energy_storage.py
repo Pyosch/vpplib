@@ -116,8 +116,7 @@ class ThermalEnergyStorage(Component):
         #self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
         self.state_of_charge = mass * cp * (self.current_temperature - (target_temperature +    # somit müsste der Ladestand zu beginn immer = 0 sein
                                                                         - hysteresis))
-        # Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10%
-        # Bereitschaftsverluste hat (ohne Rohrleitungen!!)
+   
         self.thermal_energy_loss_per_day = self.efficiencies[self.mass].loc[self.efficiency_class] #thermal_energy_loss_per_day
         self.thermal_energy_loss_per_day *= 24/1000
         

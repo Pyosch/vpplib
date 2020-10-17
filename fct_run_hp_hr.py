@@ -26,19 +26,19 @@ def run_hp_hr(hp, hr, mode, user_profile, norm_temp):
     # temperature and heat demand over time
     heat_demand = user_profile.thermal_energy_demand
     if hp.heat_pump_type == "Air":
-        temperature = pd.read_csv("./input/thermal/dwd_temp_15min_2015.csv",
-                              index_col="time")
+        temperature = temp_air
+        dataframe = pd.concat([heat_demand, temperature], axis = 1)
     if hp.heat_pump_type == "Ground":
         temperature = pd.read_csv("./input/thermal/pik_temp_15min_ground_2015.csv",
                               index_col="time")
-    dataframe = pd.concat([heat_demand, temperature, temp_air ], axis = 1)
+        dataframe = pd.concat([heat_demand, temperature, temp_air], axis = 1)
     
     # times where actual temp is below bivalence temp
     filter_temp = dataframe['temperature'] < biv_temp
     bools_temp = filter_temp.values
     filter_temp = pd.DataFrame(data = bools_temp, columns = ['t below t_biv'],
                                index = dataframe.index)
-
+   
     dataframe = pd.concat([dataframe, filter_temp], axis = 1)
     
     output_hp = []

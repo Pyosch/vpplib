@@ -29,7 +29,7 @@ target_temperature = 60  # °C
 hysteresis = 5  # °K
 mass_of_storage = 500  # kg
 cp = 4.2
-efficiency_class = "C"
+efficiency_class = "A+"
 
 # Values for Heatpump
 #el_power = 5  # kW electric
@@ -38,7 +38,7 @@ ramp_up_time = 1 / 15  # timesteps
 ramp_down_time = 1 / 15  # timesteps
 min_runtime = 1  # timesteps
 min_stop_time = 2  # timesteps
-heat_pump_type = "Ground"
+heat_pump_type = "Air"
 heat_sys_temp = 60
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year)
@@ -161,4 +161,4 @@ print("scop: " + str(scop))
 df_complete = pd.concat([hp.timeseries, tes.timeseries], axis = 1)
 print(df_complete)
 
-df_complete.to_csv("./output/HP_ground_TES.csv")
+#df_complete.to_csv("./output/HP_air_TES.csv")

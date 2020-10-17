@@ -5,7 +5,7 @@ Created on Sun Jul  5 10:43:54 2020
 @author: andre
 test function operate_storage_bivalent
 """
-
+from tqdm import tqdm
 from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.ALTERNATIVE_thermal_energy_storage import ThermalEnergyStorage
@@ -32,7 +32,7 @@ target_temperature = 60  # °C
 hysteresis = 5  # °K
 mass_of_storage = 500  # kg
 cp = 4.2
-thermal_energy_loss_per_day = 0.13
+efficiency_class = "A+"
 
 # Values for Heatpump
 #el_power = 5  # kW electric
@@ -41,8 +41,9 @@ ramp_up_time = 1 / 15  # timesteps
 ramp_down_time = 1 / 15  # timesteps
 min_runtime = 1  # timesteps
 min_stop_time = 2  # timesteps
-heat_pump_type = "Air"
+heat_pump_type = "Ground"
 heat_sys_temp = 60
+
 
 t_norm = -12
 
@@ -77,7 +78,7 @@ tes = ThermalEnergyStorage(
     hysteresis=hysteresis,
     target_temperature=target_temperature,
     #thermal_energy_loss_per_day=thermal_energy_loss_per_day,
-    efficiency_class = "A+"
+    efficiency_class = efficiency_class
 )
 
 hp = HeatPump(
@@ -117,7 +118,7 @@ print("electrical power of hp: " + str(hp.el_power) + " [kW]")
 print("electrical power of hr: " + str(hr.el_power) + " [kW]")
 print(str(tes.efficiency_per_timestep))
 
-for i in tes.user_profile.thermal_energy_demand.loc[start:end].index:
+for i in tqdm (tes.user_profile.thermal_energy_demand.loc[start:end].index):
     tes.operate_storage_bivalent(i, hp, hr, t_norm)
 
 
@@ -200,4 +201,4 @@ print("sum output hr [kWh]: " + str(sum_output_hr))
 
 df_complete = pd.concat([hr.timeseries, hp.timeseries, tes.timeseries], axis = 1)
 
-df_complete.to_csv("./output/HP_air_HR_eff1_TES.csv")
+df_complete.to_csv("./output/HP_ground_HR_eff1_TES.csv")
