@@ -403,8 +403,8 @@ class VirtualPowerPlant(object):
                          self.components[component].battery_min,
                          self.components[component].battery_max
                          ),
-                     "capacity_kWh": self.components[component].capacity,
-                     "power_kW": self.components[component].max_power,
+                     "capacity_kWh": self.components[component].battery_max,
+                     "power_kW": self.components[component].charging_power,
                      "efficiency_el": self.components[component].charge_efficiency},
                     ignore_index=True)
 
