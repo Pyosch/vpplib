@@ -447,13 +447,9 @@ else:
 
 print(df_component_values)
 plt.legend()
-plt.savefig("./Results/timeseries.png")
 plt.show()
 
 df_timeseries.wind.plot(figsize=figsize, label="wind [kW]")
 plt.legend()
-plt.savefig("./Results/timeseries_wind.png")
 plt.show()
 
-# df_timeseries.to_csv("./Results/df_timeseries.csv")
-# df_component_values.to_csv("./Results/df_component_values.csv")
