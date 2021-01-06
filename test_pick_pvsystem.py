@@ -52,7 +52,7 @@ pv = Photovoltaic(module_lib="SandiaMod",
                   surface_tilt = 20,
                   surface_azimuth = 200,
                   unit="kW",
-                  identifier=None,
+                  identifier="PV-System",
                   environment=environment,
                   user_profile=user_profile,
                   cost=None)
