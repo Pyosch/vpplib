@@ -135,9 +135,6 @@ class Photovoltaic(Component):
             raise ValueError("self.environment.pv_data is empty.")
 
         self.modelchain.run_model(
-            times=self.environment.pv_data.loc[
-                self.environment.start : self.environment.end
-            ].index,
             weather=self.environment.pv_data.loc[
                 self.environment.start : self.environment.end
             ],
