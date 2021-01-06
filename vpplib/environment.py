@@ -75,6 +75,7 @@ class Environment(object):
     def get_pv_data(self, file="./input/pv/dwd_pv_data_2015.csv"):
 
         self.pv_data = pd.read_csv(file, index_col="time")
+        self.pv_data.index = pd.to_datetime(self.pv_data.index)
 
         return self.pv_data
 
