@@ -75,10 +75,10 @@ pv_file = "./input/pv/dwd_pv_data_2015.csv"
 module_lib = "SandiaMod"
 module = "Canadian_Solar_CS5P_220M___2009_"
 inverter_lib = "cecinverter"
-inverter = "ABB__PVI_4_2_OUTD_S_US_Z_M_A__208_V__208V__CEC_2014_"
+inverter = "ABB__MICRO_0_25_I_OUTD_US_208__208V_"
 surface_tilt = (20,)
 surface_azimuth = 200
-modules_per_string = 4
+modules_per_string = 2
 strings_per_inverter = 2
 
 # BEV data
