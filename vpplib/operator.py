@@ -321,7 +321,7 @@ class Operator(object):
                         state_of_charge, res_load = self.virtual_power_plant.components[
                             self.net.storage.loc[storage_at_bus].name.item()
                         ].operate_storage(
-                            res_loads.loc[idx][bus].item()
+                            res_loads.loc[idx][bus]
                         )
 
                         # save state of charge and residual load in timeseries
