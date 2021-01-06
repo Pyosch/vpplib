@@ -19,9 +19,6 @@ from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
 
-# import logging
-# logging.getLogger().setLevel(logging.DEBUG)
-
 
 # environment
 start = "2015-03-01 00:00:00"
@@ -111,12 +108,12 @@ capacity = 4  # kWh
 max_c = 1  # factor between 0.5 and 1.2
 
 # %% define the amount of components in the grid
-# NOT VALID for all component distribution methods (see line 131-143)
+# NOT VALID for all component distribution methods (see line 220-234)
 
 pv_percentage = 50
 storage_percentage = 50
-bev_percentage = 0
-hp_percentage = 0
+bev_percentage = 10
+hp_percentage = 10
 wind_percentage = 0
 
 # %% environment
