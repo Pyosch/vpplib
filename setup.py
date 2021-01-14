@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="vpplib",
-    version="0.0.1",
+    version="0.0.2",
     author="Sascha Birk",
     author_email="birk-sascha@web.de",
     description="simulating distributed energy appliances in a virtual power plant",
@@ -21,6 +21,7 @@ setuptools.setup(
           'windpowerlib',
           'pvlib',
           'pandapower',
+          'simbench',
           ],
     classifiers=[
         "Programming Language :: Python :: 3",
