@@ -7,7 +7,7 @@ operation stategies. One subclass for example could implement
 machine learning to operate the virtual power plant.
 Additional functions that help operating the virtual power plant,
 like forecasting, should be implemented here.
-        
+
 TODO: Setup data type for target data and alter the referencing accordingly!
 
 """
@@ -24,8 +24,7 @@ class Operator(object):
                  virtual_power_plant,
                  net,
                  target_data,
-                 environment = None):
-
+                 environment=None):
         """
         Info
         ----
@@ -40,32 +39,32 @@ class Operator(object):
         machine learning to operate the virtual power plant.
         Additional functions that help operating the virtual power plant,
         like forecasting, should be implemented here.
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         # Configure attributes
@@ -75,42 +74,41 @@ class Operator(object):
         self.environment = environment
 
     def operate_virtual_power_plant(self):
-
         """
         Info
         ----
         Operation handling
-    
+
         This function is the key function for the operation of the virtual
         power plant. It simulates every timestamp given in the target data.
         It returns how good the operation of the virtual power plant matches
         the target data (0: no match, 1: perfect match).
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         # Create result variables
@@ -145,77 +143,75 @@ class Operator(object):
         return average
 
     def operate_at_timestamp(self, timestamp):
-
         """
         Info
         ----
         Raises an error since this function needs to be implemented by child classes.
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         raise NotImplementedError(
             "operate_at_timestamp needs to be implemented by child classes!"
         )
 
-    #%% assign values of generation/demand over time and run powerflow
+    # %% assign values of generation/demand over time and run powerflow
     def run_base_scenario(self, baseload):
-
         """
         Info
         ----
-        
+
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         net_dict = {}
@@ -321,7 +317,7 @@ class Operator(object):
                         state_of_charge, res_load = self.virtual_power_plant.components[
                             self.net.storage.loc[storage_at_bus].name.item()
                         ].operate_storage(
-                            res_loads.loc[idx][bus]
+                            res_loads.loc[idx][bus].item()
                         )
 
                         # save state of charge and residual load in timeseries
@@ -384,54 +380,53 @@ class Operator(object):
 
         return net_dict  # , res_loads #res_loads can be returned for analyses
 
-    #%% define a function to apply absolute values from SimBench profiles
+    # %% define a function to apply absolute values from SimBench profiles
 
     def apply_absolute_simbench_values(self, absolute_values_dict, case_or_time_step):
         for elm_param in absolute_values_dict.keys():
             if absolute_values_dict[elm_param].shape[1]:
                 elm = elm_param[0]
                 param = elm_param[1]
-                self.net[elm].loc[:, param] = absolute_values_dict[elm_param].loc[case_or_time_step]
+                self.net[elm].loc[:,
+                                  param] = absolute_values_dict[elm_param].loc[case_or_time_step]
 
         return self.net
 
-
-    #%% assign values of generation/demand from SimBench and VPPlib
+    # %% assign values of generation/demand from SimBench and VPPlib
     # over time and run powerflow
 
     def run_simbench_scenario(self, profiles):
-
         """
         Info
         ----
-        
+
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         net_dict = {}
@@ -441,7 +436,7 @@ class Operator(object):
         res_loads = pd.DataFrame(
             columns=[self.net.bus.index[self.net.bus.type == "b"]], index=index
         )  # maybe only take buses with storage
-        
+
         # # check that all needed profiles existent
         # assert not simbench.profiles_are_missing(self.net)
 
@@ -451,11 +446,11 @@ class Operator(object):
         for elm_param in profiles.keys():
             profiles[elm_param].index = pd.date_range(
                 start=self.virtual_power_plant.components[
-                next(iter(self.virtual_power_plant.components))
+                    next(iter(self.virtual_power_plant.components))
                 ].environment.start[:4],
                 periods=len(profiles[elm_param].index),
                 freq=self.virtual_power_plant.components[
-                next(iter(self.virtual_power_plant.components))
+                    next(iter(self.virtual_power_plant.components))
                 ].environment.time_freq)
 
         for idx in tqdm(index):
@@ -471,7 +466,7 @@ class Operator(object):
                         value_for_timestamp = self.virtual_power_plant.components[
                             component
                         ].value_for_timestamp(str(idx))
-    
+
                         if math.isnan(value_for_timestamp):
                             raise ValueError(
                                 (
@@ -606,40 +601,39 @@ class Operator(object):
 
         return net_dict  # , res_loads #res_loads can be returned for analyses
 
-    #%% assign values of generation/demand over time and run powerflow
+    # %% assign values of generation/demand over time and run powerflow
     def run_vise_scenario(self, el_dict):
-
         """
         Info
         ----
-        
+
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         net_dict = {}
@@ -659,7 +653,7 @@ class Operator(object):
                         value_for_timestamp = self.virtual_power_plant.components[
                             component
                         ].value_for_timestamp(str(idx))
-    
+
                         if math.isnan(value_for_timestamp):
                             raise ValueError(
                                 (
@@ -704,7 +698,6 @@ class Operator(object):
                         self.net.load.iloc[load].profile].loc[idx].item()/1000
 
                     self.net.load.q_mvar[load] = 0
-
 
                 elif self.net.load.type[load] == "mv_load":
 
@@ -808,38 +801,37 @@ class Operator(object):
 # %% extract all results from pandas powerflow
 
     def extract_results(self, net_dict):
-
         """
         Info
         ----
-        
+
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         # Create DataFrames for later export
@@ -939,41 +931,40 @@ class Operator(object):
 
         return results
 
-    #%% extract results of single component categories
+    # %% extract results of single component categories
 
     def extract_single_result(self, net_dict, res="load", value="p_mw"):
-
         """
         Info
         ----
-        
+
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         single_result = pd.DataFrame()
@@ -994,38 +985,37 @@ class Operator(object):
         return single_result
 
     def plot_results(self, results, legend=True):
-
         """
         Info
         ----
-        
+
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         results["ext_grid"].plot(
@@ -1079,38 +1069,37 @@ class Operator(object):
             plt.show()
 
     def plot_storages(self):
-
         """
         Info
         ----
-        
+
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         for comp in self.virtual_power_plant.components.keys():
