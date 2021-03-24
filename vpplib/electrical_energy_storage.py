@@ -9,6 +9,8 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 from .component import Component
 import pandas as pd
 
+from configparser import ConfigParser
+from simses.main import SimSES
 
 class ElectricalEnergyStorage(Component):
     def __init__(
@@ -30,37 +32,37 @@ class ElectricalEnergyStorage(Component):
         ----
         The class "ElectricalEnergyStorage" adds functionality to implement an
         electrical energy storage to the virtual power plant.
-        
-        
+
+
         Parameters
         ----------
-        
+
         capacity [kWh]
         charge_efficiency [-] (between 0 and 1)
         discharge_efficiency [-] (between 0 and 1)
         max_power [kW]
         maxC [-] (between 0.5 and 1.2)
-        	
+
         Attributes
         ----------
-        
+
         The stateOfCharge [kWh] is set to zero by default.
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         # Call to super class
@@ -111,34 +113,34 @@ class ElectricalEnergyStorage(Component):
         """
         Info
         ----
-        
+
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         if residual_load >= 0:
@@ -156,40 +158,40 @@ class ElectricalEnergyStorage(Component):
         """
         Info
         ----
-        This function takes a timestamp as the parameter and returns a 
-        dictionary with key (String) value (Any) pairs. 
-        Depending on the type of component, different status parameters of the 
-        respective component can be queried. 
-        
+        This function takes a timestamp as the parameter and returns a
+        dictionary with key (String) value (Any) pairs.
+        Depending on the type of component, different status parameters of the
+        respective component can be queried.
+
         For example, a power store can report its "State of Charge".
-        Returns an empty dictionary since this function needs to be 
+        Returns an empty dictionary since this function needs to be
         implemented by child classes.
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
         if type(timestamp) == int:
 
@@ -225,32 +227,32 @@ class ElectricalEnergyStorage(Component):
         This function takes the energy [kWh] that should be charged and the timebase as
         parameters. The timebase [minutes] is neccessary to calculate if the maximum
         power is exceeded.
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
         power = charge / (self.environment.timebase / 60)
 
@@ -292,32 +294,32 @@ class ElectricalEnergyStorage(Component):
         This function takes the energy [kWh] that should be discharged and the timebase as
         parameters. The timebase [minutes] is neccessary to calculate if the maximum
         power is exceeded.
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         power = charge / (self.environment.timebase / 60)
@@ -370,3 +372,84 @@ class ElectricalEnergyStorage(Component):
             raise ValueError(
                 "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
             )
+
+class SimSESModel():
+
+    def __init__(self,
+                 env,
+                 p_n: float,
+                 c_n: float,
+                 soc: float,
+                 soc_min: float,
+                 soc_max: float,
+                 eff: float,
+                 name: str = None,
+                 model: str = 'simple',
+                 result_path: str = None):
+        """
+        Parameters
+        ----------------
+        env : Class Environment
+            environment of the Energy Storage System including timeframe
+        p_n : float
+            nominal power in kW
+        c_n : float
+            nominal energy capacity in kWh
+        soc : float
+            initial state of charge
+        soc_min: float
+            minimal state of charge
+        soc_max: float
+            maximal state of charge
+        eff: float
+            charging/discharging efficiency, only used when model == 'simple'
+        name : str
+            name of the Energy Storage System
+        model : str
+            model to use for the Energy Storage simulation
+        """
+        self.p_n = p_n
+        super().__init__(env, name, self.c_invest_n*self.p_n, self.c_OnM_n*self.p_n)
+        if soc_max < soc_min:
+            raise al.InputError('soc_max must be higher than soc_min!')
+        self.model = model
+        self.eff = eff  # only used if model=='simple'
+        self.c_n = c_n
+        self.soc_min = soc_min
+        self.soc_max = soc_max
+        self.soc_start = soc
+        self.df = pd.DataFrame(columns=['P', 'SOC'], index=env.time)    # P: power [kW], SOC: State of Charge [-]
+
+        if model == 'SimSES':
+            if self.name is None:
+                simulation_name = 'NoName'
+            else:
+                simulation_name = self.name
+            self.simulation_config: ConfigParser = ConfigParser()
+            self.storage_config = StorageSystemConfig(self.simulation_config)
+
+            self.simulation_config.add_section('GENERAL')
+            self.simulation_config.set('GENERAL', 'TIME_STEP', str(env.step * 60))  # SimSES needs step size in sec
+            self.simulation_config.set('GENERAL', 'START', str(env.time[0]-dt.timedelta(minutes=env.step*9)))
+            self.simulation_config.set('GENERAL', 'END', str(env.time[-1]))
+            self.simulation_config.add_section('STORAGE_SYSTEM')
+            self.simulation_config.set('STORAGE_SYSTEM', 'STORAGE_SYSTEM_AC',
+                                       'system_1,' +
+                                       str(abs(self.p_n * 1000)) +
+                                       ',600,' +
+                                       'acdc,NoSystemThermalModel,NoHousing,no_hvac')
+            self.simulation_config.set('STORAGE_SYSTEM', 'ACDC_CONVERTER', 'acdc, FixEfficiencyAcDcConverter')
+            self.simulation_config.set('STORAGE_SYSTEM', 'STORAGE_TECHNOLOGY',
+                                       'storage_1, ' + str(self.c_n * 1000) + ', lithium_ion,'  # Config uses Watt hours
+                                       + 'SonyLFP')     # str(self.storage_config.cell_type))
+
+            self.simulation_config.add_section('BATTERY')
+            self.simulation_config.set('BATTERY', 'START_SOC', str(self.soc_start))
+            self.simulation_config.set('BATTERY', 'MIN_SOC', str(self.soc_min))
+            self.simulation_config.set('BATTERY', 'MAX_SOC', str(self.soc_max))
+            # self.simulation_config.set('BATTERY', 'START_SOH', '1.0')
+
+            self.simses: SimSES = SimSES(str(result_path + '\\').replace('\\', '/'), simulation_name,
+                                         do_simulation=True,
+                                         do_analysis=True,
+                                         simulation_config=self.simulation_config)
