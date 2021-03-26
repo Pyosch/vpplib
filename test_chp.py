@@ -9,11 +9,12 @@ from vpplib.environment import Environment
 from vpplib.thermal_energy_storage import ThermalEnergyStorage
 from vpplib.combined_heat_and_power import CombinedHeatAndPower
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 figsize = (10, 6)
 
 start = "2015-01-01 00:00:00"
-end = "2015-12-31 23:45:00"
+end = "2015-01-10 23:45:00"
 year = "2015"
 periods = None
 time_freq = "15 min"
@@ -91,25 +92,27 @@ chp = CombinedHeatAndPower(
 )
 
 
-for i in tes.user_profile.thermal_energy_demand.index:
+for i in tqdm(tes.user_profile.thermal_energy_demand.loc[start:end].index):
     tes.operate_storage(i, chp)
 
 
-tes.timeseries.plot(figsize=figsize, title="Yearly Temperature of Storage")
+# tes.timeseries.plot(figsize=figsize, title="Yearly Temperature of Storage")
+# plt.show()
+tes.timeseries.iloc[0:960].plot(figsize=figsize,
+                                title="10-Day View of Storagetemperature")
 plt.show()
-tes.timeseries.iloc[10000:10960].plot(figsize=figsize, title="10-Day View")
+tes.timeseries.iloc[0:96].plot(figsize=figsize,
+                               title="Daily View of Storagetemperature")
 plt.show()
-tes.timeseries.iloc[10000:10096].plot(figsize=figsize, title="Daily View")
+# chp.timeseries.el_demand.plot(
+#     figsize=figsize, title="Yearly Electrical Loadshape"
+# )
 plt.show()
-chp.timeseries.el_demand.plot(
-    figsize=figsize, title="Yearly Electrical Loadshape"
+chp.timeseries.el_demand.iloc[0:960].plot(
+    figsize=figsize, title="10-Day View of Electrical Generation"
 )
 plt.show()
-chp.timeseries.el_demand.iloc[10000:10960].plot(
-    figsize=figsize, title="10-Day View"
-)
-plt.show()
-chp.timeseries.el_demand.iloc[10000:10096].plot(
-    figsize=figsize, title="Daily View"
+chp.timeseries.el_demand.iloc[0:96].plot(
+    figsize=figsize, title="Daily View of Electrical Generation"
 )
 plt.show()
