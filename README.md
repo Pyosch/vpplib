@@ -26,6 +26,3 @@ The Environment can be passed to any Component in the constructor. Depending on 
 ## UserProfile
 The UserProfile class is similar to the Environment class. However, this contains information on the respective usage of different types of users. For example, it can be stored how many kilometers per day an electric vehicle covers. This information is used, for example, in the model of the electric vehicle to calculate the state of charge at arrival in the evening.
 Further parameters which describe the user behavior can also be stored.
-
-# Components of the VPPlib
-The following chapter will give an insight on the 
