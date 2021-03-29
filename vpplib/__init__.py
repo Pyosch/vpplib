@@ -3,6 +3,7 @@ from .battery_electric_vehicle import BatteryElectricVehicle
 from .combined_heat_and_power import CombinedHeatAndPower
 from .component import Component
 from .electrical_energy_storage import ElectricalEnergyStorage
+from .electrical_energy_storage import ElectricalEnergyStorageSimses
 from .environment import Environment
 from .heat_pump import HeatPump
 from .operator import Operator
