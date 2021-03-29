@@ -11,6 +11,8 @@ import pandas as pd
 
 from configparser import ConfigParser
 from simses.main import SimSES
+from simses.config.simulation.storage_system_config import StorageSystemConfig
+
 
 class ElectricalEnergyStorage(Component):
     def __init__(
@@ -26,7 +28,6 @@ class ElectricalEnergyStorage(Component):
         user_profile=None,
         cost=None,
     ):
-
         """
         Info
         ----
@@ -109,7 +110,6 @@ class ElectricalEnergyStorage(Component):
         return self.timeseries
 
     def operate_storage(self, residual_load):
-
         """
         Info
         ----
@@ -154,7 +154,6 @@ class ElectricalEnergyStorage(Component):
     # ===================================================================================
 
     def observations_for_timestamp(self, timestamp):
-
         """
         Info
         ----
@@ -220,7 +219,6 @@ class ElectricalEnergyStorage(Component):
     # ===================================================================================
 
     def charge(self, charge):
-
         """
         Info
         ----
@@ -260,7 +258,7 @@ class ElectricalEnergyStorage(Component):
             charge = (self.max_power * self.max_c) * (
                 self.environment.timebase / 60
             )
-            #TODO: Process residual load when power > max_power * max_c
+            # TODO: Process residual load when power > max_power * max_c
 
         if self.state_of_charge < self.capacity:
             # storage has not reached its max capacity
@@ -287,7 +285,6 @@ class ElectricalEnergyStorage(Component):
         return self.state_of_charge, charge
 
     def discharge(self, charge):
-
         """
         Info
         ----
@@ -373,52 +370,87 @@ class ElectricalEnergyStorage(Component):
                 "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
             )
 
-class SimSESModel():
+
+class ElectricalEnergyStorageSimses(Component):
+    """.
+
+    Parameters
+    ----------
+    max_power : float
+        nominal power in kW
+    capacity : float
+        nominal energy capacity in kWh
+    soc : float
+        initial state of charge
+        between 0.0 and 1!
+    soc_min: float
+        minimal state of charge
+        between 0.0 and 1!
+    soc_max: float
+        maximal state of charge
+        between 0.0 and 1!
+    efficiency: float
+        charging/discharging efficiency, only used when model == 'simple'
+    name : str
+        name of the Energy Storage System
+    model : str
+        model to use for the Energy Storage simulation.
+        The default is 'simple'.
+    result_path : str, optional
+        DESCRIPTION. The default is None
+    environment: class,
+        Instance fo the Environment class containing information about
+        time dependent variables.
+    user_profile : TYPE, optional
+        DESCRIPTION. The default is None.
+    unit : TYPE, optional
+        DESCRIPTION. The default is None.
+    cost : TYPE, optional
+        DESCRIPTION. The default is None.
+
+    Raises
+    ------
+    ValueError
+        If soc_min > soc_max.
+    """
 
     def __init__(self,
-                 env,
-                 p_n: float,
-                 c_n: float,
+                 max_power: float,
+                 capacity: float,
                  soc: float,
                  soc_min: float,
                  soc_max: float,
-                 eff: float,
+                 efficiency: float,
                  name: str = None,
                  model: str = 'simple',
-                 result_path: str = None):
-        """
-        Parameters
-        ----------------
-        env : Class Environment
-            environment of the Energy Storage System including timeframe
-        p_n : float
-            nominal power in kW
-        c_n : float
-            nominal energy capacity in kWh
-        soc : float
-            initial state of charge
-        soc_min: float
-            minimal state of charge
-        soc_max: float
-            maximal state of charge
-        eff: float
-            charging/discharging efficiency, only used when model == 'simple'
-        name : str
-            name of the Energy Storage System
-        model : str
-            model to use for the Energy Storage simulation
-        """
-        self.p_n = p_n
-        super().__init__(env, name, self.c_invest_n*self.p_n, self.c_OnM_n*self.p_n)
+                 result_path: str = None,
+                 environment=None,
+                 user_profile=None,
+                 unit=None,
+                 cost=None
+                 ):
+
+        self.max_power = max_power
+
+        # Call to super class
+        super(ElectricalEnergyStorageSimses, self).__init__(
+            unit, environment, user_profile, cost
+        )
+
         if soc_max < soc_min:
-            raise al.InputError('soc_max must be higher than soc_min!')
+            raise ValueError('soc_max must be higher than soc_min!')
         self.model = model
-        self.eff = eff  # only used if model=='simple'
-        self.c_n = c_n
+        self.efficiency = efficiency  # only used if model=='simple'
+        self.capacity = capacity
         self.soc_min = soc_min
         self.soc_max = soc_max
         self.soc_start = soc
-        self.df = pd.DataFrame(columns=['P', 'SOC'], index=env.time)    # P: power [kW], SOC: State of Charge [-]
+        # P: power [kW], SOC: State of Charge [-]
+        self.df = pd.DataFrame(columns=['P', 'SOC'],
+                               index=pd.date_range(
+                                   start=self.environment.start,
+                                   end=self.environment.end,
+                                   freq=self.environment.time_freq))
 
         if model == 'SimSES':
             if self.name is None:
@@ -429,27 +461,46 @@ class SimSESModel():
             self.storage_config = StorageSystemConfig(self.simulation_config)
 
             self.simulation_config.add_section('GENERAL')
-            self.simulation_config.set('GENERAL', 'TIME_STEP', str(env.step * 60))  # SimSES needs step size in sec
-            self.simulation_config.set('GENERAL', 'START', str(env.time[0]-dt.timedelta(minutes=env.step*9)))
-            self.simulation_config.set('GENERAL', 'END', str(env.time[-1]))
+            # SimSES needs step size in sec
+            self.simulation_config.set('GENERAL', 'TIME_STEP',
+                                       str(self.environment.timebase * 60))
+            self.simulation_config.set('GENERAL', 'START',
+                                       self.environment.start)
+            self.simulation_config.set('GENERAL', 'END',
+                                       self.environment.end)
             self.simulation_config.add_section('STORAGE_SYSTEM')
-            self.simulation_config.set('STORAGE_SYSTEM', 'STORAGE_SYSTEM_AC',
-                                       'system_1,' +
-                                       str(abs(self.p_n * 1000)) +
-                                       ',600,' +
-                                       'acdc,NoSystemThermalModel,NoHousing,no_hvac')
-            self.simulation_config.set('STORAGE_SYSTEM', 'ACDC_CONVERTER', 'acdc, FixEfficiencyAcDcConverter')
-            self.simulation_config.set('STORAGE_SYSTEM', 'STORAGE_TECHNOLOGY',
-                                       'storage_1, ' + str(self.c_n * 1000) + ', lithium_ion,'  # Config uses Watt hours
-                                       + 'SonyLFP')     # str(self.storage_config.cell_type))
+
+            self.simulation_config.set(
+                'STORAGE_SYSTEM',
+                'STORAGE_SYSTEM_AC',
+                'system_1,'
+                + str(abs(self.max_power * 1000))
+                + ',600,'
+                + 'acdc,NoSystemThermalModel,NoHousing,no_hvac')
+
+            self.simulation_config.set(
+                'STORAGE_SYSTEM',
+                'ACDC_CONVERTER',
+                'acdc,FixEfficiencyAcDcConverter')
+
+            self.simulation_config.set('STORAGE_SYSTEM',
+                                       'STORAGE_TECHNOLOGY',
+                                       # Config uses Watt hours
+                                       'storage_1, ' + \
+                                       str(self.capacity * 1000)
+                                       + ', lithium_ion,'
+                                       + 'SonyLFP')  # str(self.storage_config.cell_type))
 
             self.simulation_config.add_section('BATTERY')
-            self.simulation_config.set('BATTERY', 'START_SOC', str(self.soc_start))
+            self.simulation_config.set(
+                'BATTERY', 'START_SOC', str(self.soc_start))
             self.simulation_config.set('BATTERY', 'MIN_SOC', str(self.soc_min))
             self.simulation_config.set('BATTERY', 'MAX_SOC', str(self.soc_max))
-            # self.simulation_config.set('BATTERY', 'START_SOH', '1.0')
+            self.simulation_config.set('BATTERY', 'START_SOC', str(self.soc))
 
-            self.simses: SimSES = SimSES(str(result_path + '\\').replace('\\', '/'), simulation_name,
-                                         do_simulation=True,
-                                         do_analysis=True,
-                                         simulation_config=self.simulation_config)
+            self.simses: SimSES = SimSES(
+                str(result_path + '\\').replace('\\', '/'),
+                simulation_name,
+                do_simulation=True,
+                do_analysis=True,
+                simulation_config=self.simulation_config)
