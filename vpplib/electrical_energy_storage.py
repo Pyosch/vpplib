@@ -11,7 +11,7 @@ import pandas as pd
 
 from configparser import ConfigParser
 from simses.main import SimSES
-from simses.config.simulation.storage_system_config import StorageSystemConfig
+# from simses.config.simulation.storage_system_config import StorageSystemConfig
 
 
 class ElectricalEnergyStorage(Component):
@@ -391,7 +391,7 @@ class ElectricalEnergyStorageSimses(Component):
         between 0.0 and 1!
     efficiency: float
         charging/discharging efficiency, only used when model == 'simple'
-    name : str
+    identifier : str
         name of the Energy Storage System
     model : str
         model to use for the Energy Storage simulation.
@@ -417,12 +417,11 @@ class ElectricalEnergyStorageSimses(Component):
     def __init__(self,
                  max_power: float,
                  capacity: float,
-                 soc: float,
+                 soc_start: float,
                  soc_min: float,
                  soc_max: float,
                  efficiency: float,
-                 name: str = None,
-                 model: str = 'simple',
+                 identifier=None,
                  result_path: str = None,
                  environment=None,
                  user_profile=None,
@@ -433,18 +432,18 @@ class ElectricalEnergyStorageSimses(Component):
         self.max_power = max_power
 
         # Call to super class
-        super(ElectricalEnergyStorageSimses, self).__init__(
+        super().__init__(
             unit, environment, user_profile, cost
         )
 
         if soc_max < soc_min:
             raise ValueError('soc_max must be higher than soc_min!')
-        self.model = model
+        self.identifier = identifier
         self.efficiency = efficiency  # only used if model=='simple'
         self.capacity = capacity
         self.soc_min = soc_min
         self.soc_max = soc_max
-        self.soc_start = soc
+        self.soc_start = soc_start
         # P: power [kW], SOC: State of Charge [-]
         self.df = pd.DataFrame(columns=['P', 'SOC'],
                                index=pd.date_range(
@@ -452,55 +451,55 @@ class ElectricalEnergyStorageSimses(Component):
                                    end=self.environment.end,
                                    freq=self.environment.time_freq))
 
-        if model == 'SimSES':
-            if self.name is None:
-                simulation_name = 'NoName'
-            else:
-                simulation_name = self.name
-            self.simulation_config: ConfigParser = ConfigParser()
-            self.storage_config = StorageSystemConfig(self.simulation_config)
+        if self.identifier is None:
+            simulation_name = 'NoName'
+        else:
+            simulation_name = self.identifier  # TODO: Add timestamp (?)
+        self.simulation_config: ConfigParser = ConfigParser()
+        # self.storage_config = StorageSystemConfig(self.simulation_config)
 
-            self.simulation_config.add_section('GENERAL')
-            # SimSES needs step size in sec
-            self.simulation_config.set('GENERAL', 'TIME_STEP',
-                                       str(self.environment.timebase * 60))
-            self.simulation_config.set('GENERAL', 'START',
-                                       self.environment.start)
-            self.simulation_config.set('GENERAL', 'END',
-                                       self.environment.end)
-            self.simulation_config.add_section('STORAGE_SYSTEM')
+        self.simulation_config.add_section('GENERAL')
+        # SimSES needs step size in sec
+        self.simulation_config.set('GENERAL', 'TIME_STEP',
+                                   str(self.environment.timebase * 60))
+        self.simulation_config.set('GENERAL', 'START',
+                                   self.environment.start)
+        self.simulation_config.set('GENERAL', 'END',
+                                   self.environment.end)
+        self.simulation_config.add_section('STORAGE_SYSTEM')
 
-            self.simulation_config.set(
-                'STORAGE_SYSTEM',
-                'STORAGE_SYSTEM_AC',
-                'system_1,'
-                + str(abs(self.max_power * 1000))
-                + ',600,'
-                + 'acdc,NoSystemThermalModel,NoHousing,no_hvac')
+        self.simulation_config.set(
+            'STORAGE_SYSTEM',
+            'STORAGE_SYSTEM_AC',
+            'system_1,'
+            + str(abs(self.max_power * 1000))
+            + ',600,'
+            + 'acdc,no_housing,no_hvac')
 
-            self.simulation_config.set(
-                'STORAGE_SYSTEM',
-                'ACDC_CONVERTER',
-                'acdc,FixEfficiencyAcDcConverter')
+        self.simulation_config.set(
+            'STORAGE_SYSTEM',
+            'ACDC_CONVERTER',
+            'acdc,FixEfficiencyAcDcConverter')
 
-            self.simulation_config.set('STORAGE_SYSTEM',
-                                       'STORAGE_TECHNOLOGY',
-                                       # Config uses Watt hours
-                                       'storage_1, ' + \
-                                       str(self.capacity * 1000)
-                                       + ', lithium_ion,'
-                                       + 'SonyLFP')  # str(self.storage_config.cell_type))
+        self.simulation_config.set('STORAGE_SYSTEM',
+                                   'STORAGE_TECHNOLOGY',
+                                   # Config uses Watt hours
+                                   'storage_1, ' + \
+                                   str(self.capacity * 1000)
+                                   + ', lithium_ion,'
+                                   + 'SonyLFP')  # str(self.storage_config.cell_type))
 
-            self.simulation_config.add_section('BATTERY')
-            self.simulation_config.set(
-                'BATTERY', 'START_SOC', str(self.soc_start))
-            self.simulation_config.set('BATTERY', 'MIN_SOC', str(self.soc_min))
-            self.simulation_config.set('BATTERY', 'MAX_SOC', str(self.soc_max))
-            self.simulation_config.set('BATTERY', 'START_SOC', str(self.soc))
+        self.simulation_config.add_section('BATTERY')
+        self.simulation_config.set(
+            'BATTERY', 'START_SOC', str(self.soc_start))
+        self.simulation_config.set('BATTERY', 'MIN_SOC', str(self.soc_min))
+        self.simulation_config.set('BATTERY', 'MAX_SOC', str(self.soc_max))
+        # Following line has something to do with aging not soc... #TODO
+        # self.simulation_config.set('BATTERY', 'START_SOH', str(self.soh_start))
 
-            self.simses: SimSES = SimSES(
-                str(result_path + '\\').replace('\\', '/'),
-                simulation_name,
-                do_simulation=True,
-                do_analysis=True,
-                simulation_config=self.simulation_config)
+        self.simses: SimSES = SimSES(
+            str(result_path + '\\').replace('\\', '/'),
+            simulation_name,
+            do_simulation=True,
+            do_analysis=True,
+            simulation_config=self.simulation_config)
