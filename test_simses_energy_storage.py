@@ -5,6 +5,8 @@ Created on Mon Jul 29 13:25:23 2019
 @author: Sascha Birk
 """
 
+import time
+import datetime
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
 from vpplib.electrical_energy_storage import ElectricalEnergyStorageSimses
@@ -15,7 +17,7 @@ import matplotlib.pyplot as plt
 
 # environment
 start = "2015-06-01 00:00:00"
-end = "2015-06-07 23:45:00"
+end = "2015-06-01 23:45:00"
 year = "2015"
 
 # user_profile
@@ -100,44 +102,68 @@ house_loadshape["residual_load"] = (
 # assign residual load to storage
 storage.residual_load = house_loadshape.residual_load
 
+# %%
 
-def test_prepare_time_series(storage):
+ut = time.mktime(datetime.datetime.strptime(storage.environment.start,
+                                            "%Y-%m-%d %H:%M:%S").timetuple())
 
-    storage.prepare_time_series()
-    print("prepare_time_series:")
-    print(storage.timeseries.head())
-    storage.timeseries.plot(figsize=(16, 9))
-    plt.show()
+# storage.timeseries = storage.simses.evaluate_multiple_simulation_steps(
+#     ut,
+#     storage.environment.timebase*60,
+#     storage.residual_load
+# )
 
+# storage.simses.close()
 
-def test_value_for_timestamp(storage, timestamp):
+# %%
 
-    timestepvalue = storage.value_for_timestamp(timestamp)
-    print("\nvalue_for_timestamp:\n", timestepvalue)
-
-
-def test_observationsForTimestamp(storage, timestamp):
-
-    print("observations_for_timestamp:")
-    observation = storage.observations_for_timestamp(timestamp)
-    print(observation, "\n")
-
-
-def test_operate_storage(storage, timestamp):
-
-    print("operate_storage:")
-    state_of_charge, res_load = storage.operate_storage(
-        storage.residual_load.loc[timestamp]
-    )
-    print("state_of_charge: ", state_of_charge)
-    print("res_load: ", res_load)
+storage.timestep = storage.simses.run_one_simulation_step(
+    ut,
+    storage.residual_load[0]
+)
+print("SOC: ", storage.simses.state.soc)
+print("AC Power: ",
+      storage.simses.state.get(storage.simses.state.AC_POWER_DELIVERED))
+# %%
 
 
-test_prepare_time_series(storage)
-test_value_for_timestamp(storage, timestamp_int)
-test_value_for_timestamp(storage, timestamp_str)
+# def test_prepare_time_series(storage):
 
-test_observationsForTimestamp(storage, timestamp_int)
-test_observationsForTimestamp(storage, timestamp_str)
+#     storage.prepare_time_series()
+#     print("prepare_time_series:")
+#     print(storage.timeseries.head())
+#     storage.timeseries.plot(figsize=(16, 9))
+#     plt.show()
 
-test_operate_storage(storage, timestamp_str)
+
+# def test_value_for_timestamp(storage, timestamp):
+
+#     timestepvalue = storage.value_for_timestamp(timestamp)
+#     print("\nvalue_for_timestamp:\n", timestepvalue)
+
+
+# def test_observationsForTimestamp(storage, timestamp):
+
+#     print("observations_for_timestamp:")
+#     observation = storage.observations_for_timestamp(timestamp)
+#     print(observation, "\n")
+
+
+# def test_operate_storage(storage, timestamp):
+
+#     print("operate_storage:")
+#     state_of_charge, res_load = storage.operate_storage(
+#         storage.residual_load.loc[timestamp]
+#     )
+#     print("state_of_charge: ", state_of_charge)
+#     print("res_load: ", res_load)
+
+
+# test_prepare_time_series(storage)
+# test_value_for_timestamp(storage, timestamp_int)
+# test_value_for_timestamp(storage, timestamp_str)
+
+# test_observationsForTimestamp(storage, timestamp_int)
+# test_observationsForTimestamp(storage, timestamp_str)
+
+# test_operate_storage(storage, timestamp_str)
