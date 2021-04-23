@@ -8,7 +8,7 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 
 from .component import Component
 import pandas as pd
-
+import datetime as dt
 from configparser import ConfigParser
 from simses.main import SimSES
 # from simses.config.simulation.storage_system_config import StorageSystemConfig
@@ -463,7 +463,12 @@ class ElectricalEnergyStorageSimses(Component):
         self.simulation_config.set('GENERAL', 'TIME_STEP',
                                    str(self.environment.timebase * 60))
         self.simulation_config.set('GENERAL', 'START',
-                                   self.environment.start)
+                                   str(dt.datetime.strptime(
+                                       self.environment.start,
+                                       "%Y-%m-%d %H:%M:%S")
+                                       - dt.timedelta(
+                                       minutes=self.environment.timebase*9))
+                                   )
         self.simulation_config.set('GENERAL', 'END',
                                    self.environment.end)
         self.simulation_config.add_section('STORAGE_SYSTEM')
@@ -495,7 +500,8 @@ class ElectricalEnergyStorageSimses(Component):
         self.simulation_config.set('BATTERY', 'MIN_SOC', str(self.soc_min))
         self.simulation_config.set('BATTERY', 'MAX_SOC', str(self.soc_max))
         # Following line has something to do with aging not soc... #TODO
-        # self.simulation_config.set('BATTERY', 'START_SOH', str(self.soh_start))
+        self.simulation_config.set(
+            'BATTERY', 'START_SOH', str(1.0))  # self.soh_start
 
         self.simses: SimSES = SimSES(
             str(result_path + '\\').replace('\\', '/'),
@@ -503,3 +509,15 @@ class ElectricalEnergyStorageSimses(Component):
             do_simulation=True,
             do_analysis=True,
             simulation_config=self.simulation_config)
+
+    def prepare_time_series(self):
+
+        pass
+
+        # return self.timeseries
+
+    def reset_time_series(self):
+
+        self.timeseries = None
+
+        return self.timeseries
