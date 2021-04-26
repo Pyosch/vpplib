@@ -9,6 +9,7 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 from .component import Component
 import pandas as pd
 import datetime as dt
+import time
 from configparser import ConfigParser
 from simses.main import SimSES
 # from simses.config.simulation.storage_system_config import StorageSystemConfig
@@ -510,11 +511,67 @@ class ElectricalEnergyStorageSimses(Component):
             do_analysis=True,
             simulation_config=self.simulation_config)
 
+    def run_one_timestep(self, timestep, load):
+        """.
+
+        Parameters
+        ----------
+        timestep : TYPE
+            DESCRIPTION.
+        load : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        self.simses.run_one_simulation_step(
+            time.mktime(
+                dt.datetime.strptime(str(timestep),
+                                     "%Y-%m-%d %H:%M:%S").timetuple()
+            ),
+            (load * -1000)
+        )
+
+        return (self.simses.state.soc,
+                (self.simses.state.get(
+                    self.simses.state.AC_POWER_DELIVERED) / 1000))
+
     def prepare_time_series(self):
+        """.
 
-        pass
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
 
-        # return self.timeseries
+        """
+        soc_lst = list()
+        ac_lst = list()
+
+        for timestep in pd.date_range(start=self.environment.start,
+                                      end=self.environment.end,
+                                      freq=self.environment.time_freq):
+
+            soc, ac = self.run_one_timestep(
+                timestep,
+                self.residual_load[timestep]
+            )
+
+            soc_lst.append(soc)
+            ac_lst.append(ac)
+
+        self.timeseries = pd.DataFrame(
+            {"state_of_charge": soc_lst,
+             "ac_power": ac_lst},
+            index=pd.date_range(start=self.environment.start,
+                                end=self.environment.end,
+                                freq=self.environment.time_freq)
+        )
+
+        return self.timeseries
 
     def reset_time_series(self):
 

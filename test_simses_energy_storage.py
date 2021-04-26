@@ -102,47 +102,14 @@ house_loadshape["residual_load"] = (
 # assign residual load to storage
 storage.residual_load = house_loadshape.residual_load
 
-# %%
-
-ut = time.mktime(datetime.datetime.strptime(storage.environment.start,
-                                            "%Y-%m-%d %H:%M:%S").timetuple())
-
-# storage.timeseries = storage.simses.evaluate_multiple_simulation_steps(
-#     ut,
-#     storage.environment.timebase*60,
-#     storage.residual_load
-# )
-
-# storage.simses.close()
 
 # %%
-soc_lst = list()
-ac_lst = list()
 
-for date in pd.date_range(start=start, end=end, freq=environment.time_freq):
-
-    storage.timestep = storage.simses.run_one_simulation_step(
-        time.mktime(datetime.datetime.strptime(str(date),
-                                               "%Y-%m-%d %H:%M:%S").timetuple()
-                    ),
-        (storage.residual_load[date] * -1)
-
-    )
-
-    soc_lst.append(storage.simses.state.soc)
-    ac_lst.append(storage.simses.state.get(
-        storage.simses.state.AC_POWER_DELIVERED))
-
-# print("SOC: ", storage.simses.state.soc)
-# print("AC Power: ",
-#       storage.simses.state.get(storage.simses.state.AC_POWER_DELIVERED))
+storage.prepare_time_series()
 
 storage.simses.close()
+storage.timeseries.plot()
 
-plt.plot(soc_lst)
-plt.show()
-plt.plot(ac_lst)
-plt.show()
 # %%
 
 
