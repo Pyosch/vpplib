@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 
 # environment
 start = "2015-06-01 00:00:00"
-end = "2015-06-01 23:45:00"
+end = "2015-06-07 23:45:00"
 year = "2015"
 
 # user_profile
@@ -116,14 +116,33 @@ ut = time.mktime(datetime.datetime.strptime(storage.environment.start,
 # storage.simses.close()
 
 # %%
+soc_lst = list()
+ac_lst = list()
 
-storage.timestep = storage.simses.run_one_simulation_step(
-    ut,
-    storage.residual_load[0]
-)
-print("SOC: ", storage.simses.state.soc)
-print("AC Power: ",
-      storage.simses.state.get(storage.simses.state.AC_POWER_DELIVERED))
+for date in pd.date_range(start=start, end=end, freq=environment.time_freq):
+
+    storage.timestep = storage.simses.run_one_simulation_step(
+        time.mktime(datetime.datetime.strptime(str(date),
+                                               "%Y-%m-%d %H:%M:%S").timetuple()
+                    ),
+        (storage.residual_load[date] * -1)
+
+    )
+
+    soc_lst.append(storage.simses.state.soc)
+    ac_lst.append(storage.simses.state.get(
+        storage.simses.state.AC_POWER_DELIVERED))
+
+# print("SOC: ", storage.simses.state.soc)
+# print("AC Power: ",
+#       storage.simses.state.get(storage.simses.state.AC_POWER_DELIVERED))
+
+storage.simses.close()
+
+plt.plot(soc_lst)
+plt.show()
+plt.plot(ac_lst)
+plt.show()
 # %%
 
 
@@ -166,4 +185,5 @@ print("AC Power: ",
 # test_observationsForTimestamp(storage, timestamp_int)
 # test_observationsForTimestamp(storage, timestamp_str)
 
+# test_operate_storage(storage, timestamp_str)
 # test_operate_storage(storage, timestamp_str)
