@@ -578,3 +578,18 @@ class ElectricalEnergyStorageSimses(Component):
         self.timeseries = None
 
         return self.timeseries
+
+    def value_for_timestamp(self, timestamp):
+
+        if type(timestamp) == int:
+
+            return self.timeseries["ac_power"].iloc[timestamp]
+
+        elif type(timestamp) == str:
+
+            return self.timeseries["ac_power"].loc[timestamp]
+
+        else:
+            raise ValueError(
+                "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
+            )

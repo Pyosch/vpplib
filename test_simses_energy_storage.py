@@ -107,25 +107,25 @@ storage.residual_load = house_loadshape.residual_load
 
 storage.prepare_time_series()
 
-storage.simses.close()
+
 storage.timeseries.plot()
 
 # %%
 
 
-# def test_prepare_time_series(storage):
+def test_prepare_time_series(storage):
 
-#     storage.prepare_time_series()
-#     print("prepare_time_series:")
-#     print(storage.timeseries.head())
-#     storage.timeseries.plot(figsize=(16, 9))
-#     plt.show()
+    storage.prepare_time_series()
+    print("prepare_time_series:")
+    print(storage.timeseries.head())
+    storage.timeseries.plot(figsize=(16, 9))
+    plt.show()
 
 
-# def test_value_for_timestamp(storage, timestamp):
+def test_value_for_timestamp(storage, timestamp):
 
-#     timestepvalue = storage.value_for_timestamp(timestamp)
-#     print("\nvalue_for_timestamp:\n", timestepvalue)
+    timestepvalue = storage.value_for_timestamp(timestamp)
+    print("\nvalue_for_timestamp:\n", timestepvalue)
 
 
 # def test_observationsForTimestamp(storage, timestamp):
@@ -144,13 +144,16 @@ storage.timeseries.plot()
 #     print("state_of_charge: ", state_of_charge)
 #     print("res_load: ", res_load)
 
-
-# test_prepare_time_series(storage)
-# test_value_for_timestamp(storage, timestamp_int)
-# test_value_for_timestamp(storage, timestamp_str)
+try:
+    test_prepare_time_series(storage)
+    test_value_for_timestamp(storage, timestamp_int)
+    test_value_for_timestamp(storage, timestamp_str)
 
 # test_observationsForTimestamp(storage, timestamp_int)
 # test_observationsForTimestamp(storage, timestamp_str)
 
 # test_operate_storage(storage, timestamp_str)
 # test_operate_storage(storage, timestamp_str)
+
+finally:
+    storage.simses.close()
