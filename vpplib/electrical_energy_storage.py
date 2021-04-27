@@ -421,7 +421,6 @@ class ElectricalEnergyStorageSimses(Component):
                  soc_start: float,
                  soc_min: float,
                  soc_max: float,
-                 efficiency: float,
                  identifier=None,
                  result_path: str = None,
                  environment=None,
@@ -440,7 +439,6 @@ class ElectricalEnergyStorageSimses(Component):
         if soc_max < soc_min:
             raise ValueError('soc_max must be higher than soc_min!')
         self.identifier = identifier
-        self.efficiency = efficiency  # only used if model=='simple'
         self.capacity = capacity
         self.soc_min = soc_min
         self.soc_max = soc_max
@@ -591,5 +589,64 @@ class ElectricalEnergyStorageSimses(Component):
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp needs to be of type int or string."
+                + " Stringformat: YYYY-MM-DD hh:mm:ss"
             )
+
+    def observations_for_timestamp(self, timestamp):
+        """.
+
+        Info
+        ----
+        This function takes a timestamp as the parameter and returns a
+        dictionary with key (String) value (Any) pairs.
+        Depending on the type of component, different status parameters of the
+        respective component can be queried.
+
+        For example, a power store can report its "State of Charge".
+        Returns an empty dictionary since this function needs to be
+        implemented by child classes.
+
+        Parameters
+        ----------
+        ...
+
+        Attributes
+        ----------
+        ...
+
+        Notes
+        -----
+        ...
+
+        References
+        ----------
+        ...
+
+        Returns
+        -------
+        ...
+
+        """
+        if type(timestamp) == int:
+
+            state_of_charge, ac_power = self.timeseries.iloc[timestamp]
+
+        elif type(timestamp) == str:
+
+            state_of_charge, ac_power = self.timeseries.loc[timestamp]
+
+        else:
+            raise ValueError(
+                "timestamp needs to be of type int or string."
+                + " Stringformat: YYYY-MM-DD hh:mm:ss"
+            )
+
+        observations = {
+            "state_of_charge": state_of_charge,
+            "ac_power": ac_power,
+            "max_power": self.max_power,
+            "max_capacity": self.capacity * self.soc_max,
+        }
+
+        return observations

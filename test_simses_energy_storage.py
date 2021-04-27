@@ -76,10 +76,9 @@ pv.prepare_time_series()
 
 storage = ElectricalEnergyStorageSimses(max_power=max_power,
                                         capacity=capacity,
-                                        soc_start=0,
+                                        soc_start=0.1,
                                         soc_min=0.1,
                                         soc_max=0.9,
-                                        efficiency=charge_efficiency,
                                         identifier="SimSES",
                                         result_path="./Results/SimSES",
                                         environment=environment,
@@ -128,11 +127,11 @@ def test_value_for_timestamp(storage, timestamp):
     print("\nvalue_for_timestamp:\n", timestepvalue)
 
 
-# def test_observationsForTimestamp(storage, timestamp):
+def test_observations_for_timestamp(storage, timestamp):
 
-#     print("observations_for_timestamp:")
-#     observation = storage.observations_for_timestamp(timestamp)
-#     print(observation, "\n")
+    print("observations_for_timestamp:")
+    observation = storage.observations_for_timestamp(timestamp)
+    print(observation, "\n")
 
 
 # def test_operate_storage(storage, timestamp):
@@ -149,8 +148,8 @@ try:
     test_value_for_timestamp(storage, timestamp_int)
     test_value_for_timestamp(storage, timestamp_str)
 
-# test_observationsForTimestamp(storage, timestamp_int)
-# test_observationsForTimestamp(storage, timestamp_str)
+    test_observations_for_timestamp(storage, timestamp_int)
+    test_observations_for_timestamp(storage, timestamp_str)
 
 # test_operate_storage(storage, timestamp_str)
 # test_operate_storage(storage, timestamp_str)
