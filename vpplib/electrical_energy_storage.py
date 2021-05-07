@@ -509,7 +509,7 @@ class ElectricalEnergyStorageSimses(Component):
             do_analysis=True,
             simulation_config=self.simulation_config)
 
-    def run_one_timestep(self, timestep, load):
+    def operate_storage(self, timestep, load):
         """.
 
         Parameters
@@ -553,7 +553,7 @@ class ElectricalEnergyStorageSimses(Component):
                                       end=self.environment.end,
                                       freq=self.environment.time_freq):
 
-            soc, ac = self.run_one_timestep(
+            soc, ac = self.operate_storage(
                 timestep,
                 self.residual_load[timestep]
             )

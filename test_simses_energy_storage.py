@@ -112,6 +112,17 @@ storage.timeseries.plot()
 # %%
 
 
+def test_operate_storage(storage, timestamp):
+
+    print("operate_storage:")
+    state_of_charge, ac_power = storage.operate_storage(
+        timestamp,
+        storage.residual_load.loc[timestamp]
+    )
+    print("state_of_charge: ", state_of_charge)
+    print("ac_power: ", ac_power)
+
+
 def test_prepare_time_series(storage):
 
     storage.prepare_time_series()
@@ -134,25 +145,16 @@ def test_observations_for_timestamp(storage, timestamp):
     print(observation, "\n")
 
 
-# def test_operate_storage(storage, timestamp):
-
-#     print("operate_storage:")
-#     state_of_charge, res_load = storage.operate_storage(
-#         storage.residual_load.loc[timestamp]
-#     )
-#     print("state_of_charge: ", state_of_charge)
-#     print("res_load: ", res_load)
-
 try:
+    test_operate_storage(storage, timestamp_str)
+
     test_prepare_time_series(storage)
+
     test_value_for_timestamp(storage, timestamp_int)
     test_value_for_timestamp(storage, timestamp_str)
 
     test_observations_for_timestamp(storage, timestamp_int)
     test_observations_for_timestamp(storage, timestamp_str)
-
-# test_operate_storage(storage, timestamp_str)
-# test_operate_storage(storage, timestamp_str)
 
 finally:
     storage.simses.close()
