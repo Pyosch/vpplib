@@ -12,11 +12,15 @@ import datetime as dt
 import time
 from configparser import ConfigParser
 from simses.main import SimSES
-# from simses.config.simulation.storage_system_config import StorageSystemConfig
 
 
 class ElectrolysisSimses(Component):
     """.
+
+    Info
+    ----
+    Standard values are taken from
+    "simses/simulation/system_tests/configs/simulation.test_23.ini"
 
     Parameters
     ----------
@@ -86,7 +90,6 @@ class ElectrolysisSimses(Component):
         self.soc_min = soc_min
         self.soc_max = soc_max
         self.soc_start = soc_start
-        # P: power [kW], SOC: State of Charge [-]
         self.df = pd.DataFrame(columns=['P', 'SOC'],
                                index=pd.date_range(
                                    start=self.environment.start,
@@ -100,6 +103,7 @@ class ElectrolysisSimses(Component):
         self.simulation_config: ConfigParser = ConfigParser()
         # self.storage_config = StorageSystemConfig(self.simulation_config)
 
+        # GENERAL config from "simses-master\simses\commons\config\simulation"
         self.simulation_config.add_section('GENERAL')
         # SimSES needs step size in sec
         self.simulation_config.set('GENERAL', 'TIME_STEP',
@@ -113,37 +117,81 @@ class ElectrolysisSimses(Component):
                                    )
         self.simulation_config.set('GENERAL', 'END',
                                    self.environment.end)
+        # possible extensions to GENERAL:
+        # self.simulation_config.set('GENERAL', 'LOOP', 1)
+        # self.simulation_config.set('GENERAL', 'EXPORT_DATA', True)
+        # self.simulation_config.set('GENERAL', 'EXPORT_INTERVAL', 1)
+
+        # Config for ELECTROLYZER
+        self.simulation_config.add_section('ELECTROLYZER')
+
+        # According to battery config, EOL is defined btwn. 0-1
+        self.simulation_config.set('ELECTROLYZER',
+                                   'EOL',
+                                   str(0.8))
+
+        self.simulation_config.set('ELECTROLYZER', 'PRESSURE_CATHODE', str(20))
+        self.simulation_config.set('ELECTROLYZER', 'PRESSURE_ANODE', str(2))
+        self.simulation_config.set('ELECTROLYZER', 'TOTAL_PRESSURE', str(20))
+        self.simulation_config.set('ELECTROLYZER', 'TEMPERATURE', str(75))
+
+        # Config for FUEL_CELL
+        self.simulation_config.add_section('FUEL_CELL')
+
+        # According to battery config, EOL is defined btwn. 0-1
+        self.simulation_config.set('FUEL_CELL',
+                                   'EOL',
+                                   str(0.8))
+
+        self.simulation_config.set('FUEL_CELL', 'PRESSURE_CATHODE', str(20))
+        self.simulation_config.set('FUEL_CELL', 'PRESSURE_ANODE', str(2))
+        self.simulation_config.set('FUEL_CELL', 'TEMPERATURE', str(75))
+
+        # Config for the hydrogen storage
+        self.simulation_config.add_section('HYDROGEN')
+        self.simulation_config.set(
+            'HYDROGEN', 'START_SOC', str(self.soc_start))
+        self.simulation_config.set('HYDROGEN', 'MIN_SOC', str(self.soc_min))
+        self.simulation_config.set('HYDROGEN', 'MAX_SOC', str(self.soc_max))
+
+        # Config for STORAGE_SYSTEM, the overall system settings
         self.simulation_config.add_section('STORAGE_SYSTEM')
 
-        self.simulation_config.set(
-            'STORAGE_SYSTEM',
-            'STORAGE_SYSTEM_AC',
-            'system_1,'
-            + str(abs(self.max_power * 1000))
-            + ',600,'
-            + 'acdc,no_housing,no_hvac')
+        # Config AC
+        self.simulation_config.set('STORAGE_SYSTEM', 'STORAGE_SYSTEM_AC',
+                                   'system_1,'
+                                   + str(abs(self.max_power * 1000))  # 5500.0
+                                   + ',333,'
+                                   + 'fix,no_housing,no_hvac')
 
+        # Config DC
+        self.simulation_config.set('STORAGE_SYSTEM', 'STORAGE_SYSTEM_DC',
+                                   'system_1,fix,hydrogen')
+
+        # Config ACDC converter
         self.simulation_config.set(
             'STORAGE_SYSTEM',
             'ACDC_CONVERTER',
-            'acdc,FixEfficiencyAcDcConverter')
+            'fix,FixEfficiencyAcDcConverter')
+
+        # Config DCDC converter
+        self.simulation_config.set(
+            'STORAGE_SYSTEM',
+            'DCDC_CONVERTER',
+            'fix,FixEfficiencyDcDcConverter')
 
         self.simulation_config.set('STORAGE_SYSTEM',
                                    'STORAGE_TECHNOLOGY',
                                    # Config uses Watt hours
-                                   'storage_1, ' + \
+                                   'hydrogen, ' + \
                                    str(self.capacity * 1000)
-                                   + ', lithium_ion,'
-                                   + 'SonyLFP')  # str(self.storage_config.cell_type))
-
-        self.simulation_config.add_section('BATTERY')
-        self.simulation_config.set(
-            'BATTERY', 'START_SOC', str(self.soc_start))
-        self.simulation_config.set('BATTERY', 'MIN_SOC', str(self.soc_min))
-        self.simulation_config.set('BATTERY', 'MAX_SOC', str(self.soc_max))
-        # Following line has something to do with aging not soc... #TODO
-        self.simulation_config.set(
-            'BATTERY', 'START_SOH', str(1.0))  # self.soh_start
+                                   + ',hydrogen,'
+                                   + 'NoFuelCell,'
+                                   + '5000,'
+                                   + 'PemElectrolyzer,'
+                                   + '5000,'
+                                   + 'PressureTank,'
+                                   + '700')
 
         self.simses: SimSES = SimSES(
             str(result_path + '\\').replace('\\', '/'),
