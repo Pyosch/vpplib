@@ -12,10 +12,10 @@ class Component(object):
 
     def __init__(self,
                  unit=None,
-                 identifier=None,
                  environment=None,
                  user_profile=None,
-                 cost=None):
+                 cost=None,
+                 identifier=None):
         """
 
         Info.
