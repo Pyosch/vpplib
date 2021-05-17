@@ -12,6 +12,7 @@ class Component(object):
 
     def __init__(self,
                  unit=None,
+                 identifier=None,
                  environment=None,
                  user_profile=None,
                  cost=None):
@@ -48,6 +49,7 @@ class Component(object):
         """
         # Configure attributes
         self.unit = unit  # e.g. "kW"
+        self.identifier = identifier
         self.environment = environment
         self.user_profile = user_profile
         self.cost = cost  # e.g. Euro/kWh
