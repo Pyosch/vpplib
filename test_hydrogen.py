@@ -5,43 +5,8 @@ Created on Mon May 10 14:07:58 2021
 @author: sbirk
 """
 from vpplib.hydrogen import ElectrolysisSimses
-# from simses.technology.hydrogen.factory import HydrogenFactory
-# from configparser import ConfigParser
-# from simses.commons.data.data_handler import DataHandler
-# from simses.commons.config.data.electrolyzer import ElectrolyzerDataConfig
-# from simses.commons.constants import Hydrogen as HydrogenConstants
-# from simses.commons.state.technology.electrolyzer import ElectrolyzerState
-# from simses.technology.hydrogen.electrolyzer.stack.pem import PemElectrolyzer
-# from simses.technology.hydrogen.system import Hydrogen
-
-# # %%
-# electrolyzer_data_config = ElectrolyzerDataConfig()
-# electrolyzer_maximal_power = 5
-
-# pem = PemElectrolyzer(electrolyzer_maximal_power,
-#                       electrolyzer_data_config)
-
-# # %%
-# configparser = ConfigParser()
-# # datahandler = DataHandler
-
-# hydrogen = Hydrogen(data_export=DataHandler,  # "./Results/SimSES/hydrogen/",
-#                     fuel_cell="NoFuelCell",  # "PemFuelCell",
-#                     fuel_cell_maximal_power=50_000,  # W,
-#                     electrolyzer="PemElectrolyzer",
-#                     electrolyzer_maximal_power=50_000,  # W,
-#                     storage="PressureTank",
-#                     capacity=50_000,  # Wh ?
-#                     max_pressure=20,  # bar
-#                     temperature=25,  # °C
-#                     system_id=0,
-#                     storage_id=0,
-#                     config=configparser)
-
-# %%
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
-from vpplib.electrical_energy_storage import ElectricalEnergyStorageSimses
 from vpplib.photovoltaic import Photovoltaic
 
 import pandas as pd
@@ -161,7 +126,7 @@ def test_operate_storage(hydrogen, timestamp):
 def test_prepare_time_series(hydrogen):
 
     hydrogen.prepare_time_series()
-    print("prepare_time_series:")
+    print("\nprepare_time_series:")
     print(hydrogen.timeseries.head())
     hydrogen.timeseries.plot(figsize=(16, 9))
     plt.show()
@@ -175,9 +140,9 @@ def test_value_for_timestamp(hydrogen, timestamp):
 
 def test_observations_for_timestamp(hydrogen, timestamp):
 
-    print("observations_for_timestamp:")
+    print("\nobservations_for_timestamp:")
     observation = hydrogen.observations_for_timestamp(timestamp)
-    print(observation, "\n")
+    print(observation)
 
 
 try:
