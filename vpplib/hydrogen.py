@@ -63,8 +63,10 @@ class ElectrolysisSimses(Component):
     """
 
     def __init__(self,
-                 max_power: float,
+                 electrolyzer_power: float,
+                 fuelcell_power: float,
                  capacity: float,
+                 tank_size: float,
                  soc_start: float,
                  soc_min: float,
                  soc_max: float,
@@ -76,7 +78,7 @@ class ElectrolysisSimses(Component):
                  cost=None
                  ):
 
-        self.max_power = max_power
+        # self.max_power = max_power
 
         # Call to super class
         super().__init__(
@@ -86,7 +88,23 @@ class ElectrolysisSimses(Component):
         if soc_max < soc_min:
             raise ValueError('soc_max must be higher than soc_min!')
         self.identifier = identifier
-        self.capacity = capacity
+
+        if electrolyzer_power:
+            self.electrolyzer_power = electrolyzer_power * 1000
+        else:
+            self.electrolyzer_power = 0
+
+        if fuelcell_power:
+            self.fuelcell_power = fuelcell_power * 1000
+        else:
+            self.fuelcell_power = 0
+
+        if capacity:
+            self.capacity = capacity * 1000
+        else:
+            self.capacity = 0
+
+        self.tank_size = tank_size
         self.soc_min = soc_min
         self.soc_max = soc_max
         self.soc_start = soc_start
@@ -160,7 +178,8 @@ class ElectrolysisSimses(Component):
         # Config AC
         self.simulation_config.set('STORAGE_SYSTEM', 'STORAGE_SYSTEM_AC',
                                    'system_1,'
-                                   + str(abs(self.max_power * 1000))  # 5500.0
+                                   # 5500.0
+                                   + str(abs(self.electrolyzer_power))
                                    + ',333,'
                                    + 'fix,no_housing,no_hvac')
 
@@ -184,14 +203,16 @@ class ElectrolysisSimses(Component):
                                    'STORAGE_TECHNOLOGY',
                                    # Config uses Watt hours
                                    'hydrogen, ' + \
-                                   str(self.capacity * 1000)
+                                   str(self.capacity)
                                    + ',hydrogen,'
                                    + 'NoFuelCell,'
-                                   + '5000,'
+                                   + str(abs(self.fuelcell_power))+','
                                    + 'PemElectrolyzer,'
-                                   + '5000,'
+                                   + str(abs(self.electrolyzer_power))
+                                   + ','
                                    + 'PressureTank,'
-                                   + '700')
+                                   + str(self.tank_size)  # '700'
+                                   )
 
         self.simses: SimSES = SimSES(
             str(result_path + '\\').replace('\\', '/'),

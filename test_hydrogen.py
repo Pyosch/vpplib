@@ -37,7 +37,9 @@ strings_per_inverter = 2
 timebase = 15
 charge_efficiency = 0.98
 discharge_efficiency = 0.98
-max_power = 4  # kW
+electrolyzer_power = 4  # kW
+fuelcell_power = None
+tank_size = 700  # standard config
 capacity = 4  # kWh
 max_c = 1  # factor between 0.5 and 1.2
 
@@ -72,7 +74,9 @@ pv = Photovoltaic(
 pv.prepare_time_series()
 
 # %%
-hydrogen = ElectrolysisSimses(max_power=max_power,
+hydrogen = ElectrolysisSimses(electrolyzer_power=electrolyzer_power,
+                              fuelcell_power=fuelcell_power,
+                              tank_size=tank_size,
                               capacity=capacity,
                               soc_start=0.1,
                               soc_min=0.1,
