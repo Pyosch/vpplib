@@ -357,7 +357,8 @@ class ElectrolysisSimses(Component):
         observations = {
             "state_of_charge": state_of_charge,
             "ac_power": ac_power,
-            "max_power": self.max_power,
+            "electrolyzer_power": self.electrolyzer_power,
+            "fuelcell_power": self.fuelcell_power,
             "max_capacity": self.capacity * self.soc_max,
         }
 
