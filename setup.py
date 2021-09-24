@@ -22,6 +22,8 @@ setuptools.setup(
           'pvlib',
           'pandapower',
           'simbench',
+          'simses',
+          'tqdm'
           ],
     classifiers=[
         "Programming Language :: Python :: 3",
