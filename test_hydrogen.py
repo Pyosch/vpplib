@@ -32,6 +32,8 @@ surface_tilt = 20
 surface_azimuth = 200
 modules_per_string = 4
 strings_per_inverter = 2
+temp_lib = 'sapm'
+temp_model = 'open_rack_glass_glass'
 
 # storage
 timebase = 15
@@ -69,6 +71,8 @@ pv = Photovoltaic(
     surface_azimuth=surface_azimuth,
     modules_per_string=modules_per_string,
     strings_per_inverter=strings_per_inverter,
+    temp_lib=temp_lib,
+    temp_model=temp_model
 )
 
 pv.prepare_time_series()
@@ -108,13 +112,6 @@ hydrogen.residual_load = house_loadshape.residual_load
 
 # %%
 
-hydrogen.prepare_time_series()
-
-
-hydrogen.timeseries.plot()
-
-# %%
-
 
 def test_operate_storage(hydrogen, timestamp):
 
@@ -150,9 +147,9 @@ def test_observations_for_timestamp(hydrogen, timestamp):
 
 
 try:
-    test_operate_storage(hydrogen, timestamp_str)
-
     test_prepare_time_series(hydrogen)
+
+    test_operate_storage(hydrogen, timestamp_str)
 
     test_value_for_timestamp(hydrogen, timestamp_int)
     test_value_for_timestamp(hydrogen, timestamp_str)
