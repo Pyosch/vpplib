@@ -33,7 +33,8 @@ surface_tilt = 20
 surface_azimuth = 200
 modules_per_string = 4
 strings_per_inverter = 2
-
+temp_lib = 'sapm'
+temp_model = 'open_rack_glass_glass'
 # storage
 timebase = 15
 charge_efficiency = 0.98
@@ -68,6 +69,8 @@ pv = Photovoltaic(
     surface_azimuth=surface_azimuth,
     modules_per_string=modules_per_string,
     strings_per_inverter=strings_per_inverter,
+    temp_lib=temp_lib,
+    temp_model=temp_model
 )
 
 pv.prepare_time_series()
