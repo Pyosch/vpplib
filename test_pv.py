@@ -4,7 +4,7 @@ Info
 ----
 In this testfile the basic functionalities of the Photovoltaic class are tested.
 Run each time you make changes on an existing function.
-Adjust if a new function is added or 
+Adjust if a new function is added or
 parameters in an existing function are changed.
 
 """
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
-
+from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 
 latitude = 50.941357
 longitude = 6.958307
@@ -23,6 +23,8 @@ start = "2015-06-01 00:00:00"
 end = "2015-06-07 23:45:00"
 timestamp_int = 48
 timestamp_str = "2015-06-05 12:00:00"
+
+temperature_model_parameters = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
 
 environment = Environment(start=start, end=end)
 environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
@@ -44,6 +46,7 @@ pv = Photovoltaic(
     surface_azimuth=200,
     modules_per_string=2,
     strings_per_inverter=2,
+    temperature_model_parameters=temperature_model_parameters
 )
 
 
