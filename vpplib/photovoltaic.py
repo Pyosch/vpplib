@@ -17,6 +17,7 @@ import pvlib
 from pvlib.pvsystem import PVSystem
 from pvlib.location import Location
 from pvlib.modelchain import ModelChain
+from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 
 
 class Photovoltaic(Component):
@@ -31,7 +32,8 @@ class Photovoltaic(Component):
         inverter=None,
         modules_per_string=None,
         strings_per_inverter=None,
-        temperature_model_parameters=None,
+        temp_lib=None,
+        temp_model=None,
         identifier=None,
         environment=None,
         user_profile=None,
@@ -83,7 +85,7 @@ class Photovoltaic(Component):
         self.module_lib = pvlib.pvsystem.retrieve_sam(module_lib)
         self.inverter_lib = pvlib.pvsystem.retrieve_sam(inverter_lib)
 
-        self.temperature_model_parameters = temperature_model_parameters
+        self.temperature_model_parameters = TEMPERATURE_MODEL_PARAMETERS[temp_lib][temp_model]
 
         if module:
             self.module = self.module_lib[module]
