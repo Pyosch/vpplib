@@ -145,7 +145,8 @@ class Photovoltaic(Component):
             ],
         )
 
-        timeseries = pd.DataFrame(self.modelchain.ac / 1000)  # convert to kW
+        timeseries = pd.DataFrame(
+            self.modelchain.results.ac / 1000)  # convert to kW
         timeseries.rename(columns={0: self.identifier}, inplace=True)
         timeseries.set_index(timeseries.index, inplace=True)
         timeseries.index = pd.to_datetime(timeseries.index)
