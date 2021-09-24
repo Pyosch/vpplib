@@ -31,42 +31,42 @@ class Photovoltaic(Component):
         inverter=None,
         modules_per_string=None,
         strings_per_inverter=None,
+        temperature_model_parameters=None,
         identifier=None,
         environment=None,
         user_profile=None,
         cost=None,
     ):
-
         """
         Info
         ----
         ...
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
 
         # Call to super class
@@ -82,6 +82,8 @@ class Photovoltaic(Component):
         # load some module and inverter specifications
         self.module_lib = pvlib.pvsystem.retrieve_sam(module_lib)
         self.inverter_lib = pvlib.pvsystem.retrieve_sam(inverter_lib)
+
+        self.temperature_model_parameters = temperature_model_parameters
 
         if module:
             self.module = self.module_lib[module]
@@ -107,6 +109,7 @@ class Photovoltaic(Component):
                 surface_azimuth=self.surface_azimuth,
                 module_parameters=self.module,
                 inverter_parameters=self.inverter,
+                temperature_model_parameters=self.temperature_model_parameters,
                 modules_per_string=self.modules_per_string,
                 strings_per_inverter=self.strings_per_inverter,
             )
@@ -124,8 +127,8 @@ class Photovoltaic(Component):
             )
             # calculate area of pv modules
             self.modules_area = (self.module.Area
-              * self.modules_per_string
-              * self.strings_per_inverter)
+                                 * self.modules_per_string
+                                 * self.strings_per_inverter)
 
         self.timeseries = None
 
@@ -136,7 +139,7 @@ class Photovoltaic(Component):
 
         self.modelchain.run_model(
             weather=self.environment.pv_data.loc[
-                self.environment.start : self.environment.end
+                self.environment.start: self.environment.end
             ],
         )
 
@@ -200,44 +203,43 @@ class Photovoltaic(Component):
             )
 
     def observations_for_timestamp(self, timestamp):
-
         """
         Info
         ----
-        This function takes a timestamp as the parameter and returns a 
-        dictionary with key (String) value (Any) pairs. 
-        Depending on the type of component, different status parameters of the 
-        respective component can be queried. 
-        
+        This function takes a timestamp as the parameter and returns a
+        dictionary with key (String) value (Any) pairs.
+        Depending on the type of component, different status parameters of the
+        respective component can be queried.
+
         For example, a power store can report its "State of Charge".
-        Returns an empty dictionary since this function needs to be 
+        Returns an empty dictionary since this function needs to be
         implemented by child classes.
-        
+
         Parameters
         ----------
-        
+
         ...
-        	
+
         Attributes
         ----------
-        
+
         ...
-        
+
         Notes
         -----
-        
+
         ...
-        
+
         References
         ----------
-        
+
         ...
-        
+
         Returns
         -------
-        
+
         ...
-        
+
         """
         if type(timestamp) == int:
 
@@ -268,11 +270,11 @@ class Photovoltaic(Component):
             if (max_module_power
                 > self.module_lib[module].Impo
                 * self.module_lib[module].Vmpo
-                > min_module_power):
+                    > min_module_power):
                 power_lst.append(module)
 
         # pick random module from list
-        module = power_lst[random.randint(0, (len(power_lst) -1))]
+        module = power_lst[random.randint(0, (len(power_lst) - 1))]
 
         # calculate amount of modules needed to reach power
         n_modules = (pv_power
@@ -293,7 +295,7 @@ class Photovoltaic(Component):
             self.strings_per_inverter = 2
 
         # pick inverter according to peak power of modules
-        inverter_lst =[]
+        inverter_lst = []
         # sandia_inverters = pvsystem.retrieve_sam(name=inverter_lib)
 
         while len(inverter_lst) == 0:
@@ -305,16 +307,16 @@ class Photovoltaic(Component):
                        * self.strings_per_inverter)) and (
                            self.inverter_lib[inverter].Paco
                            < (self.module_lib[module].Impo
-                       * self.module_lib[module].Vmpo
-                       * self.modules_per_string
-                       * self.strings_per_inverter) + inverter_power_range):
+                              * self.module_lib[module].Vmpo
+                              * self.modules_per_string
+                              * self.strings_per_inverter) + inverter_power_range):
                     inverter_lst.append(inverter)
 
             # increase power range of inverter if no inverter was found
             inverter_power_range += 100
 
         inverter = inverter_lst[
-            random.randint(0, (len(inverter_lst) -1))]
+            random.randint(0, (len(inverter_lst) - 1))]
 
         self.module = self.module_lib[module]
         self.inverter = self.inverter_lib[inverter]
@@ -331,7 +333,7 @@ class Photovoltaic(Component):
         self.modelchain = ModelChain(
             self.system, self.location, name=self.identifier
         )
-    
+
         self.peak_power = (
             self.module.Impo
             * self.module.Vmpo
@@ -339,11 +341,11 @@ class Photovoltaic(Component):
             * self.system.modules_per_string
             * self.system.strings_per_inverter
         )
-        
+
         # calculate area of pv modules
         self.modules_area = (self.module.Area
-          * self.modules_per_string
-          * self.strings_per_inverter)
+                             * self.modules_per_string
+                             * self.strings_per_inverter)
 
         return (self.modules_per_string,
                 self.strings_per_inverter,
