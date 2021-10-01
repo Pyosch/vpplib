@@ -80,6 +80,8 @@ surface_tilt = (20,)
 surface_azimuth = 200
 modules_per_string = 2
 strings_per_inverter = 2
+temp_lib = 'sapm'
+temp_model = 'open_rack_glass_glass'
 
 # BEV data
 battery_max = 16
@@ -250,6 +252,8 @@ for bus in vpp.buses_with_pv:
             surface_azimuth=surface_azimuth,
             modules_per_string=modules_per_string,
             strings_per_inverter=strings_per_inverter,
+            temp_lib=temp_lib,
+            temp_model=temp_model
         )
     )
 
