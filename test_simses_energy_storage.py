@@ -108,13 +108,6 @@ storage.residual_load = house_loadshape.residual_load
 
 # %%
 
-storage.prepare_time_series()
-
-
-storage.timeseries.plot()
-
-# %%
-
 
 def test_operate_storage(storage, timestamp):
 
