@@ -49,21 +49,23 @@ user_profile = UserProfile(
 
 pv = Photovoltaic(module_lib="SandiaMod",
                   inverter_lib="SandiaInverter",
-                  surface_tilt = 20,
-                  surface_azimuth = 200,
+                  surface_tilt=20,
+                  surface_azimuth=200,
                   unit="kW",
                   identifier="PV-System",
                   environment=environment,
                   user_profile=user_profile,
+                  temp_lib='sapm',
+                  temp_model='open_rack_glass_glass',
                   cost=None)
 
 (modules_per_string,
  strings_per_inverter,
  module, inverter) = pv.pick_pvsystem(
-     min_module_power = 220,
-     max_module_power = 240,
-     pv_power = 8000,
-     inverter_power_range = 100)
+     min_module_power=220,
+     max_module_power=240,
+     pv_power=8000,
+     inverter_power_range=100)
 
 pv.prepare_time_series()
 
@@ -73,4 +75,4 @@ print("PV inverter: ")
 print(pv.inverter)
 print("PV peak power: ", pv.peak_power)
 print("Area of PV modules: ", pv.modules_area)
-pv.timeseries.plot(figsize=(16,9))
+pv.timeseries.plot(figsize=(16, 9))
