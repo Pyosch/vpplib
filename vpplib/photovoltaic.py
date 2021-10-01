@@ -329,6 +329,7 @@ class Photovoltaic(Component):
             surface_azimuth=self.surface_azimuth,
             module_parameters=self.module,
             inverter_parameters=self.inverter,
+            temperature_model_parameters=self.temperature_model_parameters,
             modules_per_string=self.modules_per_string,
             strings_per_inverter=self.strings_per_inverter,
         )
