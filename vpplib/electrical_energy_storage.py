@@ -421,6 +421,7 @@ class ElectricalEnergyStorageSimses(Component):
                  soc_start: float,
                  soc_min: float,
                  soc_max: float,
+                 cell_type = 'SonyLFP',
                  identifier=None,
                  result_path: str = None,
                  environment=None,
@@ -443,6 +444,7 @@ class ElectricalEnergyStorageSimses(Component):
         self.soc_min = soc_min
         self.soc_max = soc_max
         self.soc_start = soc_start
+        self.cell_type = cell_type
         # P: power [kW], SOC: State of Charge [-]
         self.df = pd.DataFrame(columns=['P', 'SOC'],
                                index=pd.date_range(
@@ -491,7 +493,7 @@ class ElectricalEnergyStorageSimses(Component):
                                    'storage_1, ' + \
                                    str(self.capacity * 1000)
                                    + ', lithium_ion,'
-                                   + 'SonyLFP')  # str(self.storage_config.cell_type))
+                                   + self.cell_type)  # str(self.storage_config.cell_type))
 
         self.simulation_config.add_section('BATTERY')
         self.simulation_config.set(
