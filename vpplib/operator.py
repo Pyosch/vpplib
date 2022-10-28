@@ -302,8 +302,9 @@ class Operator(object):
                     if len(storage_at_bus) > 0:
 
                         res_loads.loc[idx][bus] = sum(
-                            self.net.load.loc[load_at_bus].p_mw
-                        ) + sum(self.net.sgen.loc[sgen_at_bus].p_mw)
+                            [self.net.load.loc[load].p_mw for load in load_at_bus]
+                            )
+                        + sum([self.net.sgen.loc[sgen].p_mw for sgen in sgen_at_bus])
 
                         # set loads and sgen to 0 since they are in res_loads now
                         # reassign values after operate_storage has been executed
@@ -315,21 +316,21 @@ class Operator(object):
 
                         # run storage operation with residual load
                         state_of_charge, res_load = self.virtual_power_plant.components[
-                            self.net.storage.loc[storage_at_bus].name.item()
+                            self.net.storage.loc[list(storage_at_bus)].name.item()
                         ].operate_storage(
                             res_loads.loc[idx][bus]
                         )
 
                         # save state of charge and residual load in timeseries
                         self.virtual_power_plant.components[
-                            self.net.storage.loc[storage_at_bus].name.item()
+                            self.net.storage.loc[list(storage_at_bus)].name.item()
                         ].timeseries["state_of_charge"][
                             idx
                         ] = (
                             state_of_charge
                         )  # state_of_charge_df[idx][bus] = state_of_charge
                         self.virtual_power_plant.components[
-                            self.net.storage.loc[storage_at_bus].name.item()
+                            self.net.storage.loc[list(storage_at_bus)].name.item()
                         ].timeseries["residual_load"][idx] = res_load
 
                         # assign new residual load to loads and sgen depending on positive/negative values
@@ -649,18 +650,22 @@ class Operator(object):
         # keys of the dictionary. First, extract the information to the df
         for idx in tqdm(net_dict.keys()):
 
-            ext_grid = ext_grid.append(
-                net_dict[idx]["res_ext_grid"], ignore_index=True
-            )
+            ext_grid = pd.concat(
+                [ext_grid,
+                 net_dict[pd.to_datetime(idx)]["res_ext_grid"]
+                 ], ignore_index=True)
+
             line_loading_percent[idx] = net_dict[idx][
                 "res_line"
             ].loading_percent
+
             bus_vm_pu[idx] = net_dict[idx]["res_bus"].vm_pu
             bus_p_mw[idx] = net_dict[idx]["res_bus"].p_mw
             bus_q_mvr[idx] = net_dict[idx]["res_bus"].q_mvar
             trafo_loading_percent[idx] = net_dict[idx][
                 "res_trafo"
             ].loading_percent
+
             sgen_p_mw[idx] = net_dict[idx]["res_sgen"].p_mw
             load_p_mw[idx] = net_dict[idx]["res_load"].p_mw
             storage_p_mw[idx] = net_dict[idx]["res_storage"].p_mw
