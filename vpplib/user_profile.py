@@ -10,7 +10,7 @@ electric vehicles.
 
 import traceback
 import pandas as pd
-
+import os
 
 class UserProfile(object):
     def __init__(
@@ -79,9 +79,10 @@ class UserProfile(object):
         # Define the maximal connection power for a certain user
         self.max_connection_power = max_connection_power
 
-        self.mean_temp_days = pd.read_csv(
-            "./input/thermal/dwd_temp_days_2015.csv", index_col="time"
-        )
+        self.mean_temp_days = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                                       'input/thermal/dwd_temp_days_2015.csv').replace('\\', '/'),
+                                          index_col='time')
+
         self.mean_temp_days.index = pd.to_datetime(self.mean_temp_days.index)
         self.year = str(next(iter(self.mean_temp_days.index)))[:4]
 
@@ -90,24 +91,25 @@ class UserProfile(object):
         # 'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.building_type = building_type
         # for cop
-        self.mean_temp_hours = pd.read_csv(
-            "./input/thermal/dwd_temp_hours_2015.csv", index_col="time"
+        self.mean_temp_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
+            "input/thermal/dwd_temp_hours_2015.csv"), index_col="time"
         )
         self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
 
-        self.mean_temp_quarter_hours = pd.read_csv(
-            "./input/thermal/dwd_temp_15min_2015.csv", index_col="time"
+        self.mean_temp_quarter_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
+            "input/thermal/dwd_temp_15min_2015.csv"), index_col="time"
         )
         self.mean_temp_quarter_hours.index = pd.to_datetime(
             self.mean_temp_quarter_hours.index
         )
 
-        self.demand_daily = pd.read_csv("./input/thermal/demand_daily.csv")
+        self.demand_daily = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
+                                                     "input/thermal/demand_daily.csv"))
         self.t_0 = t_0  # °C
 
         # for SigLinDe calculations
-        self.SigLinDe = pd.read_csv(
-            "./input/thermal/SigLinDe.csv", decimal=","
+        self.SigLinDe = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
+            "./input/thermal/SigLinDe.csv"), decimal=","
         )
         self.building_parameters = None
         self.h_del = None
