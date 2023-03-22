@@ -4,4 +4,4 @@ simses
 pandapower
 numba
 matplotlib
-nrel-pysam
+NREL-PySAM
