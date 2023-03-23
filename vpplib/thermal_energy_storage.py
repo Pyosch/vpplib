@@ -2,8 +2,7 @@
 """
 Info
 ----
-This file contains the basic functionalities of the Component class.
-This is the mother class of all VPPx classes
+This file contains the basic functionalities of the ThermalEnergyStorage class.
 
 """
 
@@ -15,6 +14,7 @@ class ThermalEnergyStorage(Component):
     def __init__(
         self,
         target_temperature,
+        min_temperature,
         hysteresis,
         mass,
         cp,
@@ -69,6 +69,7 @@ class ThermalEnergyStorage(Component):
         self.identifier = identifier
         self.target_temperature = target_temperature
         self.current_temperature = target_temperature - hysteresis
+        self.min_temperature = min_temperature
         self.timeseries = pd.DataFrame(
             columns=["temperature"],
             index=pd.date_range(
@@ -144,7 +145,7 @@ class ThermalEnergyStorage(Component):
         ):
             self.needs_loading = False
 
-        if self.current_temperature < 40:
+        if self.current_temperature < self.min_temperature:
             raise ValueError(
                 "Thermal energy production to low to maintain "
                 + "heat storage temperature!"

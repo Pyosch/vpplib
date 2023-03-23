@@ -18,12 +18,13 @@ year = "2015"
 timebase = 15
 
 # Values for user_profile
-yearly_thermal_energy_demand = 2500  # kWh
+yearly_thermal_energy_demand = 12500  # kWh
 building_type = "DE_HEF33"
 t_0 = 40  # °C
 
 # Values for Thermal Storage
 target_temperature = 60  # °C
+min_temperature = 40  # °C
 hysteresis = 5  # °K
 mass_of_storage = 500  # kg
 cp = 4.2
@@ -69,6 +70,7 @@ tes = ThermalEnergyStorage(
     mass=mass_of_storage,
     hysteresis=hysteresis,
     target_temperature=target_temperature,
+    min_temperature=min_temperature,
     thermal_energy_loss_per_day=thermal_energy_loss_per_day,
 )
 
