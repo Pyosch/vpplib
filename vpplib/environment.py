@@ -11,7 +11,7 @@ TODO: Add regulatory influences e. g. photovoltaik maximum power at the grid con
 """
 
 import pandas as pd
-
+import os
 
 class Environment(object):
     def __init__(
@@ -72,7 +72,10 @@ class Environment(object):
         self.pv_data = pv_data
         self.wind_data = wind_data
 
-    def get_pv_data(self, file="./input/pv/dwd_pv_data_2015.csv"):
+    def get_pv_data(
+        self, file=os.path.join(os.path.dirname(__file__),"../input/pv/dwd_pv_data_2015.csv")
+        # self, file="./input/pv/dwd_pv_data_2015.csv"
+        ):
 
         self.pv_data = pd.read_csv(file, index_col="time")
         self.pv_data.index = pd.to_datetime(self.pv_data.index)
@@ -80,7 +83,8 @@ class Environment(object):
         return self.pv_data
 
     def get_mean_temp_days(
-        self, file="./input/thermal/dwd_temp_days_2015.csv"
+        self, file=os.path.join(os.path.dirname(__file__),"../input/thermal/dwd_temp_days_2015.csv")
+        # self, file="./input/thermal/dwd_temp_days_2015.csv"
     ):
 
         self.mean_temp_days = pd.read_csv(file, index_col="time")
@@ -88,7 +92,8 @@ class Environment(object):
         return self.mean_temp_days
 
     def get_mean_temp_hours(
-        self, file="./input/thermal/dwd_temp_hours_2015.csv"
+        self, file=os.path.join(os.path.dirname(__file__),"../input/thermal/dwd_temp_hours_2015.csv"),
+        # self, file="./input/thermal/dwd_temp_hours_2015.csv"
     ):
 
         self.mean_temp_hours = pd.read_csv(file, index_col="time")
@@ -96,7 +101,8 @@ class Environment(object):
         return self.mean_temp_hours
 
     def get_wind_data(
-        self, file="./input/wind/dwd_wind_data_2015.csv", utc=False
+        self, file=os.path.join(os.path.dirname(__file__),"../input/wind/dwd_wind_data_2015.csv"), utc=False
+        # self, file="./input/wind/dwd_wind_data_2015.csv", utc=False
     ):
 
         r"""
