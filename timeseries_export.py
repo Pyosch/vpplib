@@ -47,7 +47,6 @@ df_component_values = pd.DataFrame(index=[0])
 identifier = "bus_1"
 latitude = 50.941357
 longitude = 6.958307
-target_temperature = 60  # °C
 t_0 = 40  # °C
 yearly_thermal_energy_demand = 12500  # kWh thermal
 
@@ -112,6 +111,8 @@ min_stop_time_hp = 2  # timesteps
 
 # Values for Thermal Storage
 hysteresis = 5  # °K
+target_temperature = 60  # °C
+min_temperature = 40  # °C
 mass_of_storage = 500  # kg
 cp = 4.2
 thermal_energy_loss_per_day = 0.13
@@ -328,6 +329,7 @@ if scenario == 1:
         cp=cp,
         hysteresis=hysteresis,
         target_temperature=target_temperature,
+        min_temperature=min_temperature,
         thermal_energy_loss_per_day=thermal_energy_loss_per_day,
         environment=environment,
         user_profile=user_profile,
@@ -389,6 +391,7 @@ tes_chp = ThermalEnergyStorage(
     user_profile=user_profile,
     hysteresis=hysteresis,
     target_temperature=target_temperature,
+    min_temperature=min_temperature,
     cp=cp,
     thermal_energy_loss_per_day=thermal_energy_loss_per_day,
 )

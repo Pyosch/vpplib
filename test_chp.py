@@ -26,6 +26,7 @@ t_0 = 40  # °C
 
 # Values for Thermal Storage
 target_temperature = 60  # °C
+min_temperature = 40  # °C
 hysteresis = 5  # °K
 mass_of_storage = 500  # kg
 cp = 4.2
@@ -73,6 +74,7 @@ tes = ThermalEnergyStorage(
     mass=mass_of_storage,
     hysteresis=hysteresis,
     target_temperature=target_temperature,
+    min_temperature=min_temperature,
     cp=cp,
     thermal_energy_loss_per_day=thermal_energy_loss_per_day,
 )
