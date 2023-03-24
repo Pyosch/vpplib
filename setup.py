@@ -23,12 +23,16 @@ setuptools.setup(
           'pandapower',
           'simbench',
           'simses',
-          'tqdm'
+          'tqdm',
+          'pandapower'
+          'numba',
+          'matplotlib',
+          'NREL-PySAM'
           ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)", # https://pypi.org/classifiers/
         "Operating System :: OS Independent",   #hopefully
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8',
 )
