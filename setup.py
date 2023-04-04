@@ -10,7 +10,7 @@ setuptools.setup(
     name="vpplib",
     version="0.0.3",
     author="Sascha Birk",
-    author_email="birk-sascha@web.de",
+    author_email="pyosch@posteo.de",
     description="simulating distributed energy appliances in a virtual power plant",
     long_description=long_description,
     long_description_content_type="text/markdown",
