@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="vpplib",
-    version="0.0.2",
+    version="0.0.3",
     author="Sascha Birk",
     author_email="birk-sascha@web.de",
     description="simulating distributed energy appliances in a virtual power plant",
@@ -24,7 +24,7 @@ setuptools.setup(
           'simbench',
           'simses',
           'tqdm',
-          'pandapower'
+          'pandapower',
           'numba',
           'matplotlib',
           'NREL-PySAM'
