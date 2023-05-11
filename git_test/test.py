@@ -1,3 +1,2 @@
 import os
-
-print("pyosch")
+print("GeschedB änderung")
