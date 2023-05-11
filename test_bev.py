@@ -14,8 +14,6 @@ from vpplib.environment import Environment
 from vpplib.battery_electric_vehicle import BatteryElectricVehicle
 import matplotlib.pyplot as plt
 
-print("Kann ich hier testen?")
-
 identifier = "bev_1"
 start = "2015-06-01 00:00:00"
 end = "2015-06-01 23:45:00"
