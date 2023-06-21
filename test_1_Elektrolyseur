@@ -1,0 +1,21 @@
+import numpy as np
+import matplotlib.pyplot as plt
+Faraday_Constant = 96485  # Faraday-Konstante [C/mol]
+Gas_Constant = 8.314  # Gaskonstante [J/(mol K)]
+Temperature = 298  # Temperatur [K]
+Cell_Voltage = 1.48  # Zellspannung [V]
+Current = np.linspace(0, 1000, 100)  # Strom [A]
+Hydrogen_Production_Rate = (Current * Cell_Voltage) / (2 * Faraday_Constant)
+Volume_Hydrogen = Hydrogen_Production_Rate * (Gas_Constant * Temperature) / 101325  # Umrechnung in Volumen bei Normalbedingungen (101325 Pa)
+plt.plot(Current, Hydrogen_Production_Rate)
+plt.xlabel('Strom [A]')
+plt.ylabel('Wasserstoffproduktion [mol/s]')
+plt.title('Elektrolyseur-Wasserstoffproduktion')
+plt.grid(True)
+plt.show()
+plt.plot(Current, Volume_Hydrogen)
+plt.xlabel('Strom [A]')
+plt.ylabel('Volumen Wasserstoff [m³/s]')
+plt.title('Elektrolyseur - Volumen Wasserstoff pro Zeit')
+plt.grid(True)
+plt.show()

@@ -1,0 +1,18 @@
+import numpy as np
+import matplotlib.pyplot as plt
+Cell_Voltage= 1.23 #[V]
+Faraday_Constant = 96485  # Faraday-Konstante [C/mol]
+Gas_Constant = 8.314  # Gaskonstante [J/(mol K)]
+Temperature = 298  # Temperatur [K]
+Anode_Concentration = 1.0  # Konzentration am Anodenkatalysator [mol/L]
+Cathode_Concentration = 1.0  # Konzentration am Kathodenkatalysator [mol/L]
+Anode_Partial_Pressure = 1.0  # Partialdruck am Anodenkatalysator [atm]
+Cathode_Partial_Pressure = 1.0  # Partialdruck am Kathodenkatalysator [atm]
+Current_Density = np.linspace(-2, 2, 100)  # Stromdichte [A/cm^2]
+Cell_Voltage = Cell_Voltage - (Current_Density * (1 / 1000))  # Spannung [V]
+plt.plot(Current_Density, Cell_Voltage)
+plt.xlabel('Stromdichte [A/cm^2]')
+plt.ylabel('Spannung [V]')
+plt.title('Brennstoffzellen-Kennlinie')
+plt.grid(True)
+plt.show()
