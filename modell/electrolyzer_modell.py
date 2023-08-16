@@ -22,9 +22,9 @@ class Electrolyzer:
     '''
     def __init__(self,P_elektrolyseur, P_ac, dt=15): # p_ac = eingangsleistung
 
-        cell_area= 2500 #cm^2   
-        max_current_density = 2,5 #A/cm^2
-        n_cell=10
+          
+        
+        
         P_elektrolyseur = (cell_area*max_current_density*n_cell)*n_stacks   
 
         # Constants
@@ -41,10 +41,10 @@ class Electrolyzer:
         self.T = 50 # Grad Celsius
 
         # Stack parameters
-        self.n_cells = n_cells  # Number of cells
-        self.cell_area = cell_area  # [cm^2] Cell active area
+        self.n_cells = 10  # Number of cells
+        self.cell_area = 2500  # [cm^2] Cell active area
         self.temperature = temperature  # [C] stack temperature
-        self.max_current = 2 * self.cell_area  # [A/cm^2] current density
+        self.max_current = 2,5  # [A/cm^2] current density #2 * self.cell_area
 
         self.p_atmo = 101325#2000000  # (Pa) atmospheric pressure / pressure of water
         self.p_anode = self.p_atmo  # (Pa) pressure at anode, assumed atmo
