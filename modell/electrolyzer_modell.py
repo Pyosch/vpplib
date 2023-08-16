@@ -165,7 +165,7 @@ class Electrolyzer:
         # Eigenverbrauch berechnen
         eta_interp = f_eta(P_ac / P_nenn)  # Interpoliere den eta-Wert
 
-        P_electronics = P_ac * (1 - eta_interp)  # Berechne den Eigenverbrauch
+        P_electronics = P_ac * (1 - eta_interp)  # Berechne den Eigenverbrauch [kW]
 
         return P_electronics
 
@@ -174,7 +174,7 @@ class Electrolyzer:
         :param P_ac:
         :return:
         '''
-        P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100)
+        P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100) #[kW]
 
         return P_dc
 
@@ -183,14 +183,14 @@ class Electrolyzer:
         P_in [Wdc]: stack power input
         return :: H2_mfr [kg/dt]: hydrogen mass flow rate
         """
-        power_left = P_dc
+        power_left = P_dc #[kW]
 
-        I = self.calculate_cell_current(P_dc)
-        V = self.calc_cell_voltage(I, self.temperature)
+        I = self.calculate_cell_current(P_dc) #[A]
+        V = self.calc_cell_voltage(I, self.temperature) #[V]
         eta_F = self.calc_faradaic_efficiency(I)
         mfr = (eta_F * I * self.M * self.n_cells) / (self.n * self.F)
         #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
-        H2_mfr = (mfr*3600)/1000 #kg/15min
+        H2_mfr = (mfr*3600)/1000 #kg/dt
 
         return H2_mfr
 
@@ -200,8 +200,8 @@ class Electrolyzer:
         return: Oxygen flow rate in kg/dt
         '''
         roh_O = 1.429 #density Oxigen kg/m3
-        O_mfr_m3 = (H2_mfr/self.roh_H2)/2
-        O_mfr = O_mfr_m3*roh_O
+        O_mfr_m3 = (H2_mfr/self.roh_H2)/2 #m^3/dt
+        O_mfr = O_mfr_m3*roh_O #[kg/dt]
         return O_mfr
 
     def calc_H2O_mfr(self, H2_mfr):
@@ -254,7 +254,7 @@ class Electrolyzer:
         n = (X_in/(X_out-X_in))*nH2
         dT=300-20 #Temperaturdifferenz zwischen Adsorbtion und Desorption
 
-        P_hz = cp_H2*M_H2*n*dT
+        P_hz = cp_H2*M_H2*n*dT #[W]
 
         Q_des = 48600*n #J/s
         P_gasdrying = P_hz + Q_des #in W
@@ -268,7 +268,7 @@ class Electrolyzer:
         '''
         #w_isotherm = R * T * Z * ln(p2 / p1)
         #p1=101325 #p atmo in pascal
-        T2 = 273.15+30
+        T2 = 273.15+30 # [K]
         p1 = 30 #bar
         Z = 0.95
         k = 1.4
@@ -284,9 +284,9 @@ class Electrolyzer:
         P_dc: in W
         return: q cell in W
         '''
-        V_th = self.E_th_0
-        I = self.calculate_cell_current(P_dc)
-        U_cell = self.calc_cell_voltage(I, self.temperature)
+        V_th = self.E_th_0 # 
+        I = self.calculate_cell_current(P_dc) #[A]
+        U_cell = self.calc_cell_voltage(I, self.temperature) # [V]
 
         q_cell = self.n_cells*(U_cell - V_th)*I
         return q_cell
@@ -350,22 +350,4 @@ class Electrolyzer:
 
         return P_pump_fresh, P_pump_cool
 
-    #def eta_total
-    #'''
-    #Wirkungsgrad, also P_in/H2_mfr_out bezogen auf unteren Heizwert
-    #'''
-        # return eta
-        #     power_left = P_dc
-
-        # I = self.calculate_cell_current(P_dc)
-        # V = self.calc_cell_voltage(I, self.temperature)
-        # eta_F = self.calc_faradaic_efficiency(I)
-        # mfr = (eta_F * I * self.M * self.n_cells) / (self.n * self.F)
-        # #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
-        # H2_mfr = (mfr*3600)/1000 #kg/15min
-
-        # return H2_mfr
-
-
-
-    #def run_dynamic(df, )
+    
