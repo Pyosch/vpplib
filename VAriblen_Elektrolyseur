@@ -1,9 +1,9 @@
-import elec
+import pandas as pd
+from modell.electrolyzer_modell import Electrolyzer
 
-#P_ac = pd_readcsv
+P_ac = pd.read_csv('...\plots\wind_energy_cologne.csv', sep=',', decimal='.', header=0)
 elec = Electrolyzer(500, P_ac, Betriebsstrategie=2)
 
 H2_mfr = elec.run
-wirkungsgrad = elec.eta_total
-print(h2_mfr)
-# test 123
+print(H2_mfr)
+
