@@ -82,7 +82,7 @@ class operate_electrolyzer:
         _____________________________________________________________________________________________________________________________
         P_nominal = self.P_nominal
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_funcion(P_nominal, P_in):
@@ -300,7 +300,7 @@ class operate_electrolyzer:
         })
         P_nominal = self.P_nominal
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_funcion(P_nominal, P_in):
@@ -444,7 +444,7 @@ class operate_electrolyzer:
         })
         P_nominal = self.P_nominal
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots/my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_funcion(P_nominal, P_in):
@@ -579,7 +579,7 @@ class operate_electrolyzer:
         P_nominal = self.P_nominal
         P_middle = P_nominal * 0.5
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_funcion(P_nominal, P_in):
@@ -724,7 +724,7 @@ class operate_electrolyzer:
         })
 
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_function(P_nominal, P_in):
@@ -905,7 +905,7 @@ class operate_electrolyzer:
             'booting': 3
         })
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_function(P_nominal, P_in):
@@ -1017,7 +1017,7 @@ class operate_electrolyzer:
         P_nominal = self.P_nominal
         P_min =  P_nominal * 0.12
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_funcion(P_nominal, P_in):
@@ -1148,7 +1148,7 @@ class operate_electrolyzer:
         })
         P_nominal = self.P_nominal
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_funcion(P_nominal, P_in):
@@ -1229,7 +1229,7 @@ class operate_electrolyzer:
         dt=1min
 
         '''
-        price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
+        price = pd.read_csv('..\prices\day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
                             date_parser=lambda idx: pd.to_datetime(idx, utc=True))
         price = price.resample('1min').interpolate(method='linear')
         price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
@@ -1297,7 +1297,7 @@ class operate_electrolyzer:
         P_nominal = self.P_nominal
         P_middle = P_nominal * 0.5
         # Load power curve data
-        power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
+        power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         # Define function to calculate specific energy consumption
         def operation_funcion(P_nominal, P_in):
