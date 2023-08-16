@@ -1,0 +1,8 @@
+import electrolyzer
+
+P_ac = pd_readcsv
+elec = electrolyzer(500, P_ac, Betriebsstrategie=2)
+
+H2_mfr = elec.run
+wirkungsgrad = elec.eta_total
+print(h2_mfr)

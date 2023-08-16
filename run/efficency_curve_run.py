@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import sys
-sys.path.append('../11120991_End_Moritz_MA/python_code')
+sys.path.append('..\11120991_End_Moritz_MA\python_code')
 from modell.electrolyzer_modell import Electrolyzer
 import matplotlib.pyplot as plt
 

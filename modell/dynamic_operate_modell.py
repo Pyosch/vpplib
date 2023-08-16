@@ -16,12 +16,12 @@ class operate_electrolyzer:
         dt=1min
         Output: Df with Status, heat, hydrogen_production,
         '''
-        price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
-                            date_parser=lambda idx: pd.to_datetime(idx, utc=True))
-        price = price.resample('1min').interpolate(method='linear')
-        price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
-        df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
-        P_min = self.P_min
+        #price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
+        #                    date_parser=lambda idx: pd.to_datetime(idx, utc=True))
+        #price = price.resample('1min').interpolate(method='linear')
+        #price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
+        #df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
+        #P_min = self.P_min
 
 
         P_min = self.P_min
@@ -79,6 +79,7 @@ class operate_electrolyzer:
             'production': 4,
             'booting': 3
         })
+        _____________________________________________________________________________________________________________________________
         P_nominal = self.P_nominal
         # Load power curve data
         power_curve = pd.read_csv('../plots/my_power_curve.csv', sep=',', decimal='.', header=0)
@@ -146,87 +147,87 @@ class operate_electrolyzer:
         return df
 
 
-    def calculate_full_load_hours(self, df):
-        '''
-        Calculates the full load hours of the electrolyzer.
+    #  def calculate_full_load_hours(self, df):
+    #     '''
+    #     Calculates the full load hours of the electrolyzer.
 
-        :param df: DataFrame containing the hydrogen production data
-        :param P_nominal: nominal power of the electrolyzer in kW
-        :return: full load hours of the electrolyzer
-        '''
-        P_nominal = self.P_nominal
-        # Convert hydrogen production to kWh
-        for i in range(len(df.index)):
-            if df.loc[df.index[i], 'status'] == 'production':
-                if df.loc[df.index[i], 'power total [kW]'] <= P_nominal:
-                    df.loc[df.index[i], 'consumed energy [kWh]'] = df.loc[df.index[i], 'power total [kW]']
-                else:
-                    df.loc[df.index[i],'consumed energy [kWh]'] = P_nominal
-        # Calculate full load hours
-        full_load_hours = ((df['consumed energy [kWh]'].sum()/60)/P_nominal)
-        return full_load_hours
+    #     :param df: DataFrame containing the hydrogen production data
+    #     :param P_nominal: nominal power of the electrolyzer in kW
+    #     :return: full load hours of the electrolyzer
+    #     '''
+    #     P_nominal = self.P_nominal
+    #     # Convert hydrogen production to kWh
+    #     for i in range(len(df.index)):
+    #         if df.loc[df.index[i], 'status'] == 'production':
+    #             if df.loc[df.index[i], 'power total [kW]'] <= P_nominal:
+    #                 df.loc[df.index[i], 'consumed energy [kWh]'] = df.loc[df.index[i], 'power total [kW]']
+    #             else:
+    #                 df.loc[df.index[i],'consumed energy [kWh]'] = P_nominal
+    #     # Calculate full load hours
+    #     full_load_hours = ((df['consumed energy [kWh]'].sum()/60)/P_nominal)
+    #     return full_load_hours}
 
-    def calculate_hydrogen_production_elogen(self, df):
-        '''
-        Calculates hydrogen production for each time step based on the power generation.
-        :param df: DataFrame containing the power generation data and status information
-        :param P_nominal: nominal power of the electrolyzer
-        :return: DataFrame with a new column 'hydrogen [Nm3]' containing the hydrogen production for each time step
-        '''
-        P_nominal = self.P_nominal
-        # Load power curve data
-        power_curve = pd.read_csv('plots/elogen_powercurve_data.csv', sep=';', decimal=',', header=0)
+    # def calculate_hydrogen_production_elogen(self, df):
+    #     '''
+    #     Calculates hydrogen production for each time step based on the power generation.
+    #     :param df: DataFrame containing the power generation data and status information
+    #     :param P_nominal: nominal power of the electrolyzer
+    #     :return: DataFrame with a new column 'hydrogen [Nm3]' containing the hydrogen production for each time step
+    #     '''
+    #     P_nominal = self.P_nominal
+    #     # Load power curve data
+    #     power_curve = pd.read_csv('plots/elogen_powercurve_data.csv', sep=';', decimal=',', header=0)
 
-        # Define function to calculate specific energy consumption
-        def operation_funcion(P_nominal, P_in):
-            '''
-            :param P_nominal: nominal power of the electrolyzer
-            :param P_in: actual power generation of the electrolyzer
-            :return: specific energy consumption in kWh/Nm3 for P_in
-            '''
+    #     # Define function to calculate specific energy consumption
+    #     def operation_funcion(P_nominal, P_in):
+    #         '''
+    #         :param P_nominal: nominal power of the electrolyzer
+    #         :param P_in: actual power generation of the electrolyzer
+    #         :return: specific energy consumption in kWh/Nm3 for P_in
+    #         '''
 
-            x = power_curve['relative Leistung [%]'].to_numpy()
-            x = (x * P_nominal) / 100
-            y = power_curve['Energieverbrauch [kWh/Nm3]'].to_numpy()
+    #         x = power_curve['relative Leistung [%]'].to_numpy()
+    #         x = (x * P_nominal) / 100
+    #         y = power_curve['Energieverbrauch [kWh/Nm3]'].to_numpy()
 
-            f = interp1d(x, y, kind='linear')
+    #         f = interp1d(x, y, kind='linear')
 
-            return f(P_in)
+    #         return f(P_in)
 
         # Initialize new columns for hydrogen production, heat energy, and surplus electricity
-        df['hydrogen [Nm3]'] = 0.0
-        df['heat energy [kW/h]'] = 0.0
-        df['Surplus electricity [kW]'] = 0.0
+        # df['hydrogen [Nm3]'] = 0.0
+        # df['heat energy [kW/h]'] = 0.0
+        # df['Surplus electricity [kW]'] = 0.0
 
-        # Calculate hydrogen production, heat energy, and surplus electricity for each time step
-        for i in range(len(df.index)):
-            # Check if the status is 'production'
-            if df.loc[df.index[i], 'status'] == 'production':
-                # Check if the power generation is less than or equal to the nominal power
-                if df.loc[df.index[i], 'power total [kW]'] <= P_nominal:
-                    # Calculate specific energy consumption and hydrogen production
-                    P_in = df.loc[df.index[i], 'power total [kW]']
-                    specific_energy_consumption = operation_funcion(P_nominal, P_in * 0.99)
-                    hydrogen_production = (P_in / 60) / specific_energy_consumption
-                else:
-                    # Calculate hydrogen production using nominal power and specific energy consumption
-                    specific_energy_consumption = operation_funcion(P_nominal, P_nominal * 0.99)
-                    hydrogen_production = (P_nominal / 60) / specific_energy_consumption
+        # # Calculate hydrogen production, heat energy, and surplus electricity for each time step
+        # for i in range(len(df.index)):
+        #     # Check if the status is 'production'
+        #     if df.loc[df.index[i], 'status'] == 'production':
+        #         # Check if the power generation is less than or equal to the nominal power
+        #         if df.loc[df.index[i], 'power total [kW]'] <= P_nominal:
+        #             # Calculate specific energy consumption and hydrogen production
+        #             P_in = df.loc[df.index[i], 'power total [kW]']
+        #             specific_energy_consumption = operation_funcion(P_nominal, P_in * 0.99)
+        #             hydrogen_production = (P_in / 60) / specific_energy_consumption
+        #         else:
+        #             # Calculate hydrogen production using nominal power and specific energy consumption
+        #             specific_energy_consumption = operation_funcion(P_nominal, P_nominal * 0.99)
+        #             hydrogen_production = (P_nominal / 60) / specific_energy_consumption
 
-                # Update the hydrogen production column for the current time step
-                df.loc[df.index[i], 'hydrogen [Nm3]'] = hydrogen_production
-                # Check if the power generation is greater than the nominal power
-                if df.loc[df.index[i], 'power total [kW]'] > P_nominal:
-                    # Calculate surplus electricity
-                    surplus_electricity = df.loc[df.index[i], 'power total [kW]'] - P_nominal
-                    df.loc[df.index[i], 'Surplus electricity [kW]'] = surplus_electricity
+        #         # Update the hydrogen production column for the current time step
+        #         df.loc[df.index[i], 'hydrogen [Nm3]'] = hydrogen_production
+        #         # Check if the power generation is greater than the nominal power
+        #         if df.loc[df.index[i], 'power total [kW]'] > P_nominal:
+        #             # Calculate surplus electricity
+        #             surplus_electricity = df.loc[df.index[i], 'power total [kW]'] - P_nominal
+        #             df.loc[df.index[i], 'Surplus electricity [kW]'] = surplus_electricity
 
-            # Check if the status is 'booting'
-            if df.loc[df.index[i], 'status'] == 'booting':
-                # Set heat energy to 8.5 kW
-                df.loc[df.index[i], 'heat energy [kW/h]'] = 8.5
+        #     # Check if the status is 'booting'
+        #     if df.loc[df.index[i], 'status'] == 'booting':
+        #         # Set heat energy to 8.5 kW
+        #         df.loc[df.index[i], 'heat energy [kW/h]'] = 8.5
 
-        return df
+        # return df
 
     def hydrogen_production_peakload(self, df):
         '''
