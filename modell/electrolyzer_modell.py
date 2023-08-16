@@ -56,7 +56,7 @@ class Electrolyzer:
         T [degC]: stack temperature
         return :: V_cell [Vdc/cell]: cell voltage
         """
-        T_K = T + 273.15
+        T_K = T + 273.15 #Celvin
 
         # Cell reversible voltage:
         E_rev_0 = self.gibbs / (self.n * self.F)  # Reversible cell voltage at standard state
