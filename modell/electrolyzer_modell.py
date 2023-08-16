@@ -25,7 +25,7 @@ class Electrolyzer:
           
         
         
-        P_elektrolyseur = (cell_area*max_current_density*n_cell)*n_stacks   
+        P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   
 
         # Constants
         self.F = 96485.34  # Faraday's constant [C/mol]
@@ -43,7 +43,7 @@ class Electrolyzer:
         # Stack parameters
         self.n_cells = 10  # Number of cells
         self.cell_area = 2500  # [cm^2] Cell active area
-        self.temperature = temperature  # [C] stack temperature
+        self.temperature = 50  # [C] stack temperature
         self.max_current = 2,5  # [A/cm^2] current density #2 * self.cell_area
 
         self.p_atmo = 101325#2000000  # (Pa) atmospheric pressure / pressure of water
@@ -125,7 +125,7 @@ class Electrolyzer:
         return V_cell
 
     def create_polarization(self):
-        currents = np.arange(1, (max_current_density*cell_area+ 10), 10)
+        currents = np.arange(1, (self.max_current_density*self.cell_area+ 10), 10)
         voltage = []
         for i in range(len(currents)):
             voltage.append(self.calc_cell_voltage(currents[i],self.T))
@@ -350,22 +350,22 @@ class Electrolyzer:
 
         return P_pump_fresh, P_pump_cool
 
-    def eta_total
-    '''
-    Wirkungsgrad, also P_in/H2_mfr_out bezogen auf unteren Heizwert
-    '''
-        return eta
-            power_left = P_dc
+    #def eta_total
+    #'''
+    #Wirkungsgrad, also P_in/H2_mfr_out bezogen auf unteren Heizwert
+    #'''
+        # return eta
+        #     power_left = P_dc
 
-        I = self.calculate_cell_current(P_dc)
-        V = self.calc_cell_voltage(I, self.temperature)
-        eta_F = self.calc_faradaic_efficiency(I)
-        mfr = (eta_F * I * self.M * self.n_cells) / (self.n * self.F)
-        #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
-        H2_mfr = (mfr*3600)/1000 #kg/15min
+        # I = self.calculate_cell_current(P_dc)
+        # V = self.calc_cell_voltage(I, self.temperature)
+        # eta_F = self.calc_faradaic_efficiency(I)
+        # mfr = (eta_F * I * self.M * self.n_cells) / (self.n * self.F)
+        # #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
+        # H2_mfr = (mfr*3600)/1000 #kg/15min
 
-        return H2_mfr
+        # return H2_mfr
 
 
 
-    def run_dynamic(df, )
+    #def run_dynamic(df, )
