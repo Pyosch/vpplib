@@ -6,3 +6,4 @@ elec = Electrolyzer(500, P_ac, Betriebsstrategie=2)
 H2_mfr = elec.run
 wirkungsgrad = elec.eta_total
 print(h2_mfr)
+# test 123
