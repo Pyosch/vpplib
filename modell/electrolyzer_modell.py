@@ -74,9 +74,9 @@ class Electrolyzer:
         #E_rev = E_rev_0 - ((E_rev_0* 10**-3 * T_K) + 9.523 * 10**-5 * np.log(T_K) + 9.84*10**-8* T_K**2) #empirical equation
 
 
-        T_anode = T_K
+        T_anode = T_K #[K]
 
-        T_cathode = T_K
+        T_cathode = T_K #[K]
 
         # anode charge transfer coefficient
         alpha_a = 2
@@ -90,7 +90,7 @@ class Electrolyzer:
         # cathode exchange current density
         i_0_c = 10 ** (-3)
 
-        i = I / self.cell_area
+        i = I / self.cell_area# A/cm^2
 
         # derived from Butler-Volmer eqs
        # V_act_a = ((self.R * T_anode) / (alpha_a * self.F)) * np.arcsinh(i / (2*i_0_a))
@@ -118,9 +118,9 @@ class Electrolyzer:
 
         R_ohmic_elec = 50e-3
 
-        V_ohmic = i * (R_ohmic_elec + R_ohmic_ionic)
+        V_ohmic = i * (R_ohmic_elec + R_ohmic_ionic) #[V]
 
-        V_cell = E_rev + V_act_a + V_act_c + V_ohmic
+        V_cell = E_rev + V_act_a + V_act_c + V_ohmic #[V]
 
         return V_cell
 
@@ -140,7 +140,7 @@ class Electrolyzer:
         P_cell: Power each cell
         return I: Current each cell in Ampere
         '''
-        P_cell = P_dc /self.n_cells
+        P_cell = P_dc /self.n_cells  #[kW]
         df = self.create_polarization()
         x = df['power_W'].to_numpy()
         y = df['current_A'].to_numpy()
