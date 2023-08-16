@@ -349,31 +349,29 @@ class Electrolyzer:
         P_pump_cool = (vfr_H2O / 3600) * (dt_interp_pressure) * (1 - eta_interp_pump)
 
         return P_pump_fresh, P_pump_cool
+    
 
-<<<<<<< HEAD
     def eta_total(self, P_dc,):
         #H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
        
         # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt 
         # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
-
+        # H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
+        # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt
+        # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
         # P_gasdrying = self.gas_drying(H2_mfr_cal)                       # Calculate power for gas drying
         # P_compression = self.compression(3000000)                       # Calculate power for compression /warum nicht P_dc?
         # q_cell = self.heat_cell(P_dc)                                   # Erzeugte Wärme in Zelle in W
         # q_loss, q_H2O_fresh = self.heat_sys(q_cell, H2O_mfr)            # Wärmeverluste in W
-
         # q_system = (P_dc + P_gasdrying + P_compression) / 3600       # Gesamtwärme des Systems in kWh
         # mfr_cool = self.calc_mfr_cool(q_system)                         # Massenstrom Kühlung in kg/dt
         # P_pump_fresh, P_pump_cool = self.calc_pump(H2O_mfr, P_dc, 2000000)  # Calculate pump power
-
         # P_total_in = P_dc - P_gasdrying - P_compression - P_pump_fresh - P_pump_cool
        
         eta_run= P_dc/(H2_mfr*self.lhv)                       #kWh/kg
-        return eta_total
-    #'''
-    #Wirkungsgrad, also P_in/H2_mfr_out bezogen auf unteren Heizwert
-    #'''
-        # return eta
+
+        return eta_run
+
         #     power_left = P_dc
 
         # I = self.calculate_cell_current(P_dc)
@@ -388,6 +386,3 @@ class Electrolyzer:
 
 
     #def run_dynamic(df, )
-=======
-    
->>>>>>> ea162f7adb1ee287a60113eeb87b384bdc4dabaa
