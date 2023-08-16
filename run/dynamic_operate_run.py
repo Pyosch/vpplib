@@ -1,5 +1,5 @@
 import sys
-sys.path.append('11120991_End_Moritz_MA/python_code')
+sys.path.append('11120991_End_Moritz_MA\python_code')
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,10 +10,10 @@ import seaborn as sns
 
 #read the power curve
 pnominal_generation = 5000 #kW
-dfpv = pd.read_csv('../power_generation/pv_energy_cologne.csv', header=0, index_col=0, date_parser=lambda idx: pd.to_datetime(idx, utc=True))
+dfpv = pd.read_csv('..\power_generation\pv_energy_cologne.csv', header=0, index_col=0, date_parser=lambda idx: pd.to_datetime(idx, utc=True))
 dfpv['PV [W]'] = (dfpv['PV [W]']/1e3)*2.5
 dfpv = dfpv.rename(columns={'PV [W]':'PV [kW]'})
-dfwind = pd.read_csv('../power_generation/wind_energy_cologne.csv',
+dfwind = pd.read_csv('..\power_generation\wind_energy_cologne.csv',
                      header=0, index_col=0, date_parser=lambda idx: pd.to_datetime(idx, utc=True))
 dfwind['feedin_power_plant'] = ((dfwind['feedin_power_plant']/1e3)/4.2)*2.5
 dfwind = dfwind.rename(columns={'feedin_power_plant':'wind power [kW]'})

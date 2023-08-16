@@ -351,12 +351,16 @@ class Electrolyzer:
         return P_pump_fresh, P_pump_cool
     
 
+<<<<<<< HEAD
     def eta_total(self, P_dc,):
         #H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
        
         # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt 
         # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
         # H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
+=======
+        H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
+>>>>>>> e8dc93886d6499de7e64a746ef72420e946f7da2
         # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt
         # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
         # P_gasdrying = self.gas_drying(H2_mfr_cal)                       # Calculate power for gas drying
@@ -371,6 +375,7 @@ class Electrolyzer:
         eta_run= P_dc/(H2_mfr*self.lhv)                       #kWh/kg
 
         return eta_run
+<<<<<<< HEAD
 
         #     power_left = P_dc
 
@@ -386,3 +391,83 @@ class Electrolyzer:
 
 
     #def run_dynamic(df, )
+=======
+    
+    def __init__(self, n_stacks):
+        self.n_stacks = n_stacks
+        self.P_stack= 531 #fixed nominal power of stack
+        self.P_nominal = self.P_stack * n_stacks
+        self.P_min = self.P_nominal * 0.1
+        self.P_max = self.P_nominal
+
+    def power_profile(self, df):
+        '''
+        input: Df with P_in Data
+        dt=1min
+        Output: Df with Status, heat, hydrogen_production,
+        '''
+        #price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
+        #                    date_parser=lambda idx: pd.to_datetime(idx, utc=True))
+        #price = price.resample('1min').interpolate(method='linear')
+        #price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
+        #df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
+        #P_min = self.P_min
+
+
+        P_min = self.P_min
+        long_gap_threshold = 60
+        short_gap_threshold = 5
+        # create a mask for power values below P_min
+        below_threshold_mask = df['power total [kW]'] < P_min
+
+        # find short gaps (up to 4 steps) where power is below P_min
+        short_gaps = below_threshold_mask.rolling(window=short_gap_threshold).sum()
+        hot_mask = (short_gaps <= 4) & below_threshold_mask
+        df.loc[hot_mask, 'status'] = 'hot'
+
+        # find middle gaps (between 5 and 60 steps) where power is below P_min
+        middle_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
+        hot_standby_mask = ((5 <= middle_gaps) & (middle_gaps < 60)) & below_threshold_mask
+        df.loc[hot_standby_mask, 'status'] = 'hot standby'
+        # find long gaps (over 60 steps) where power is below P_min
+        long_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
+        cold_standby_mask = (long_gaps >= 60) & below_threshold_mask
+        df.loc[cold_standby_mask, 'status'] = 'cold standby'
+
+        # mark production periods (above P_min)
+        production_mask = df['power total [kW]'] >= P_min
+        df.loc[production_mask, 'status'] = 'production'
+
+        # add status codes
+        df['status codes'] = df['status'].replace({
+            'cold standby': 0,
+            'hot standby': 1,
+            'hot': 2,
+            'production': 4
+        })
+
+        # add 'booting' status
+        booting_mask = pd.Series(False, index=df.index)
+        # Identify rows where production is True and previous row is hot standby or cold standby
+        booting_mask |= (df['status'].eq('production') & df['status'].shift(1).isin(['hot standby', 'cold standby']))
+
+        # Identify rows where production is True and status is cold standby for up to 5 rows before
+
+        booting_mask |= (df['status'].eq('production') & df['status'].shift(30).eq('cold standby'))
+
+        # Identify rows where production is True and status is hot standby for up to 30 rows before
+        for i in range(1, 15):
+            booting_mask |= (df['status'].eq('production') & df['status'].shift(i).eq('hot standby'))
+
+        df.loc[booting_mask, 'status'] = 'booting'
+
+        # add status codes
+        df['status codes'] = df['status'].replace({
+            'cold standby': 0,
+            'hot standby': 1,
+            'hot': 2,
+            'production': 4,
+            'booting': 3
+        })  
+        return df
+>>>>>>> e8dc93886d6499de7e64a746ef72420e946f7da2
