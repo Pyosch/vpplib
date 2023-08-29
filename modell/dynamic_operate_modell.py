@@ -16,12 +16,13 @@ class operate_electrolyzer:
         dt=1min
         Output: Df with Status, heat, hydrogen_production,
         '''
-        #price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
-        #                    date_parser=lambda idx: pd.to_datetime(idx, utc=True))
-        #price = price.resample('1min').interpolate(method='linear')
-        #price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
-        #df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
-        
+        price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
+                            date_parser=lambda idx: pd.to_datetime(idx, utc=True))
+        price = price.resample('1min').interpolate(method='linear')
+        price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
+        df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
+        P_min = self.P_min
+
 
         P_min = self.P_min
         long_gap_threshold = 60
@@ -68,14 +69,16 @@ class operate_electrolyzer:
         for i in range(1, 15):
             booting_mask |= (df['status'].eq('production') & df['status'].shift(i).eq('hot standby'))
 
-        df.loc[status codes
+        df.loc[booting_mask, 'status'] = 'booting'
+
+        # add status codes
         df['status codes'] = df['status'].replace({
             'cold standby': 0,
             'hot standby': 1,
             'hot': 2,
             'production': 4,
             'booting': 3
-        })booting_mask, 'status'] = 'booting'
+        })
 
         # add 
         
