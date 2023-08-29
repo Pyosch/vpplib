@@ -8,16 +8,15 @@ from scipy.interpolate import interp1d
 from scipy.optimize import minimize_scalar
 
 #Leistungen
-#P_ac = Eingangsstrom
-#P_dc = Eingangsstrom in Gleichstrom
-#P_nominal = Maximaler Strom Elektrolyseur gleichstrom
-#P_max = P_nominal
-#P_min = mindestLeistung Elektrolyseur
-#P_nenn =  P_nominal 
-#P_electronics =Eigenverbrauch des Elektrolyseurs
-#P_cell = Leistung Zelle
-#P_in   = ÜberschusLeistung "Strom"
-
+#P_ac = Eingangsstrom                                       ac
+#P_dc = Eingangsstrom in Gleichstrom                        dc
+#P_nominal = Maximaler Strom Elektrolyseur gleichstrom      dc
+#P_max = P_nominal                                          dc
+#P_min = mindestLeistung Elektrolyseur                      dc
+#P_nenn =  P_nominal                                        dc
+#P_electronics =Eigenverbrauch des Elektrolyseurs           dc
+#P_cell = Leistung Zelle                                    dc
+#P_Elektrolyseur = P_nominal                                dc oder ac? P_Elektrolyseur
 
 class Electrolyzer:
     '''    Membrane : Zirfon
@@ -25,10 +24,13 @@ class Electrolyzer:
     Cathode : Nickel 99.99%
     Electrolyte : KOH at 30 wt.%
     '''
-    def __init__(self,P_elektrolyseur, P_ac, dt=15):
+    def __init__(self,P_elektrolyseur, P_ac, dt=15): # p_ac = eingangsleistung
 
-        P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
-
+          
+        
+        
+        #P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
+        self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cell)     # Ist die Leistung des Elektrolyseurs in dc oder ac
         # Constants
         self.F = 96485.34  # Faraday's constant [C/mol]
         self.R = 8.314  # ideal gas constant [J/(mol*K)]
@@ -41,27 +43,19 @@ class Electrolyzer:
         self.roh_H2 = 0.08988 #Density in kg/m3
         self.roh_O = 1.429 #Density kg/m3
         self.T = 50 # Grad Celsius
-        self.P_stack= 531 #fixed nominal power of stack
-        self.max_current_density = 2 * self.cell_area  # Habe ich hinzugefügt um eine maximale Stromsidhcte zu haben
-        #self.max_current_density wie komme sonst auf diesen Wert durch I/A oder wird der festgelegt
-        self.n_stacks=20 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Ist nur zum Test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #self.n_stacks= n_stacks
-        self.P_nominal = self.P_stack * self.n_stacks
+        
+        #Leistungen/Stromdichte
+        self.max_current_density = 2 * self.cell_area                                      # Habe ich hinzugefügt um eine maximale Stromdichte zu haben #self.max_current_density wie komme sonst auf diesen Wert durch I/A oder wird der festgelegt
+        #self.P_nominal = self.P_stack * self.n_stacks
+        self.p_nominal = P_elektrolyseur
         self.P_min = self.P_nominal * 0.1
         self.P_max = self.P_nominal
-        #self.max_current_density wie komme ich auf diesen Wert durch I/A oder wird der festgelegt
 
         # Stack parameters
         self.n_cells = 10  # Number of cells
         self.cell_area = 2500  # [cm^2] Cell active area
         self.temperature = 50  # [C] stack temperature
-        self.max_current = 2,5  # [A/cm^2] current density #2 * self.cell_area
-
-        self.n_stacks = 10
-        self.P_stack= 531 #fixed nominal power of stack
-        self.P_nominal = self.P_stack * self.n_stacks
-        self.P_min = self.P_nominal * 0.1
-        self.P_max = self.P_nominal
+        self.max_current = 2,5  # [A/cm^2] current density #2 * self.cell_area              # Ist das nicht das selbe wie self.max_current_density
 
         self.p_atmo = 101325#2000000  # (Pa) atmospheric pressure / pressure of water
         self.p_anode = self.p_atmo  # (Pa) pressure at anode, assumed atmo
@@ -141,7 +135,7 @@ class Electrolyzer:
 
         return V_cell
 
-    def create_polarization(self):
+    def create_polarization(self):  # Spannungswerte berechnet
         currents = np.arange(1, (self.max_current_density*self.cell_area+ 10), 10)
         voltage = []
         for i in range(len(currents)):
@@ -164,12 +158,13 @@ class Electrolyzer:
         f = interp1d(x, y, kind='linear')
         return  f(P_cell)
 
-    def stack_nominal(self):
-        '''
-        :return:            nominal Power in W 
-        '''
-        P_nominal = (self.create_polarization().iloc[500,0] * self.create_polarization().iloc[500,1]*self.n_cells) /1000
-        return P_nominal
+    # def stack_nominal(self):                                                                                          # wird nicht mehr benötigt oder
+    #     '''
+    #     stack nominal in kW
+    #     :return:
+    #     '''
+    #     P_nominal = (self.create_polarization().iloc[500,0] * self.create_polarization().iloc[500,1]*self.n_cells) /1000
+    #     return P_nominal
 
     def power_electronics(self, P_nenn, P_ac):
         '''
@@ -190,7 +185,7 @@ class Electrolyzer:
 
         return P_electronics
 
-    def power_dc(self, P_ac):# P_dc
+    def power_dc(self, P_ac):# Berechnung P_dc                                                              #muss noch als df abgeändert werden
         '''
         :param P_ac:        Power AC in W
         :return:            Power DC in W
@@ -198,12 +193,14 @@ class Electrolyzer:
         P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100) #[kW]
 
         return P_dc
-    def status_codes(self,df)   # masken
-        ''' Inputparameter ist p_in über eine Zeitreihe
-        return: df mit status Codes '''
+    def status_codes(self,dt,df): 
+            #''' Inputparameter ist p_in über eine Zeitreihe
+        #return: df mit status Codes '''
         # P_min = self.P_min
-        long_gap_threshold = 60
-        short_gap_threshold = 5
+        
+        P_min = self.P_min
+        long_gap_threshold = 60/dt          #Zeitschritte                                                     # muss aufgerundet werden oder sonst könnten kommazahlen entstehen
+        short_gap_threshold = 5/dt          #Zeitschritte                                                     # muss aufgerundet werden oder sonst könnten kommazahlen entstehen
         # create a mask for power values below P_min
         below_threshold_mask = df['power total [kW]'] < P_min
 
@@ -246,17 +243,19 @@ class Electrolyzer:
         for i in range(1, 15):
             booting_mask |= (df['status'].eq('production') & df['status'].shift(i).eq('hot standby'))
 
-        df.loc[status codes
+        df.loc[booting_mask, 'status'] = 'booting'
+
+        # add status codes
         df['status codes'] = df['status'].replace({
             'cold standby': 0,
             'hot standby': 1,
             'hot': 2,
             'production': 4,
             'booting': 3
-        })booting_mask, 'status'] = 'booting'
+        })
         return df
     
-    def calculate_hydrogen_production(self,P_max,P_dc,df):    #vorher run # for schleife rein
+    def calculate_hydrogen_production(self,P_max,P_dc,df):    #vorher run # for schleife rein           #P_dc muss eigentlich aus dem df geholt werden muss geändert werden
 
         
         """
@@ -284,21 +283,20 @@ class Electrolyzer:
                 if df.loc[df.index[i], 'power total [kW]'] <= P_max: #P_nominal = P_MAXIMAL
                     hydrogen_production = (self.calc_faradaic_efficiency(self.calculate_cell_current(P_dc)) *(self.calculate_cell_current(P_dc)) * self.M * self.n_cells) / (self.n * self.F)
                     df.loc[df.index[i], 'hydrogen [Nm3]'] = hydrogen_production
-                    #specific_energy_consumption = operation_funcion(P_nominal, P_in * 0.99)
-                    df.loc[df.index[i], 'specific consumption'] = #Berechnen!
+                    df.loc[df.index[i], 'specific consumption'] = P_dc
                 else:
                     # Calculate hydrogen production using nominal power and specific energy consumptio
                     hydrogen_production = (self.calc_faradaic_efficiency(self.calculate_cell_current(P_max)) *(self.calculate_cell_current(P_max)) * self.M * self.n_cells) / (self.n * self.F) #P_nominal richtige variabel?
-                    df.loc[df.index[i], 'specific consumption'] = #Berechnen!
+                    df.loc[df.index[i], 'specific consumption'] = P_dc - P_max
                     df.loc[df.index[i], 'Surplus electricity [kW]'] = df.loc[df.index[i], 'power total [kW]'] - P_max
                 # Update the hydrogen production column for the current time step
                 df.loc[df.index[i], 'hydrogen [Nm3]'] = hydrogen_production
 
             elif df.loc[df.index[i], 'status'] == 'booting':
                     df.loc[df.index[i], 'heat energy loss [kW]'] = 0.0085*P_max #0.85% of P_nominal energy losses for heat
-                    df.loc[df.index[i], 'Surplus electricity [kW]'] = P_in - (0.0085*P_max)
+                    df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc - (0.0085*P_max)
             else:
-                df.loc[df.index[i], 'Surplus electricity [kW]'] = P_in
+                df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc
 
         return df
 
@@ -466,7 +464,6 @@ class Electrolyzer:
         # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt 
         # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
         # H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
-=======
         #H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
         # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt
         # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
