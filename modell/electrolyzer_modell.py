@@ -255,7 +255,7 @@ class Electrolyzer:
         })
         return df
     
-    def calculate_hydrogen_production(self,P_max,P_dc,df):    #vorher run # for schleife rein
+    def calculate_hydrogen_production(self,P_max,P_dc,df):    #vorher run # for schleife rein           #P_dc muss eigentlich aus dem df geholt werden muss geändert werden
 
         
         """
