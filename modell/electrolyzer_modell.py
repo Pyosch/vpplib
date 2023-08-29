@@ -1,8 +1,3 @@
-#todo
-#daten in stack parameter
-# Einheiten
-#test
-#
 import math
 import numpy as np
 import scipy
@@ -12,19 +7,14 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize_scalar
 
-
-
 class Electrolyzer:
     '''    Membrane : Zirfon
     Anode : Nickel 99.99%
     Cathode : Nickel 99.99%
     Electrolyte : KOH at 30 wt.%
     '''
-    def __init__(self,P_elektrolyseur, P_ac, dt=15): # p_ac = eingangsleistung
+    def __init__(self,P_elektrolyseur, P_ac, dt=15):
 
-          
-        
-        
         P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   
 
         # Constants
@@ -45,6 +35,12 @@ class Electrolyzer:
         self.cell_area = 2500  # [cm^2] Cell active area
         self.temperature = 50  # [C] stack temperature
         self.max_current = 2,5  # [A/cm^2] current density #2 * self.cell_area
+
+        self.n_stacks = 10
+        self.P_stack= 531 #fixed nominal power of stack
+        self.P_nominal = self.P_stack * self.n_stacks
+        self.P_min = self.P_nominal * 0.1
+        self.P_max = self.P_nominal
 
         self.p_atmo = 101325#2000000  # (Pa) atmospheric pressure / pressure of water
         self.p_anode = self.p_atmo  # (Pa) pressure at anode, assumed atmo
@@ -149,13 +145,17 @@ class Electrolyzer:
 
     def stack_nominal(self):
         '''
-        stack nominal in kW
-        :return:
+        :return:            nominal Power in W 
         '''
         P_nominal = (self.create_polarization().iloc[500,0] * self.create_polarization().iloc[500,1]*self.n_cells) /1000
         return P_nominal
 
     def power_electronics(self, P_nenn, P_ac):
+        '''
+        :param P_ac:        Power AC in W
+        :param P_nenn:      nominal Power in W
+        :return:            self-consumption in kW
+        '''
         # Wirkungsgradkurve definieren
         relative_performance = [0.0,0.09,0.12,0.15,0.189,0.209,0.24,0.3,0.4,0.54,0.7,1.001]
         eta = [0.86,0.91,0.928,0.943,0.949,0.95,0.954,0.96,0.965,0.97,0.973,0.977]
@@ -171,8 +171,8 @@ class Electrolyzer:
 
     def power_dc(self, P_ac):
         '''
-        :param P_ac:
-        :return:
+        :param P_ac:        Power AC in W
+        :return:            Power DC in W
         '''
         P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100) #[kW]
 
@@ -180,8 +180,8 @@ class Electrolyzer:
 
     def run(self, P_dc):
         """
-        P_in [Wdc]: stack power input
-        return :: H2_mfr [kg/dt]: hydrogen mass flow rate
+        :param P_dc:        Power DC in W
+        :return:            H2_mfr [kg/dt]: hydrogen mass flow rate
         """
         power_left = P_dc #[kW]
 
@@ -350,17 +350,8 @@ class Electrolyzer:
 
         return P_pump_fresh, P_pump_cool
     
-
-<<<<<<< HEAD
-    def eta_total(self, P_dc,):
-        #H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
-       
-        # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt 
-        # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
-        # H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
-=======
-        H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
->>>>>>> e8dc93886d6499de7e64a746ef72420e946f7da2
+        def eta(self,P_dc):
+            H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
         # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt
         # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
         # P_gasdrying = self.gas_drying(H2_mfr_cal)                       # Calculate power for gas drying
@@ -372,10 +363,9 @@ class Electrolyzer:
         # P_pump_fresh, P_pump_cool = self.calc_pump(H2O_mfr, P_dc, 2000000)  # Calculate pump power
         # P_total_in = P_dc - P_gasdrying - P_compression - P_pump_fresh - P_pump_cool
        
-        eta_run= P_dc/(H2_mfr*self.lhv)                       #kWh/kg
+            eta_run= P_dc/(H2_mfr*self.lhv)                       #kWh/kg
 
-        return eta_run
-<<<<<<< HEAD
+            return eta_run
 
         #     power_left = P_dc
 
@@ -390,15 +380,8 @@ class Electrolyzer:
 
 
 
-    #def run_dynamic(df, )
-=======
-    
-    def __init__(self, n_stacks):
-        self.n_stacks = n_stacks
-        self.P_stack= 531 #fixed nominal power of stack
-        self.P_nominal = self.P_stack * n_stacks
-        self.P_min = self.P_nominal * 0.1
-        self.P_max = self.P_nominal
+    #def run_dynamic(self, df):
+
 
     def power_profile(self, df):
         '''
@@ -412,7 +395,6 @@ class Electrolyzer:
         #price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
         #df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
         #P_min = self.P_min
-
 
         P_min = self.P_min
         long_gap_threshold = 60
@@ -470,4 +452,3 @@ class Electrolyzer:
             'booting': 3
         })  
         return df
->>>>>>> e8dc93886d6499de7e64a746ef72420e946f7da2

@@ -1,5 +1,3 @@
-import sys
-sys.path.append('11120991_End_Moritz_MA\python_code')
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
