@@ -7,6 +7,18 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize_scalar
 
+#Leistungen
+#P_ac = Eingangsstrom
+#P_dc = Eingangsstrom in Gleichstrom
+#P_nominal = Maximaler Strom Elektrolyseur gleichstrom
+#P_max = P_nominal
+#P_min = mindestLeistung Elektrolyseur
+#P_nenn =  P_nominal 
+#P_electronics =Eigenverbrauch des Elektrolyseurs
+#P_cell = Leistung Zelle
+#P_in   = ÜberschusLeistung "Strom"
+
+
 class Electrolyzer:
     '''    Membrane : Zirfon
     Anode : Nickel 99.99%
@@ -15,7 +27,7 @@ class Electrolyzer:
     '''
     def __init__(self,P_elektrolyseur, P_ac, dt=15):
 
-        P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   
+        P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
 
         # Constants
         self.F = 96485.34  # Faraday's constant [C/mol]
@@ -29,6 +41,15 @@ class Electrolyzer:
         self.roh_H2 = 0.08988 #Density in kg/m3
         self.roh_O = 1.429 #Density kg/m3
         self.T = 50 # Grad Celsius
+        self.P_stack= 531 #fixed nominal power of stack
+        self.max_current_density = 2 * self.cell_area  # Habe ich hinzugefügt um eine maximale Stromsidhcte zu haben
+        #self.max_current_density wie komme sonst auf diesen Wert durch I/A oder wird der festgelegt
+        self.n_stacks=20 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Ist nur zum Test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        #self.n_stacks= n_stacks
+        self.P_nominal = self.P_stack * self.n_stacks
+        self.P_min = self.P_nominal * 0.1
+        self.P_max = self.P_nominal
+        #self.max_current_density wie komme ich auf diesen Wert durch I/A oder wird der festgelegt
 
         # Stack parameters
         self.n_cells = 10  # Number of cells
@@ -89,7 +110,7 @@ class Electrolyzer:
         i = I / self.cell_area# A/cm^2
 
         # derived from Butler-Volmer eqs
-       # V_act_a = ((self.R * T_anode) / (alpha_a * self.F)) * np.arcsinh(i / (2*i_0_a))
+        # V_act_a = ((self.R * T_anode) / (alpha_a * self.F)) * np.arcsinh(i / (2*i_0_a))
         #V_act_c = ((self.R * T_cathode) / (alpha_c * self.F)) * np.arcsinh(i / (2*i_0_c))
         # alternate equations for Activation overpotential
         # Option 2: Dakota: I believe this may be more accurate, found more
@@ -169,7 +190,7 @@ class Electrolyzer:
 
         return P_electronics
 
-    def power_dc(self, P_ac):
+    def power_dc(self, P_ac):# P_dc
         '''
         :param P_ac:        Power AC in W
         :return:            Power DC in W
@@ -177,22 +198,109 @@ class Electrolyzer:
         P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100) #[kW]
 
         return P_dc
+    def status_codes(self,df)   # masken
+        ''' Inputparameter ist p_in über eine Zeitreihe
+        return: df mit status Codes '''
+        # P_min = self.P_min
+        long_gap_threshold = 60
+        short_gap_threshold = 5
+        # create a mask for power values below P_min
+        below_threshold_mask = df['power total [kW]'] < P_min
 
-    def run(self, P_dc):
+        # find short gaps (up to 4 steps) where power is below P_min
+        short_gaps = below_threshold_mask.rolling(window=short_gap_threshold).sum()
+        hot_mask = (short_gaps <= 4) & below_threshold_mask
+        df.loc[hot_mask, 'status'] = 'hot'
+
+        # find middle gaps (between 5 and 60 steps) where power is below P_min
+        middle_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
+        hot_standby_mask = ((5 <= middle_gaps) & (middle_gaps < 60)) & below_threshold_mask
+        df.loc[hot_standby_mask, 'status'] = 'hot standby'
+        # find long gaps (over 60 steps) where power is below P_min
+        long_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
+        cold_standby_mask = (long_gaps >= 60) & below_threshold_mask
+        df.loc[cold_standby_mask, 'status'] = 'cold standby'
+
+        # mark production periods (above P_min)
+        production_mask = df['power total [kW]'] >= P_min
+        df.loc[production_mask, 'status'] = 'production'
+
+        # add status codes
+        df['status codes'] = df['status'].replace({
+            'cold standby': 0,
+            'hot standby': 1,
+            'hot': 2,
+            'production': 4
+        })
+
+        # add 'booting' status
+        booting_mask = pd.Series(False, index=df.index)
+        # Identify rows where production is True and previous row is hot standby or cold standby
+        booting_mask |= (df['status'].eq('production') & df['status'].shift(1).isin(['hot standby', 'cold standby']))
+
+        # Identify rows where production is True and status is cold standby for up to 5 rows before
+
+        booting_mask |= (df['status'].eq('production') & df['status'].shift(30).eq('cold standby'))
+
+        # Identify rows where production is True and status is hot standby for up to 30 rows before
+        for i in range(1, 15):
+            booting_mask |= (df['status'].eq('production') & df['status'].shift(i).eq('hot standby'))
+
+        df.loc[status codes
+        df['status codes'] = df['status'].replace({
+            'cold standby': 0,
+            'hot standby': 1,
+            'hot': 2,
+            'production': 4,
+            'booting': 3
+        })booting_mask, 'status'] = 'booting'
+        return df
+    
+    def calculate_hydrogen_production(self,P_max,P_dc,df):    #vorher run # for schleife rein
+
+        
         """
         :param P_dc:        Power DC in W
         :return:            H2_mfr [kg/dt]: hydrogen mass flow rate
         """
-        power_left = P_dc #[kW]
+        # power_left = P_dc #[kW]
 
-        I = self.calculate_cell_current(P_dc) #[A]
-        V = self.calc_cell_voltage(I, self.temperature) #[V]
-        eta_F = self.calc_faradaic_efficiency(I)
-        mfr = (eta_F * I * self.M * self.n_cells) / (self.n * self.F)
-        #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
-        H2_mfr = (mfr*3600)/1000 #kg/dt
+         #I = self.calculate_cell_current(P_dc) #[A]
+        # V = self.calc_cell_voltage(I, self.temperature) #[V]
+         #eta_F = self.calc_faradaic_efficiency(I)
+        # mfr = (eta_F * I * self.M * self.n_cells) / (self.n * self.F)
+        # #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
+        # H2_mfr = (mfr*3600)/1000 #kg/dt
+        df['hydrogen [Nm3]'] = 0.0
+        df['heat energy [kW/h]'] = 0.0
+        df['Surplus electricity [kW]'] = 0.0
+        df['heat [kW/h]'] = 0.0
 
-        return H2_mfr
+        for i in range(len(df.index)):
+            P_in = df.loc[df.index[i], 'power total [kW]']
+            # Check if the status is 'production'
+            if df.loc[df.index[i], 'status'] == 'production':
+                # Check if the power generation is less than or equal to the nominal power
+                if df.loc[df.index[i], 'power total [kW]'] <= P_max: #P_nominal = P_MAXIMAL
+                    hydrogen_production = (self.calc_faradaic_efficiency(self.calculate_cell_current(P_dc)) *(self.calculate_cell_current(P_dc)) * self.M * self.n_cells) / (self.n * self.F)
+                    df.loc[df.index[i], 'hydrogen [Nm3]'] = hydrogen_production
+                    #specific_energy_consumption = operation_funcion(P_nominal, P_in * 0.99)
+                    df.loc[df.index[i], 'specific consumption'] = #Berechnen!
+                else:
+                    # Calculate hydrogen production using nominal power and specific energy consumptio
+                    hydrogen_production = (self.calc_faradaic_efficiency(self.calculate_cell_current(P_max)) *(self.calculate_cell_current(P_max)) * self.M * self.n_cells) / (self.n * self.F) #P_nominal richtige variabel?
+                    df.loc[df.index[i], 'specific consumption'] = #Berechnen!
+                    df.loc[df.index[i], 'Surplus electricity [kW]'] = df.loc[df.index[i], 'power total [kW]'] - P_max
+                # Update the hydrogen production column for the current time step
+                df.loc[df.index[i], 'hydrogen [Nm3]'] = hydrogen_production
+
+            elif df.loc[df.index[i], 'status'] == 'booting':
+                    df.loc[df.index[i], 'heat energy loss [kW]'] = 0.0085*P_max #0.85% of P_nominal energy losses for heat
+                    df.loc[df.index[i], 'Surplus electricity [kW]'] = P_in - (0.0085*P_max)
+            else:
+                df.loc[df.index[i], 'Surplus electricity [kW]'] = P_in
+
+        return df
 
     def calc_O_mfr(self, H2_mfr):
         '''
@@ -350,8 +458,16 @@ class Electrolyzer:
 
         return P_pump_fresh, P_pump_cool
     
-        def eta(self,P_dc):
-            H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
+
+
+    #def eta_total(self, P_dc,):
+        #H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
+       
+        # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt 
+        # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
+        # H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
+=======
+        #H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
         # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt
         # H2O_mfr = self.calc_H2O_mfr(H2_mfr_cal, O_mfr)                  # Massenstrom Wasser in kg
         # P_gasdrying = self.gas_drying(H2_mfr_cal)                       # Calculate power for gas drying
@@ -363,92 +479,16 @@ class Electrolyzer:
         # P_pump_fresh, P_pump_cool = self.calc_pump(H2O_mfr, P_dc, 2000000)  # Calculate pump power
         # P_total_in = P_dc - P_gasdrying - P_compression - P_pump_fresh - P_pump_cool
        
-            eta_run= P_dc/(H2_mfr*self.lhv)                       #kWh/kg
+        #eta_run= P_dc/(H2_mfr*self.lhv)                       #kWh/kg
 
-            return eta_run
+       # return eta_run
 
-        #     power_left = P_dc
+   
+    # def __init__(self, n_stacks):
+    #     self.n_stacks = n_stacks
+    #     self.P_stack= 531 #fixed nominal power of stack
+    #     self.P_nominal = self.P_stack * n_stacks
+    #     self.P_min = self.P_nominal * 0.1
+    #     self.P_max = self.P_nominal
 
-        # I = self.calculate_cell_current(P_dc)
-        # V = self.calc_cell_voltage(I, self.temperature)
-        # eta_F = self.calc_faradaic_efficiency(I)
-        # mfr = (eta_F * I * self.M * self.n_cells) / (self.n * self.F)
-        # #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
-        # H2_mfr = (mfr*3600)/1000 #kg/15min
-
-        # return H2_mfr
-
-
-
-    #def run_dynamic(self, df):
-
-
-    def power_profile(self, df):
-        '''
-        input: Df with P_in Data
-        dt=1min
-        Output: Df with Status, heat, hydrogen_production,
-        '''
-        #price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
-        #                    date_parser=lambda idx: pd.to_datetime(idx, utc=True))
-        #price = price.resample('1min').interpolate(method='linear')
-        #price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
-        #df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
-        #P_min = self.P_min
-
-        P_min = self.P_min
-        long_gap_threshold = 60
-        short_gap_threshold = 5
-        # create a mask for power values below P_min
-        below_threshold_mask = df['power total [kW]'] < P_min
-
-        # find short gaps (up to 4 steps) where power is below P_min
-        short_gaps = below_threshold_mask.rolling(window=short_gap_threshold).sum()
-        hot_mask = (short_gaps <= 4) & below_threshold_mask
-        df.loc[hot_mask, 'status'] = 'hot'
-
-        # find middle gaps (between 5 and 60 steps) where power is below P_min
-        middle_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
-        hot_standby_mask = ((5 <= middle_gaps) & (middle_gaps < 60)) & below_threshold_mask
-        df.loc[hot_standby_mask, 'status'] = 'hot standby'
-        # find long gaps (over 60 steps) where power is below P_min
-        long_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
-        cold_standby_mask = (long_gaps >= 60) & below_threshold_mask
-        df.loc[cold_standby_mask, 'status'] = 'cold standby'
-
-        # mark production periods (above P_min)
-        production_mask = df['power total [kW]'] >= P_min
-        df.loc[production_mask, 'status'] = 'production'
-
-        # add status codes
-        df['status codes'] = df['status'].replace({
-            'cold standby': 0,
-            'hot standby': 1,
-            'hot': 2,
-            'production': 4
-        })
-
-        # add 'booting' status
-        booting_mask = pd.Series(False, index=df.index)
-        # Identify rows where production is True and previous row is hot standby or cold standby
-        booting_mask |= (df['status'].eq('production') & df['status'].shift(1).isin(['hot standby', 'cold standby']))
-
-        # Identify rows where production is True and status is cold standby for up to 5 rows before
-
-        booting_mask |= (df['status'].eq('production') & df['status'].shift(30).eq('cold standby'))
-
-        # Identify rows where production is True and status is hot standby for up to 30 rows before
-        for i in range(1, 15):
-            booting_mask |= (df['status'].eq('production') & df['status'].shift(i).eq('hot standby'))
-
-        df.loc[booting_mask, 'status'] = 'booting'
-
-        # add status codes
-        df['status codes'] = df['status'].replace({
-            'cold standby': 0,
-            'hot standby': 1,
-            'hot': 2,
-            'production': 4,
-            'booting': 3
-        })  
-        return df
+   

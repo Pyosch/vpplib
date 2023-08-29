@@ -7,7 +7,7 @@ from scipy.interpolate import interp1d
 
 class operate_electrolyzer:
     def __init__(self, n_stacks):
-        self.n_stacks = n_stacks
+        self.n_stacks = n_stacks                                            # anpassen
         self.P_stack= 531 #fixed nominal power of stack
         self.P_nominal = self.P_stack * n_stacks
         self.P_min = self.P_nominal * 0.1
@@ -24,9 +24,8 @@ class operate_electrolyzer:
         #price = price.resample('1min').interpolate(method='linear')
         #price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
         #df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
-        #P_min = self.P_min
+        
 
-        #zeile 30 - 84 bleibt komplett unverändert bleiben
         P_min = self.P_min
         long_gap_threshold = 60
         short_gap_threshold = 5
@@ -72,25 +71,26 @@ class operate_electrolyzer:
         for i in range(1, 15):
             booting_mask |= (df['status'].eq('production') & df['status'].shift(i).eq('hot standby'))
 
-        df.loc[booting_mask, 'status'] = 'booting'
-
-        # add status codes
+        df.loc[status codes
         df['status codes'] = df['status'].replace({
             'cold standby': 0,
             'hot standby': 1,
             'hot': 2,
             'production': 4,
             'booting': 3
-        })
-        #_____________________________________________________________________________________________________________________________
+        })booting_mask, 'status'] = 'booting'
+
+        # add 
+        
         P_nominal = self.P_nominal
         # Load power curve data (Kurve wird eingelesen, die se zwei funktionen können gelöscht werden, es muss hier das apssieren was im elektrolyseurmodell passiert)
         #wirkungsgraddkurve soll nicht mehr verwendet werden, dient als Umrechnungsfaktor, jetzt nicht mehr/my power curve soll es nicht mehr geben)
         #wir haben einen stromwert, funktion h2 produktion eingeben
         power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
-        # hier muss wasserstoffproduktion berechnet werden
+        #Berechnung Wasserstoffproduktion
         
+
         # Initialize new columns for hydrogen production, heat energy, and surplus electricity
         df['hydrogen [Nm3]'] = 0.0
         df['heat energy [kW/h]'] = 0.0
