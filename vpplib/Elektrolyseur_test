@@ -2,7 +2,7 @@
 """
 Info
 ----
-This file contains the basic functionalities of the ElectricalEnergyStorage class.
+This file contains the basic functionalities of the Electrolyseur class.
 
 """
 
@@ -362,3 +362,40 @@ class ElectrolysisSimses(Component):
         }
 
         return observations
+
+
+    def vorlage(self, eingabeparameter):
+        """.
+
+        Info
+        ----
+        This function takes a (Input) as the parameter and returns a
+        (Output) with key (String) value (Any) pairs.
+        Depending on the type of component, different status parameters of the
+        respective component can be queried.
+
+        For example, a power store can report its "State of Charge".
+        Returns an empty dictionary since this function needs to be
+        implemented by child classes.
+
+        Parameters
+        ----------
+        ...
+
+        Attributes
+        ----------
+        ...
+
+        Notes
+        -----
+        ...
+
+        References
+        ----------
+        ...
+
+        Returns
+        -------
+        ...
+
+        """
