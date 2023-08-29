@@ -21,7 +21,7 @@ from scipy.optimize import minimize_scalar
 #P_nenn =  P_nominal                                        dc
 #P_electronics =Eigenverbrauch des Elektrolyseurs           dc
 #P_cell = Leistung Zelle                                    dc
-#P_Elektrolyseur = P_nominal                                dc oder ac?
+#P_Elektrolyseur = P_nominal                                dc oder ac? P_Elektrolyseur
 
 class Electrolyzer:
     '''    Membrane : Zirfon
@@ -185,7 +185,7 @@ class Electrolyzer:
 
         return P_electronics
 
-    def power_dc(self, P_ac):# P_dc
+    def power_dc(self, P_ac):# Berechnung P_dc                                                              #muss noch als df abgeändert werden
         '''
         :param P_ac:
         :return:
@@ -199,8 +199,8 @@ class Electrolyzer:
         # P_min = self.P_min
         
         P_min = self.P_min
-        long_gap_threshold = 60/dt
-        short_gap_threshold = 5/dt
+        long_gap_threshold = 60/dt          #Zeitschritte                                                     # muss aufgerundet werden oder sonst könnten kommazahlen entstehen
+        short_gap_threshold = 5/dt          #Zeitschritte                                                     # muss aufgerundet werden oder sonst könnten kommazahlen entstehen
         # create a mask for power values below P_min
         below_threshold_mask = df['power total [kW]'] < P_min
 
