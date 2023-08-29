@@ -5,6 +5,15 @@ Info
 This file contains the basic functionalities of the ElectricalEnergyStorage class.
 
 """
+#neu
+import math
+import numpy as np
+import scipy
+from scipy.signal import tf2ss, cont2discrete
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from scipy.optimize import minimize_scalar
+#
 
 from .component import Component
 import pandas as pd
@@ -13,13 +22,12 @@ import time
 from configparser import ConfigParser
 from modell.electrolyzer_modell import Electrolyzer
 
-class ElectrolysisSimses(Component):
+
+class Electrolyzer(Component):
     """.
 
     Info
     ----
-    Standard values are taken from
-    "simses/simulation/system_tests/configs/simulation.test_23.ini"
 
     Parameters
     ----------
@@ -120,9 +128,9 @@ class ElectrolysisSimses(Component):
         self.simulation_config: ConfigParser = ConfigParser()
         # self.storage_config = StorageSystemConfig(self.simulation_config)
 
-        # GENERAL config from "simses-master\simses\commons\config\simulation"
+       
         self.simulation_config.add_section('GENERAL')
-        # SimSES needs step size in sec
+        
         self.simulation_config.set('GENERAL', 'TIME_STEP',
                                    str(self.environment.timebase * 60))
         self.simulation_config.set('GENERAL', 'START',

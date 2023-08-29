@@ -4,7 +4,7 @@ from scipy.interpolate import interp1d
 
 class operate_electrolyzer:
     def __init__(self, n_stacks):
-        self.n_stacks = n_stacks
+        self.n_stacks = n_stacks                                            # anpassen
         self.P_stack= 531 #fixed nominal power of stack
         self.P_nominal = self.P_stack * n_stacks
         self.P_min = self.P_nominal * 0.1
@@ -21,8 +21,7 @@ class operate_electrolyzer:
         #price = price.resample('1min').interpolate(method='linear')
         #price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
         #df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
-        #P_min = self.P_min
-
+        
 
         P_min = self.P_min
         long_gap_threshold = 60
@@ -69,46 +68,23 @@ class operate_electrolyzer:
         for i in range(1, 15):
             booting_mask |= (df['status'].eq('production') & df['status'].shift(i).eq('hot standby'))
 
-        df.loc[booting_mask, 'status'] = 'booting'
-
-        # add status codes
+        df.loc[status codes
         df['status codes'] = df['status'].replace({
             'cold standby': 0,
             'hot standby': 1,
             'hot': 2,
             'production': 4,
             'booting': 3
-        })
-        _____________________________________________________________________________________________________________________________
+        })booting_mask, 'status'] = 'booting'
+
+        # add 
+        
         P_nominal = self.P_nominal
         # Load power curve data
         power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
-        # Define function to calculate specific energy consumption
-        def operation_funcion(P_nominal, P_in):
-            '''
-            :param P_nominal: nominal power of the electrolyzer
-            :param P_in: actual power generation of the electrolyzer
-            :return: specific energy consumption in kWh/Nm3 for P_in
-            '''
-
-            x = power_curve['relative power [%]'].to_numpy()
-            x = (x * P_nominal) / 100
-            y = power_curve['energy consumption [kWh/m3]'].to_numpy()
-
-            f = interp1d(x, y, kind='linear')
-
-            return f(P_in)
-        def heat_funcion(P_nominal, P_in):
-            '''
-            calculate ind interpolate eta heat for each P_in
-            '''
-            x = [0.08,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90,0.95,1.01]
-            for i in range(len(x)):
-                x[i] = x[i]*P_nominal
-            y = [0.01,0.017,0.035,0.046,0.059,0.068,0.078,0.086,0.093,0.10,0.109,0.116,0.123,0.129,0.136,0.144,0.148,0.153,0.159,0.163]
-            f = interp1d(x, y, kind='linear')
-            return f(P_in)
+        #Berechnung Wasserstoffproduktion
+        
 
         # Initialize new columns for hydrogen production, heat energy, and surplus electricity
         df['hydrogen [Nm3]'] = 0.0
