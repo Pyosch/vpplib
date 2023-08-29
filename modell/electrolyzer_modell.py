@@ -48,16 +48,13 @@ class Electrolyzer:
         self.roh_H2 = 0.08988 #Density in kg/m3
         self.roh_O = 1.429 #Density kg/m3
         self.T = 50 # Grad Celsius
-        self.P_stack= 531 #fixed nominal power of stack                                             # Bleibt das auch bei uns so woher kommen die 531
-        self.max_current_density = 2 * self.cell_area                                               # Habe ich hinzugefügt um eine maximale Stromdichte zu haben
-                                                                                                    #self.max_current_density wie komme sonst auf diesen Wert durch I/A oder wird der festgelegt
-        #self.n_stacks=20 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Ist nur zum Test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #self.n_stacks= n_stacks
+        
+        #Leistungen/Stromdichte
+        self.max_current_density = 2 * self.cell_area                                      # Habe ich hinzugefügt um eine maximale Stromdichte zu haben #self.max_current_density wie komme sonst auf diesen Wert durch I/A oder wird der festgelegt
         #self.P_nominal = self.P_stack * self.n_stacks
         self.p_nominal = P_elektrolyseur
         self.P_min = self.P_nominal * 0.1
         self.P_max = self.P_nominal
-                                                                                                    #self.max_current_density wie komme ich auf diesen Wert durch I/A oder wird der festgelegt
 
         # Stack parameters
         self.n_cells = 10  # Number of cells
