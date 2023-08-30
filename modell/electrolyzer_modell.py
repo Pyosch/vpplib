@@ -255,9 +255,8 @@ class Electrolyzer:
         })
         return df
     
-    def calculate_hydrogen_production(self,P_max,P_dc,df):    #vorher run # for schleife rein           #P_dc muss eigentlich aus dem df geholt werden muss geändert werden
+    def calc_hydrogen_production(self,P_max,P_dc,df):    #vorher run # for schleife rein           #P_dc muss eigentlich aus dem df geholt werden muss geändert werden
 
-        
         """
         :param P_dc:        Power DC in W
         :return:            H2_mfr [kg/dt]: hydrogen mass flow rate
@@ -300,22 +299,61 @@ class Electrolyzer:
 
         return df
 
-    def calc_O_mfr(self, H2_mfr):
+    def calc_O_mfr(self, H2_mfr, P_dc, df):                   
         '''
-        H2_mfr = massen flow rate H2 in kg/dt
-        return: Oxygen flow rate in kg/dt
+        Input parameter: H2_mfr = massen flow rate H2 in kg/dt oder df
+        return: Oxygen flow rate in kg/dt as a df
         '''
-        roh_O = 1.429 #density Oxigen kg/m3
-        O_mfr_m3 = (H2_mfr/self.roh_H2)/2 #m^3/dt
-        O_mfr = O_mfr_m3*roh_O #[kg/dt]
-        return O_mfr
 
-    def calc_H2O_mfr(self, H2_mfr):
+        df["oxygen flow rate in kg/dt"] = 0.0
+        #df['hydrogen [Nm3]'] = 0.0
+        df['heat energy [kW/h]'] = 0.0
+        df['Surplus electricity [kW]'] = 0.0
+        df['heat [kW/h]'] = 0.0
+
+        for i in range(len(df.index)):
+            
+            P_dc = df.loc[df.index[i], 'power total [kW]']
+            P_max = self.P_nominal                                      # create an instance (?)
+            roh_O = 1.429                                               # density of oxygen in kg/m3
+            
+            # Check if the status is 'production'
+            if df.loc[df.index[i], 'status'] == 'production':           # df.loc (=Zugriff auf eine Gruppe von Spalten und Zeilen nach Beschriftung(en))
+                # Check if the power generation is less than or equal to the nominal power
+                if df.loc[df.index[i], 'power total [kW]'] <= P_max:    # P_nominal = P_MAXIMAL  
+                    oxygen_production_m3 = (H2_mfr/self.roh_H2)/2       # [m^3/dt]
+                    oxygen_production = oxygen_production_m3*roh_O      # [kg/dt]
+                    df.loc[df.index[i], "oxygen flow rate in kg/dt"] = oxygen_production
+                    df.loc[df.index[i], 'specific consumption'] = P_dc
+                else:
+                    # Calculate oxygen production using nominal power and specific energy consumption
+                    oxygen_production_m3 = (H2_mfr/self.roh_H2)/2       #[m^3/dt]
+                    oxygen_production = oxygen_production_m3*roh_O      #[kg/dt]
+                    df.loc[df.index[i], 'specific consumption'] = P_dc - P_max
+                    df.loc[df.index[i], 'Surplus electricity [kW]'] = df.loc[df.index[i], 'power total [kW]'] - P_max
+                # Update the oxygen production column for the current time step
+                df.loc[df.index[i], 'hydrogen [Nm3]'] = oxygen_production
+
+            elif df.loc[df.index[i], 'status'] == 'booting':
+                    df.loc[df.index[i], 'heat energy loss [kW]'] = 0.0085*P_max #0.85% of P_nominal energy losses for heat
+                    df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc - (0.0085*P_max)
+            else:
+                df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc
+
+        return df
+
+    def calc_H2O_mfr(self, P_max, P_dc, df):                         #vorher H2_mfr als input
         '''
         H2_mfr: Hydrogen mass flow in kg
         O_mfr: Oxygen mass flow in kg
         return: needed water mass flow in kg
         '''
+    
+        df['H20 [kg]'] = 0.0
+        df['heat energy [kW/h]'] = 0.0
+        df['Surplus electricity [kW]'] = 0.0
+        df['heat [kW/h]'] = 0.0
+
         M_H2O = 18.010 #mol/g
         roh_H2O = 997 #kg/m3
 
@@ -323,7 +361,34 @@ class Electrolyzer:
         H2O_mfr = H2_mfr * ratio_M + 40#H2O_mfr in kg
         #H2O_mfr = H2O_mfr_kg / roh_H2O
 
-        return H2O_mfr
+        for i in range(len(df.index)):
+            P_in = df.loc[df.index[i], 'power total [kW]']
+            H2_mfr = df.loc[df.index[i], "hydrogen [Nm3]"]
+            # Check if the status is 'production'
+            if df.loc[df.index[i], 'status'] == 'production':
+                # Check if the power generation is less than or equal to the nominal power
+                if df.loc[df.index[i], 'power total [kW]'] <= P_max:    # P_nominal = P_maximal
+                    M_H2O = 18.010                                      # mol/g
+                    roh_H2O = 997                                       # kg/m3
+                    ratio_M = M_H2O/self.M                              # (mol/g)/(mol/g)
+                    H2O_mfr = H2_mfr * ratio_M + 40                     # H2O_mfr in kg
+                    df.loc[df.index[i], 'H2O [kg]'] = H2O_mfr
+                    df.loc[df.index[i], 'specific consumption'] = P_dc
+                else:
+                    # Calculate H2O production using nominal power and specific energy consumptio
+                    H2O_mfr = H2_mfr * ratio_M + 40                     # H2O_mfr in kg (TODO: Warum +40??)
+                    df.loc[df.index[i], 'specific consumption'] = P_dc - P_max
+                    df.loc[df.index[i], 'Surplus electricity [kW]'] = df.loc[df.index[i], 'power total [kW]'] - P_max
+                # Update the H2O production column for the current time step
+                df.loc[df.index[i], 'H2O [kg]'] = H2O_mfr
+
+            elif df.loc[df.index[i], 'status'] == 'booting':
+                    df.loc[df.index[i], 'heat energy loss [kW]'] = 0.0085*P_max #0.85% of P_nominal energy losses for heat
+                    df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc - (0.0085*P_max)
+            else:
+                df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc
+
+        return df
 
     def calc_faradaic_efficiency(self, I):
         """
@@ -489,3 +554,24 @@ class Electrolyzer:
     #     self.P_max = self.P_nominal
 
    
+# Definition einer Timeseries:
+# 
+# Times Series
+ds = pd.Series(data, index=index)
+
+# Dataframe (zweidimensionale Datenstruktur, in Tabellenform, wie Exceltabelle oder SQL-Tabelle)
+df = pd.DataFrame(data, index=index)
+
+# df['neue_spalte'] = df['alte_spalte'] * 2
+
+# Indexbasierte Auswahl
+# df.loc[df['spalte'] > 5]
+
+# Integerbasierte Auswahl
+# df.iloc[2:5, 1:3]
+
+# Bessere Praxis (explizite Indexierung)
+# df.loc['zeile', 'spalte']
+
+# Ersetze fehlende Werte durch den Mittelwert
+# df['spalte'].fillna(df['spalte'].mean(), inplace=True)

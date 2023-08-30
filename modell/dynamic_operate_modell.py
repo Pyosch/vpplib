@@ -2,13 +2,14 @@ import pandas as pd
 import numpy as np
 from scipy.interpolate import interp1d
 
-#alle self zeilen müssen angepasst werden, beim elektrolyseurmodell wird es vorgegeben. 
+# TODO Alle self-Zeilen müssen angepasst werden, beim elektrolyseurmodell wird es vorgegeben
+# TODO: Was sind Timesseries und wie können wir diese anstelle des df einbauen?
 
 
 class operate_electrolyzer:
     def __init__(self, n_stacks):
         self.n_stacks = n_stacks                                            # anpassen
-        self.P_stack= 531 #fixed nominal power of stack
+        self.P_stack= 531                                                   #fixed nominal power of stack
         self.P_nominal = self.P_stack * n_stacks
         self.P_min = self.P_nominal * 0.1
         self.P_max = self.P_nominal
@@ -19,17 +20,16 @@ class operate_electrolyzer:
         dt=1min
         Output: Df with Status, heat, hydrogen_production,
         '''
-        price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
-                            date_parser=lambda idx: pd.to_datetime(idx, utc=True))
-        price = price.resample('1min').interpolate(method='linear')
-        price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
-        df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
-        P_min = self.P_min
-
+        # price = pd.read_csv('../prices/day_ahead_prices_2015_ger.csv', sep=';', header=0, index_col=0, decimal=',',
+        #                     date_parser=lambda idx: pd.to_datetime(idx, utc=True))
+        # price = price.resample('1min').interpolate(method='linear')
+        # price = price.loc['2015-01-01 00:00:00+00:00':'2015-12-31 23:45:00+00:00']
+        # df['Day-ahead Price [EUR/kWh]'] = price[' Day-ahead Price [EUR/kWh] ']
 
         P_min = self.P_min
         long_gap_threshold = 60
         short_gap_threshold = 5
+        
         # create a mask for power values below P_min
         below_threshold_mask = df['power total [kW]'] < P_min
 
@@ -87,8 +87,10 @@ class operate_electrolyzer:
         
         P_nominal = self.P_nominal
         # Load power curve data (Kurve wird eingelesen, die se zwei funktionen können gelöscht werden, es muss hier das apssieren was im elektrolyseurmodell passiert)
-        #wirkungsgraddkurve soll nicht mehr verwendet werden, dient als Umrechnungsfaktor, jetzt nicht mehr/my power curve soll es nicht mehr geben)
+        
+        # INFO: Wirkungsgraddkurve soll nicht mehr verwendet werden, dient als Umrechnungsfaktor / my power curve soll es nicht mehr geben)
         #wir haben einen stromwert, funktion h2 produktion eingeben
+        
         power_curve = pd.read_csv('..\plots\my_power_curve.csv', sep=',', decimal='.', header=0)
 
         #Berechnung Wasserstoffproduktion
