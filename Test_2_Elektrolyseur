@@ -1,0 +1,32 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Physikalische Parameter des Elektrolyseurs
+Faraday_Constant = 96485  # Faraday-Konstante [C/mol]
+Gas_Constant = 8.314  # Gaskonstante [J/(mol K)]
+Temperature = 298  # Temperatur [K]
+
+# Elektrolysezellenparameter
+Cell_Voltage = 1.48  # Zellspannung [V]
+Max_Current_Density = 2.5  # Maximale Stromdichte [A/cm²]
+
+# Modellierung der Wasserstoffproduktion
+def hydrogen_production_rate(current_density):
+    return (current_density * Max_Current_Density) / (2 * Faraday_Constant)
+
+# Stromdichtenbereich für die Modellierung
+current_density_range = np.linspace(0, Max_Current_Density, 100)
+
+# Wasserstoffproduktion für verschiedene Stromdichten berechnen
+hydrogen_production = hydrogen_production_rate(current_density_range)
+
+# Umrechnung in Volumen Wasserstoff pro Zeit bei Normalbedingungen (101325 Pa)
+volume_hydrogen = hydrogen_production * (Gas_Constant * Temperature) / 101325
+
+# Plotten des Graphen
+plt.plot(current_density_range, volume_hydrogen)
+plt.xlabel('Stromdichte [A/cm²]')
+plt.ylabel('Volumen Wasserstoff [m³/s]')
+plt.title('Elektrolyseur - Volumen Wasserstoff pro Zeit')
+plt.grid(True)
+plt.show()
