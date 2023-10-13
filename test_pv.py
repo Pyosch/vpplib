@@ -25,7 +25,8 @@ timestamp_int = 48
 timestamp_str = "2015-06-05 12:00:00"
 
 environment = Environment(start=start, end=end)
-environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
+#environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
+environment.get_dwd_pv_data(lat=latitude, lon=longitude)
 
 user_profile = UserProfile(
     identifier=identifier, latitude=latitude, longitude=longitude
