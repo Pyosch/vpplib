@@ -21,6 +21,9 @@ from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
 
+
+#TODO: Add units to input fields
+
 #region Input Mask
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])  
 
@@ -321,7 +324,7 @@ dbc.Row([
                                     style={
                                             'color': 'black',
                                             'bgcolor': 'white',
-                                            'width': '3'
+                                            'width': '82%'
                                             },
                                     placeholder='Choose a Building Type')
                                 ], width=3)
@@ -349,7 +352,6 @@ dbc.Row([
                                     'Drag and Drop or ',
                                     html.A('Select Files')
                                 ]),style={
-                                    'width': 'auto',
                                     'height': 'auto',
                                     'lineHeight': '60px',
                                     'borderWidth': '1px',
@@ -361,15 +363,197 @@ dbc.Row([
                         ], align='center')
                     ]),
         dbc.Tab(label='BEV', 
-                tab_id='tab4',
+                tab_id='tab_bev',
                 active_label_style={'color': 'grey'},
-                ),
-        dbc.Tab(label='Photovoltaic', 
-                tab_id='tab5',
-                active_label_style={'color': 'grey'}
-                ),
+                children=[
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Max. Battery Capacity')
+                        ], width=4),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_bev_max_battery_capacity',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 100 kWh'
+                            )
+                        ], width=3),
+                    ], style={'margin-top': '20px'}),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Min. Battery Capacity')
+                        ], width=4),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_bev_min_battery_capacity',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 15 kWh'
+                            )
+                        ], width=3),
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Battery Usage') #TODO: What is this?
+                        ], width=4),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_bev_battery_usage',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. ???'
+                            )
+                        ], width=3),
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Charging Power') 
+                        ], width=4),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_bev_charging_power',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 11 kW'
+                            )
+                        ], width=3),
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Charging Efficiency') 
+                        ], width=4),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_bev_charging_efficiency',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 90%'
+                            )
+                        ], width=3),
+                    ])
+                ]),
+        dbc.Tab(label='Photovoltaic', #TODO: Fill in the blanks in DropDown Menues
+                tab_id='tab_photvoltaic',
+                active_label_style={'color': 'grey'},
+                children=[
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Module Library')
+                        ], width=3),
+                        dbc.Col([
+                            dcc.Dropdown(
+                                id='dropdown_pv_module_library',
+                                clearable=True,
+                                style={'width': '82%', 
+                                       'color': 'black',
+                                        'bg-color':'white' 
+                                        },
+                                placeholder='e.g. SandiaMod',
+                                options=[
+                                    {'label': 'SandiaMod', 'value': 'SandiaMod'},
+                                    {'label': 'CECMod', 'value': 'CECMod'}
+                                ]
+                            )
+                        ], width=3)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Module')
+                        ], width=3),
+                        dbc.Col([
+                            dcc.Dropdown(
+                                id='dropdown_pv_module',
+                                clearable=True,
+                                style={'width': '82%', 
+                                       'color': 'black'},
+                                placeholder='e.g. Canadian_Solar_CS5P_220M___2009_'
+                            )
+                        ], width=3)
+
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Inverter Library')
+                        ], width=3),
+                    dbc.Col([
+                        dcc.Dropdown(
+                            id='dropdown_pv_inverter_library',
+                            clearable=True,
+                            style={'width': '82%', 
+                                   'color': 'black'},
+                            placeholder='e.g. cecinverter'
+                        )
+                        ], width=3)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Inverter')
+                        ], width=3),
+                        dbc.Col([
+                            dcc.Dropdown(
+                                id='dropdown_pv_inverter',
+                                clearable=True,
+                                style={'width': '82%', 
+                                       'color': 'black'},
+                                placeholder='e.g. ABB__MICRO_0_25_I_OUTD_US_208__208V_'
+                            )
+                        ], width=3)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Surface Tilt')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_pv_surface_tilt',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 20°'
+                            )
+                        ], width=3)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Surface Azimuth')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_pv_surface_azimuth',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 200°'
+                            )
+                        ], width=3)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Modules per String')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_pv_modules_per_string',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 6'
+                            )
+                        ], width=3)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Strings per Inverter')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_pv_strings_per_inverter',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 2'
+                            )
+                        ], width=3)
+                    ])
+                ]),
         dbc.Tab(label='Wind', 
-                tab_id='tab6',
+                tab_id='tab_wind',
                 active_label_style={'color': 'grey'},),
         dbc.Tab(label='Heat Pump', 
                 tab_id='tab7',
@@ -383,8 +567,8 @@ dbc.Row([
                 tab_id='tab9',
                 active_label_style={'color': 'grey'}
                 ),
-        ], active_tab='tab1'),
-], fluid=True)
+        ]),
+],fluid=True)
 
 
 
