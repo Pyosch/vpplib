@@ -164,8 +164,14 @@ class Environment(object):
 
         return self.wind_data
     
+    """
+    TODO
+    Use timezone information of environment class instead of utc in function declaration
+    Change get mean temperature functions to use dwd data (hourly and daily)
+    Check error handling for __get_dwd_data runturn = None
+    """
     def __get_dwd_data(
-        self, parameter, lat, lon, distance,target_timezone=datetime.timezone.utc, min_quality_per_dataset=99, resample_to = '15min'
+        self, parameter, lat, lon, distance,target_timezone=datetime.timezone.utc, min_quality_per_parameter=99, resample_to = '15min'
         ):
 
         start_datetime = datetime.datetime.strptime(self.start, '%Y-%m-%d %H:%M:%S').replace(tzinfo=target_timezone)
@@ -207,7 +213,7 @@ class Environment(object):
         )
         
         valid_station_data = False
-        #Check query result for the stations within defined distance
+        #Check query result for the stations within the defined distance
         for station_id in pd_station_result["station_id"].values:
             name  = pd_station_result.loc[pd_station_result['station_id'] == station_id]['name'].values[0]
             print('Checking query result for station '+ name, station_id +" ...")
@@ -240,16 +246,16 @@ class Environment(object):
                 quality[column] = count
                 quality         = quality.fillna(0)
             
-            #Calculate the percentage of valid data per parameter query    
+            #Calculate the percentage of valid data per parameter    
             quality.loc['quality'] = round((quality.loc[0]/(quality.loc[0]+quality.loc[1]))*100,1)
             print("Quality of the data set:",quality.loc['quality'].values)
             
             #If quality is good enough
-            if quality.loc['quality'].min() >= min_quality_per_dataset:
+            if quality.loc['quality'].min() >= min_quality_per_parameter:
                 distance            = str(round(pd_station_result.loc[pd_station_result['station_id'] == station_id]['distance'].values[0]))
                 valid_station_data  = True
                 print("Query result valid!")
-                print("Station " + station_id + " " + name +" used")
+                print("Station " + station_id + " " + name + " used")
                 print("Distance to location: " + distance + " km")
                 break
         if not valid_station_data:
@@ -258,11 +264,11 @@ class Environment(object):
 
         print("Query successful!")
         
-        dwd_result_processed.rename(columns=parameter, inplace=True)
+        dwd_result_processed.rename(columns = parameter, inplace = True)
 
-        #Missing data is marked with -999. Replace by NaN
-        dwd_result_processed.where(cond=(dwd_result_processed[parameter.values()] != -999), other=None, inplace=True)
-        dwd_result_processed.interpolate(inplace=True)
+        #Missing data is marked with -999. Replace by NaN and interpolate
+        dwd_result_processed.where(cond = (dwd_result_processed[parameter.values()] != -999), other=None, inplace=True)
+        dwd_result_processed.interpolate(inplace =True)
     
         #Calculate dni if df contains PV data
         if 'ghi' in dwd_result_processed.columns and 'dhi' in dwd_result_processed.columns:
