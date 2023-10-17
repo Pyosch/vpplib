@@ -26,9 +26,6 @@ class Electrolyzer:
     '''
     def __init__(self,P_elektrolyseur, P_ac, dt=15): # p_ac = eingangsleistung
 
-          
-        
-        
         #P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
         self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cell)     # Ist die Leistung des Elektrolyseurs in dc oder ac
         # Constants
@@ -147,7 +144,7 @@ class Electrolyzer:
 
     def calculate_cell_current(self, P_dc):
         '''
-        P_in: Power DC in Watt
+        P_dc: Power DC in Watt
         P_cell: Power each cell
         return I: Current each cell in Ampere
         '''
@@ -193,14 +190,25 @@ class Electrolyzer:
         P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100) #[kW]
 
         return P_dc
+    # Alternative mit df
+    def power_dc(self, df):
+        '''
+        :param df:      DataFrame mit 'P_ac' (Power AC in W)
+        :return:        DataFrame mit 'P_dc' (Power DC in W)
+        '''
+        
+        df['P_dc'] = df['P_ac'] - df.apply(lambda row: self.power_electronics(row['P_ac'], self.stack_nominal() / 100), axis=1)
+        return df
+        
     def status_codes(self,dt,df): 
-            #''' Inputparameter ist p_in über eine Zeitreihe
-        #return: df mit status Codes '''
-        # P_min = self.P_min
+        ''' 
+        :param:     p_in über eine Zeitreihe
+        return:     df mit Status-Codes 
+        '''
         
         P_min = self.P_min
-        long_gap_threshold = 60/dt          #Zeitschritte                                                     # muss aufgerundet werden oder sonst könnten kommazahlen entstehen
-        short_gap_threshold = 5/dt          #Zeitschritte                                                     # muss aufgerundet werden oder sonst könnten kommazahlen entstehen
+        long_gap_threshold = int(60/dt)             #Zeitschritte                                                     # muss aufgerundet werden oder sonst könnten kommazahlen entstehen
+        short_gap_threshold = int(5/dt)             #Zeitschritte                                                     # muss aufgerundet werden oder sonst könnten kommazahlen entstehen --> einfach int draus machen?
         # create a mask for power values below P_min
         below_threshold_mask = df['power total [kW]'] < P_min
 
@@ -557,10 +565,10 @@ class Electrolyzer:
 # Definition einer Timeseries:
 # 
 # Times Series
-ds = pd.Series(data, index=index)
+#ds = pd.Series(data, index=index)
 
 # Dataframe (zweidimensionale Datenstruktur, in Tabellenform, wie Exceltabelle oder SQL-Tabelle)
-df = pd.DataFrame(data, index=index)
+#df = pd.DataFrame(data, index=index)
 
 # df['neue_spalte'] = df['alte_spalte'] * 2
 
