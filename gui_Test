@@ -22,7 +22,7 @@ from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
 
 
-#TODO: Add units to input fields
+#TODO: Add units to input fields (input addons)
 
 #region Input Mask
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])  
@@ -455,7 +455,7 @@ dbc.Row([
                                 ]
                             )
                         ], width=3)
-                    ]),
+                    ], style={'margin-top': '20px'}),
                     dbc.Row([
                         dbc.Col([
                             html.P('Module')
@@ -554,14 +554,280 @@ dbc.Row([
                 ]),
         dbc.Tab(label='Wind', 
                 tab_id='tab_wind',
-                active_label_style={'color': 'grey'},),
+                active_label_style={'color': 'grey'},
+                children=[
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardHeader('Wind Turbine Data', 
+                                               style={'font-weight': 'bold'}),
+                                dbc.CardBody([
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Turbine Type')
+                                        ], width=3),
+                                        dbc.Col([
+                                            dbc.Input(
+                                                id='input_wind_turbine_type',
+                                                type='text',
+                                                style={'width': 'auto'},
+                                                placeholder='e.g. E-126/4200',
+                                            )
+                                        ]),
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Hub Height')
+                                        ], width=3),
+                                        dbc.Col([
+                                            dbc.Input(
+                                                id='input_wind_hub_height',
+                                                type='number',
+                                                style={'width': 'auto'},
+                                                placeholder='e.g. 135 m'
+                                            )
+                                        ])                                    
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Rotor Diameter')
+                                        ], width=3),
+                                        dbc.Col([
+                                            dbc.Input(
+                                                id='input_wind_rotor_diameter',
+                                                type='number',
+                                                style={'width': 'auto'},
+                                                placeholder='e.g. 127 m'
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Comfort Factor')
+                                        ], width=3),
+                                        dbc.Col([
+                                            dbc.Input( #TODO: What is this? Compare with Screeenshot
+                                                id='input_wind_comfort_factor',
+                                                type='number',
+                                                style={'width': 'auto'},
+                                                placeholder='e.g. 0.9'
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Data source')
+                                        ], width=3),
+                                        dbc.Col([
+                                            dcc.Dropdown(
+                                                ['oedb', 'xyz'],
+                                                id='dropdown_wind_data_source',
+                                                clearable=True,
+                                                style={
+                                                       'color': 'black',
+                                                       'bgcolor': 'white',
+                                                       'width':'70%'
+                                                       },
+                                                placeholder='e.g. WindTurbines',
+                                            )
+                                        ])
+                                    ])
+                                ])
+                            ])
+                        ], width=6),
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardHeader('Wind Power Model Chain Data',
+                                               style={'font-weight': 'bold'}),
+                                dbc.CardBody([
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Wind Speed Model')
+                                        ], width = 4),
+                                        dbc.Col([
+                                            dcc.Dropdown(
+                                                ['logarithmic', 'hellman', 'interpolation_extrapolation'],
+                                                id='dropdown_wind_speed_model',
+                                                clearable=True,
+                                                style={'width': '82%', 
+                                                       'color': 'black',
+                                                       'bgcolor': 'white',
+                                                       },
+                                                placeholder='e.g. logarithmic',
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Density Model')
+                                        ], width=4),
+                                        dbc.Col([
+                                            dcc.Dropdown(
+                                                ['barometric', 'ideal gas', 'interpolation_extrapolation'],
+                                                id='dropdown_wind_density_model',
+                                                clearable=True,
+                                                style={'width': '82%', 
+                                                       'color': 'black',
+                                                       'bgcolor': 'white',
+                                                       },
+                                                placeholder='e.g. barometric',
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Temperature Model')
+                                        ], width=4),
+                                        dbc.Col([
+                                            dcc.Dropdown(
+                                                ['linear gradient', 'interpolation extrapolation'],
+                                                id='dropdown_wind_temperature_model',
+                                                clearable=True,
+                                                style={'width': '82%', 
+                                                       'color': 'black',
+                                                       'bgcolor': 'white',
+                                                       },
+                                                placeholder='e.g. linear gradient',
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Power Output Model')
+                                        ], width=4),
+                                        dbc.Col([
+                                            dcc.Dropdown(
+                                                ['power curve', 'power coefficient curve'],
+                                                id='dropdown_wind_power_output_model',
+                                                clearable=True,
+                                                style={'width': '82%', 
+                                                       'color': 'black',
+                                                       'bgcolor': 'white',
+                                                       },
+                                                placeholder='power curve',
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Density Correction', style={'margin-top': '10%'})
+                                        ], width=4),
+                                        dbc.Col([
+                                            dbc.Switch(
+                                                id='switch_wind_density_correction',
+                                                style={'width': 'auto', 'margin-top': '5%'},
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Obstacle Height')
+                                        ], width=4),
+                                        dbc.Col([
+                                            dbc.Input(
+                                                id='input_wind_obstacle_height',
+                                                type='number',
+                                                style={'width': 'auto'},
+                                                placeholder='e.g. 0 m'
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Hellmann Exponent')
+                                        ], width=4),
+                                        dbc.Col([
+                                            dbc.Input( 
+                                                id='input_hellmann_exponent',
+                                                type='text',
+                                                style={'width': 'auto'},
+                                                placeholder='e.g. 0.2'
+                                            )
+                                        ])
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.P('Upload Wind Data', style={'margin-top': '15%'})
+                                        ], width=4),
+                                        dbc.Col([
+                                            dcc.Upload(
+                                                id='upload_wind_data',
+                                                style={'width': 'auto',
+                                                    'height': 'auto',
+                                                    'lineHeight': '60px',
+                                                    'borderWidth': '1px',
+                                                    'borderStyle': 'dashed',
+                                                    'textAlign': 'center',
+                                                    'margin': '10px'
+                                                },
+                                                children=dbc.Container([
+                                                    'Drag and Drop or ',
+                                                    html.A('Select Files')
+                                                ]),
+                                            )
+                                        ])
+                                    ])
+                                ])
+                            ])
+                        ])
+                    ], style={'margin-top': '20px'}),
+                ]),
         dbc.Tab(label='Heat Pump', 
-                tab_id='tab7',
-                active_label_style={'color': 'grey'}
-                ),
+                tab_id='tab_heatpump',
+                active_label_style={'color': 'grey'},
+                children=[
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Type of Heat Pump')
+                        ], width=3),
+                        dbc.Col([
+                            dcc.Dropdown(
+                                ['Air', 'Ground'],
+                                id='dropdown_heatpump_type',
+                                style={'width': '100%',
+                                        'color': 'black',
+                                        'bgcolor': 'white',
+                                        },
+                                placeholder='e.g. Air'
+                            )
+                        ], width=2)
+                    ], style={'margin-top': '20px'}),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Heat System Temperature')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_heatpump_system_temperature',
+                                type='number',
+                                style={'width': '100%'},
+                                placeholder='e.g. 20.5 °C'
+                            )
+                        ], width=2)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Electrical Power')
+                            ], width=3),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_heatpump_electrical_power',
+                                type='number',
+                                style={'width': '100%'},
+                                placeholder='e.g. 5 kW'
+                            )
+                        ], width=2)
+                    ])
+                ]),
         dbc.Tab(label='Storage', 
-                tab_id='tab8',
-                active_label_style={'color': 'grey'}
+                tab_id='tab_storage',
+                active_label_style={'color': 'grey'},
+                children=[
+                    dbc.Row([
+                        dbc.Col
+
+                    ], margin_top='20px'),
+                ]
                 ),
         dbc.Tab(label='Results', 
                 tab_id='tab9',
