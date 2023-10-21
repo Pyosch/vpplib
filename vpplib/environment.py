@@ -167,7 +167,7 @@ class Environment(object):
     """
     TODO
     Use timezone information of environment class instead of utc in function declaration
-    Change get mean temperature functions to use dwd data (hourly and daily)
+    Change "get mean temperature"-functions to use dwd data (hourly and daily)
     Check error handling for __get_dwd_data runturn = None
     """
     def __get_dwd_data(
@@ -178,23 +178,24 @@ class Environment(object):
         end_datetime   = datetime.datetime.strptime(self.end  , '%Y-%m-%d %H:%M:%S').replace(tzinfo=target_timezone)
         req_parameter = list(parameter.keys())
 
-        #Get station data for your location
-        station_result = DwdObservationRequest(
+        #Get weather data for your location from dwd
+        wd_query_result = DwdObservationRequest(
             parameter  = req_parameter,
             resolution = DwdObservationResolution.MINUTE_10,
-            period     = DwdObservationPeriod.RECENT,
+            #period     = DwdObservationPeriod.RECENT,
             start_date = start_datetime,
             end_date   = end_datetime + datetime.timedelta(minutes = 10),
-        ).filter_by_distance(latlon = (lat, lon), distance = distance)
+        )
+        wd_available_stations = wd_query_result.filter_by_distance(latlon = (lat, lon), distance = distance)
 
-        if(isinstance(station_result.df,pd.core.frame.DataFrame)):
-            empty = station_result.df.empty
+        if(isinstance(wd_available_stations.df,pd.core.frame.DataFrame)):
+            empty = wd_available_stations.df.empty
             if not empty:
-                pd_station_result = station_result.df
-        elif(isinstance(station_result.df,pl.DataFrame)):
-            empty = station_result.df.is_empty()
+                pd_available_stations = wd_available_stations.df
+        elif(isinstance(wd_available_stations.df,pl.DataFrame)):
+            empty = wd_available_stations.df.is_empty()
             if not empty:
-                pd_station_result = station_result.df.to_pandas()
+                pd_available_stations = wd_available_stations.df.to_pandas()
         else:
             empty = True
 
@@ -202,39 +203,29 @@ class Environment(object):
             print("No station found!")
             return
 
-        #Get weather data
-        values = (
-            DwdObservationRequest(
-                parameter  = req_parameter,
-                resolution = DwdObservationResolution.MINUTE_10,
-                start_date = start_datetime,
-                end_date   = end_datetime + datetime.timedelta(minutes = 10),
-            )
-        )
-        
         valid_station_data = False
         #Check query result for the stations within the defined distance
-        for station_id in pd_station_result["station_id"].values:
-            name  = pd_station_result.loc[pd_station_result['station_id'] == station_id]['name'].values[0]
-            print('Checking query result for station '+ name, station_id +" ...")
+        for station_id in pd_available_stations["station_id"].values:
+            station_name  = pd_available_stations.loc[pd_available_stations['station_id'] == station_id]['name'].values[0]
+            print('Checking query result for station '+ station_name, station_id +" ...")
             
             #Get query result for the actual station
-            values_for_station = values.filter_by_station_id(station_id=station_id).values.all().df
+            wd_data_for_station = wd_query_result.filter_by_station_id(station_id=station_id).values.all().df
 
-            if(isinstance(values_for_station,pd.core.frame.DataFrame)):
-                pd_values_for_station = values_for_station
-            elif(isinstance(values_for_station,pl.DataFrame)):
-                pd_values_for_station = values_for_station.to_pandas()
+            if(isinstance(wd_data_for_station,pd.core.frame.DataFrame)):
+                pd_data_for_station = wd_data_for_station
+            elif(isinstance(wd_data_for_station,pl.DataFrame)):
+                pd_data_for_station = wd_data_for_station.to_pandas()
             else:
                 print("Data type incorrect")
                 return
                 
-            dwd_result_processed        = pd.DataFrame()
-            pd_values_for_station.index = pd_values_for_station.date
+            pd_data_for_station.set_index ('date', inplace= True)
+            dwd_result_processed = pd.DataFrame()
 
             #Format data to get a df with one column for each parameter
             for key in parameter.keys():
-                dwd_result_processed[key] = pd_values_for_station.loc[pd_values_for_station['parameter'] == key]['value']
+                dwd_result_processed[key] = pd_data_for_station.loc[pd_data_for_station['parameter'] == key]['value']
                 
             quality                         = pd.DataFrame()
             quality.index                   = [True,False,'quality']
@@ -252,10 +243,10 @@ class Environment(object):
             
             #If quality is good enough
             if quality.loc['quality'].min() >= min_quality_per_parameter:
-                distance            = str(round(pd_station_result.loc[pd_station_result['station_id'] == station_id]['distance'].values[0]))
+                distance            = str(round(pd_available_stations.loc[pd_available_stations['station_id'] == station_id]['distance'].values[0]))
                 valid_station_data  = True
                 print("Query result valid!")
-                print("Station " + station_id + " " + name + " used")
+                print("Station " + station_id + " " + station_name + " used")
                 print("Distance to location: " + distance + " km")
                 break
         if not valid_station_data:
@@ -291,10 +282,3 @@ class Environment(object):
     def get_dwd_temp_data(self,lat,lon,distance = 30):
         parameter = {"pressure_air_site": "pressure", "temperature_air_mean_200": "temperature"}
         self.mean_temp_hours = self.__get_dwd_data(parameter, lat, lon, distance, resample_to = '1h')
-
-
-
-        
-
-    
-
