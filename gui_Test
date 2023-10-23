@@ -1,7 +1,6 @@
 import pandas as pd
 import pandapower as pp
 import pandapower.networks as pn
-#import pandapower.plotting as pp_plot
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -826,7 +825,7 @@ dbc.Row([
                     dbc.Row([
                         dbc.Col
 
-                    ], margin_top='20px'),
+                    ], style={'margin-top':'20px'}),
                 ]
                 ),
         dbc.Tab(label='Results', 
@@ -848,3 +847,4 @@ dbc.Row([
 #endregion
 if __name__ == '__main__':
     app.run_server(debug=True)
+
