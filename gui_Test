@@ -823,11 +823,10 @@ dbc.Row([
                 active_label_style={'color': 'grey'},
                 children=[
                     dbc.Row([
-                        dbc.Col
-
-                    ], style={'margin-top':'20px'}),
-                ]
-                ),
+                        dbc.Col([
+                    ]),
+                ],style={'margin-top':'20px'}),
+                ]),
         dbc.Tab(label='Results', 
                 tab_id='tab9',
                 active_label_style={'color': 'grey'}
