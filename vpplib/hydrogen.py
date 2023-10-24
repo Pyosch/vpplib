@@ -368,7 +368,7 @@ class ElectrolysisSimses(Component):
 
 class ElectrolysisMoritz():
     
-    def __init__(self,P_elektrolyseur, P_ac, dt=15): # p_ac = eingangsleistung
+    def __init__(self,P_elektrolyseur, P_ac, dt=15):        # p_ac = eingangsleistung
 
         #P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
         self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cell)     # Ist die Leistung des Elektrolyseurs in dc oder ac
@@ -402,7 +402,7 @@ class ElectrolysisMoritz():
         self.p_anode = self.p_atmo  # (Pa) pressure at anode, assumed atmo
         self.p_cathode = 3000000
 
-    def operate_storage(self, timestep, load):              #Ursprung: Saschas Modell /TODO: Name beibehalten / Rest anpassen / Load = Residuallast / Moritz Load = Spitzenlast
+    def operate_storage(self, timestep, load):              #Ursprung: Saschas Modell /TODO: Name beibehalten / unverändert / Load = Residuallast / Moritz Load = Spitzenlast
         """.
 
         Parameters
@@ -430,7 +430,7 @@ class ElectrolysisMoritz():
                 (self.simses.state.get(
                     self.simses.state.AC_POWER_DELIVERED) / 1000))
 
-    def prepare_time_series(self):                          #Ursprung: Saschas Modell /TODO: Name beibehalten / in dieser Funktion soll das Dataframe initialisiert werden / nicht in __init__
+    def prepare_time_series(self):                          #Ursprung: Saschas Modell /TODO: Name beibehalten / unverändert / in dieser Funktion soll das Dataframe initialisiert werden / nicht in __init__
         """.
 
         Returns
@@ -452,7 +452,7 @@ class ElectrolysisMoritz():
             )
 
             soc_lst.append(soc)
-            ac_lst.append(ac)                   #hier müssen wir irgendwie P_ac einbeziehen als timeseries
+            ac_lst.append(ac)
 
         self.timeseries = pd.DataFrame(
             {"state_of_charge": soc_lst,
@@ -488,9 +488,10 @@ class ElectrolysisMoritz():
         :param:                 DataFrame mit 'P_ac' (Power AC in W)
         :return:                DataFrame mit 'P_dc' (Power DC in W)
         '''
+        # P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100) #[kW]
         
         self.timeseries['P_dc'] = self.timeseries['P_ac'] - self.timeseries.apply(lambda row: self.power_electronics(row['P_ac'], self.stack_nominal() / 100), axis=1)
-        return self.timeseries
+        return self.timeseries["P_dc"]
 
     def calc_H2O_mfr(self, P_dc, P_max, df):                #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / verändert / Eingangsprodukt: Wasser
     
@@ -514,7 +515,7 @@ class ElectrolysisMoritz():
         O_mfr: Oxygen mass flow in kg
         return: needed water mass flow in kg
         '''
-        df['H20 [kg]'] = 0.0
+        df['H20 [kg]'] = 0.0                                  #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch)) 
         df['heat energy [kW/h]'] = 0.0
         df['Surplus electricity [kW]'] = 0.0
         df['heat [kW/h]'] = 0.0
@@ -618,7 +619,7 @@ class ElectrolysisMoritz():
 
         return q_loss, q_H2O_fresh
         
-    # def status_codes(self,dt,df):                         #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch))
+    # def status_codes(self,dt,df):                         #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch)).
     #     ''' 
     #     :param:     p_in über eine Zeitreihe
     #     return:     df mit Status-Codes 
