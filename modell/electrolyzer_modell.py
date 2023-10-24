@@ -4,7 +4,7 @@ import scipy
 import pandas as pd
 from scipy.signal import tf2ss, cont2discrete
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d 
 from scipy.optimize import minimize_scalar
 
 #Leistungen
@@ -24,7 +24,7 @@ class Electrolyzer:
     Cathode : Nickel 99.99%
     Electrolyte : KOH at 30 wt.%
     '''
-    def __init__(self,P_elektrolyseur, P_ac, dt=15): # p_ac = eingangsleistung
+    def __init__(self,P_elektrolyseur, P_ac, dt=15): # p_ac = eingangsleistung = df
 
         #P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
         self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cell)     # Ist die Leistung des Elektrolyseurs in dc oder ac
@@ -354,7 +354,7 @@ class Electrolyzer:
 
         return df
 
-    def calc_H2O_mfr(self, P_max, P_dc, df):                         #vorher H2_mfr als input
+    def calc_H2O_mfr(self, df):                         #vorher H2_mfr als input
         '''
         H2_mfr: Hydrogen mass flow in kg
         O_mfr: Oxygen mass flow in kg
@@ -535,7 +535,7 @@ class Electrolyzer:
     
 
 
-    #def eta_total(self, P_dc,):
+    #def eta_total(self, P_dc):
         #H2_mfr= self.run(P_dc)                                     # Massenstrom Wasserstoff in kg/dt
        
         # O_mfr = self.calc_O_mfr(H2_mfr_cal)                             # Massenstrom Sauerstoff in kg/dt 

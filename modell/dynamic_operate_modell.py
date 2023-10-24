@@ -3,14 +3,13 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 # TODO Alle self-Zeilen müssen angepasst werden, beim elektrolyseurmodell wird es vorgegeben
-# TODO: Was sind Timesseries und wie können wir diese anstelle des df einbauen?
 
 
 class operate_electrolyzer:
     def __init__(self, n_stacks):
         self.n_stacks = n_stacks                                            # anpassen
-        self.P_stack= 531                                                   #fixed nominal power of stack
-        self.P_nominal = self.P_stack * n_stacks
+        self.P_stack= 531                                                   # konstante Nennleistung eines einzelnen Stacks                                           #fixed nominal power of stack
+        self.P_nominal = self.P_stack * n_stacks                            # Gesamtleistung des Elektrolysesystems
         self.P_min = self.P_nominal * 0.1
         self.P_max = self.P_nominal
 
@@ -30,28 +29,28 @@ class operate_electrolyzer:
         long_gap_threshold = 60
         short_gap_threshold = 5
         
-        # create a mask for power values below P_min
-        below_threshold_mask = df['power total [kW]'] < P_min
+        # Maske/Filter, um Zeilen zu finden, in denen die Leistung unter P_min liegt
+        below_threshold_mask = df['power total [kW]'] < P_min               
 
-        # find short gaps (up to 4 steps) where power is below P_min
+        # Kurze Unterbrechungen (bis zu 4 Schritten) in denen Leistung < P_min
         short_gaps = below_threshold_mask.rolling(window=short_gap_threshold).sum()
         hot_mask = (short_gaps <= 4) & below_threshold_mask
         df.loc[hot_mask, 'status'] = 'hot'
 
-        # find middle gaps (between 5 and 60 steps) where power is below P_min
+        # Mittlere Unterbrechungen (zwischen 5 - 60 Schritten) in denen Leistung < P_min
         middle_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
         hot_standby_mask = ((5 <= middle_gaps) & (middle_gaps < 60)) & below_threshold_mask
         df.loc[hot_standby_mask, 'status'] = 'hot standby'
-        # find long gaps (over 60 steps) where power is below P_min
+        # Lange Unterbrechungen (über 60 Schritte) in denen Leistung < P_min
         long_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
         cold_standby_mask = (long_gaps >= 60) & below_threshold_mask
         df.loc[cold_standby_mask, 'status'] = 'cold standby'
 
-        # mark production periods (above P_min)
+        # Produktionszeiträume (wenn P über P_min liegt) werden markiert.
         production_mask = df['power total [kW]'] >= P_min
         df.loc[production_mask, 'status'] = 'production'
 
-        # add status codes
+        # Status Codes werden hinzugefügt, um verschiedene Zustände zu codieren.
         df['status codes'] = df['status'].replace({
             'cold standby': 0,
             'hot standby': 1,

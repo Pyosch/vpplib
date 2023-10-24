@@ -107,7 +107,7 @@ house_loadshape["residual_load"] = (
 )
 
 # assign residual load to storage
-hydrogen.residual_load = house_loadshape.residual_load
+hydrogen.residual_load = house_loadshape.residual_load   
 
 
 # %%
