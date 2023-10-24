@@ -824,9 +824,76 @@ dbc.Row([
                 children=[
                     dbc.Row([
                         dbc.Col([
+                            html.P('Charge Efficiency')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.Input(
+                                id='input_storage_charge_efficiency',
+                                type='number',
+                                style={'width': '100%'},
+                                placeholder='e.g. 90%'
+                            )
+                        ], width=2)
+                    ],style={'margin-top':'20px'}),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Discharge Efficiency')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.InputGroup([
+                            dbc.Input(
+                                id='input_storage_discharge_efficiency',
+                                type='number',
+                                style={'width': 'auto'},
+                                placeholder='e.g. 90%'),
+                            dbc.InputGroupText('%')
+                            ])
+                        ], width=2)
                     ]),
-                ],style={'margin-top':'20px'}),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Max. Power')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.Input(
+                                    id='input_storage_max_power',
+                                    type='number',
+                                    style={'width': 'auto'},
+                                    placeholder='e.g. 10 kW'),
+                                dbc.InputGroupText('kW')
+                            ])
+                        ], width=2)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Max. Capacity')
+                        ], width=3),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.Input(
+                                    id='input_storage_max_capacity',
+                                    type='number',
+                                    style={'width': 'auto'},
+                                    placeholder='e.g. 10 kWh'),
+                                dbc.InputGroupText('kWh')
+                            ])
+                        ], width=2)
+                    ]),
+                    dbc.Row([
+                        dbc.Col([
+                            html.P('Max. C-Rate')
+                        ], width=3),
+                        dbc.Col([
+                                dbc.Input(
+                                    id='input_storage_max_crate',
+                                    type='number',
+                                    style={'width': 'auto'},
+                                    placeholder='0.5-1.2')
+                        ], width=2)
+                    ])
                 ]),
+
         dbc.Tab(label='Results', 
                 tab_id='tab9',
                 active_label_style={'color': 'grey'}
