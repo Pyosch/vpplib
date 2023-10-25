@@ -827,12 +827,14 @@ dbc.Row([
                             html.P('Charge Efficiency')
                         ], width=3),
                         dbc.Col([
+                            dbc.InputGroup([
                             dbc.Input(
                                 id='input_storage_charge_efficiency',
                                 type='number',
-                                style={'width': '100%'},
-                                placeholder='e.g. 90%'
-                            )
+                                style={'width': '70%'},
+                                placeholder='e.g. 90%'),
+                            dbc.InputGroupText('%')
+                        ])
                         ], width=2)
                     ],style={'margin-top':'20px'}),
                     dbc.Row([
@@ -844,7 +846,7 @@ dbc.Row([
                             dbc.Input(
                                 id='input_storage_discharge_efficiency',
                                 type='number',
-                                style={'width': 'auto'},
+                                style={'width': '70%'},
                                 placeholder='e.g. 90%'),
                             dbc.InputGroupText('%')
                             ])
@@ -859,7 +861,7 @@ dbc.Row([
                                 dbc.Input(
                                     id='input_storage_max_power',
                                     type='number',
-                                    style={'width': 'auto'},
+                                    style={'width': '70%'},
                                     placeholder='e.g. 10 kW'),
                                 dbc.InputGroupText('kW')
                             ])
@@ -874,7 +876,7 @@ dbc.Row([
                                 dbc.Input(
                                     id='input_storage_max_capacity',
                                     type='number',
-                                    style={'width': 'auto'},
+                                    style={'width': '60%'},
                                     placeholder='e.g. 10 kWh'),
                                 dbc.InputGroupText('kWh')
                             ])
@@ -888,7 +890,7 @@ dbc.Row([
                                 dbc.Input(
                                     id='input_storage_max_crate',
                                     type='number',
-                                    style={'width': 'auto'},
+                                    style={'width': '100%'},
                                     placeholder='0.5-1.2')
                         ], width=2)
                     ])
