@@ -17,13 +17,15 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 #P_Elektrolyseur = P_nominal                                dc oder ac? P_Elektrolyseur
 #P_Elektrolyseur=p_in  wird nicht mehr benötigt  
 
-#Montag:
+#Monday:
+#TODO: Ist die Leistung des Elektrolyseurs in dc oder ac (Z. 393)
 #TODO: Woher beziehen wir P_ac als timeseries (Z. 434; 448) um den Code laufen zu lassen?
-#TODO: Brauchen wir () einen EIngabeparameter bei de Klasse? (Z. 418)
-#TODO: Wofür steht der Wert 40 bei der Wassermenge die benötigt wird? (Z. 523)
+#TODO: Brauchen wir () einen Eingabeparameter bei de Klasse? (Z. 418)
+#TODO: Wofür steht der Wert 40 bei der Wassermenge die benötigt wird? (Z. 518)
+#TODO: Müssen die Funktionen calculate_cell_current und calculate_cell_voltage auch zu timeseries? (Z.629) 
 #TODO: Funktion operate_storage: Was muss gemacht werden? Anstelle SIMSES
 #TODO: dt erst wieder gebraucht bei Funktion status codes? dt vorher als Eingabeparameter bei Funktion __init__
-#TODO: 
+
 
 from .component import Component
 import pandas as pd
@@ -389,6 +391,7 @@ class ElectrolysisMoritz:
     
     def __init__(self,P_elektrolyseur):
 
+        #P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
         self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cell)     
         # Constants
         self.F = 96485.34  # Faraday's constant [C/mol]
@@ -434,7 +437,7 @@ class ElectrolysisMoritz:
         #         (self.simses.state.get(
         #             self.simses.state.AC_POWER_DELIVERED) / 1000))
         
-    def prepare_time_series(self):
+    def prepare_time_series(self):                          #Ursprung: Saschas Modell
         soc_lst = list()                
         ac_lst = list()
         for timestep in pd.date_range(start=self.environment.start,
@@ -459,8 +462,8 @@ class ElectrolysisMoritz:
 
     def power_electronics(self, P_nenn):                    #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / unverändert / notwendig für Funktion AC to DC
         '''
-        :param:             self.timeseries['P_ac'] Power AC in W
-        :param P_nenn:      nominal Power in W
+        :param:             self.timeseries['P_ac'] Power AC in kW
+        :param:             nominal Power in kW
         :return:            self-consumption in kW
         '''
         for timestep in pd.date_range(start=self.environment.start,
@@ -482,8 +485,8 @@ class ElectrolysisMoritz:
     
     def power_dc(self):                                     #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / verändert
         '''
-        :param:                 Timeseries mit 'P_ac' (Power AC in W)
-        :return:                Timeseries mit 'P_dc' (Power DC in W)
+        :param:             Timeseries with 'P_ac' (Power AC in kW)
+        :return:            Timeseries with 'P_dc' (Power DC in kW)
         '''
         
         self.timeseries['P_dc'] = self.timeseries['P_ac'] - self.timeseries.apply(lambda row: self.power_electronics(row['P_ac'], self.stack_nominal() / 100), axis=1)
@@ -506,20 +509,19 @@ class ElectrolysisMoritz:
 
         # return H2O_mfr
         '''
-        :param:             self
-        :return:            Timeseries of H2O mass flow rate
+        :param:             Timeseries with 'H2_mfr' (Hydrogen mass flow rate in kg)
+        :return:            Timeseries with 'H2O_mfr' (needed water mass flow in kg)
         '''
-
-        # self.timeseries['H20 [kg]'] = 0.0                                 #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch)) / verändert: df in timeseries / Ausgangsprodukt: Wasser
-        # self.timeseries['heat energy [kW/h]'] = 0.0
-        # self.timeseries['Surplus electricity [kW]'] = 0.0
-        # self.timeseries['heat [kW/h]'] = 0.0
-
         M_H2O = 18.010 #mol/g
         roh_H2O = 997 #kg/m3
 
         ratio_M = M_H2O/self.M # (mol/g)/(mol/g)
         self.timeseries["H2O_mfr"] = self.timeseries["H2_mfr"] * ratio_M + 40 #H2O_mfr in kg
+
+        # self.timeseries['H20 [kg]'] = 0.0                                 #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch)) / verändert: df in timeseries / Ausgangsprodukt: Wasser
+        # self.timeseries['heat energy [kW/h]'] = 0.0
+        # self.timeseries['Surplus electricity [kW]'] = 0.0
+        # self.timeseries['heat [kW/h]'] = 0.0
 
         # for i in range(len(df.index)):                                      
         #     P_elektrolyseur = df.loc[df.index[i], 'power total [kW]'] # P_elektrolyseur war vorher P_in TODO: Was ist p_in? Frage an Moritz
@@ -550,13 +552,14 @@ class ElectrolysisMoritz:
 
         return self.timeseries["H2O_mfr"]
 
-    def calc_cell_voltage(self, I):
-        """
-        I [Adc]: stack current
-        T [degC]: stack temperature #Vorgeben 50°C
-        return :: V_cell [Vdc/cell]: cell voltage
-        """
-        T_K = self.T + 273.15 #Celvin
+    def calc_cell_voltage(self, I, T):                      #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) 
+        '''
+        :param:             I [Adc]: stack current
+        :param:             T [degC]: stack temperature
+        :return:            V_cell [Vdc/cell]: cell voltage
+        '''
+
+        T_K = T + 273.15 #Celvin
 
         # Cell reversible voltage:
         E_rev_0 = self.gibbs / (self.n * self.F)  # Reversible cell voltage at standard state
@@ -565,7 +568,7 @@ class ElectrolysisMoritz:
         p_cathode = 3000000
 
         # Arden Buck equation T=C, https://www.omnicalculator.com/chemistry/vapour-pressure-of-water#vapor-pressure-formulas
-        p_h2O_sat = (0.61121 * np.exp((18.678 - (self.T / 234.5)) * (self.T / (257.14 + self.T)))) * 1e3  # (Pa)
+        p_h2O_sat = (0.61121 * np.exp((18.678 - (T / 234.5)) * (T / (257.14 + T)))) * 1e3  # (Pa)
 
        # General Nernst equation
         E_rev = E_rev_0 + ((self.R * T_K) / (self.n * self.F)) * (
@@ -590,7 +593,7 @@ class ElectrolysisMoritz:
         # cathode exchange current density
         i_0_c = 10 ** (-3)
 
-        i = I / self.cell_area# A/cm^2                                                                          # ist unsere Stromstärke vorgegeben
+        i = I / self.cell_area# A/cm^2
 
         # derived from Butler-Volmer eqs
         # V_act_a = ((self.R * T_anode) / (alpha_a * self.F)) * np.arcsinh(i / (2*i_0_a))
@@ -624,36 +627,19 @@ class ElectrolysisMoritz:
 
         return V_cell
         
-    def calculate_cell_current(self, P_dc):
+    def calculate_cell_current(self, P_dc):                 #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) 
         '''
-        P_dc:       Power DC in Watt
-        P_cell:     Power each cell
-        return I:   Current each cell in Ampere
+        :param:             P_dc (Power DC in kW)
+        :param:             P_cell (Power each cell in kW)
+        :return:            I Current each cell in Ampere
         '''
+        
         P_cell = P_dc /self.n_cells  #[kW]
         df = self.create_polarization()
         x = df['power_W'].to_numpy()
         y = df['current_A'].to_numpy()
         f = interp1d(x, y, kind='linear')
         return  f(P_cell)
-    
-    def calc_faradaic_efficiency(self, I):
-        """
-            #     I [A]: stack current
-            #     return :: eta_F [-]: Faraday's efficiency
-            #     Reference: https://res.mdpi.com/d_attachment/energies/energies-13-04792/article_deploy/energies-13-04792-v2.pdf
-            #     """
-        p = 20 #electrolyze pressure in bar
-        i = I/self.cell_area
-
-        a_1 = -0.0034
-        a_2 = -0.001711
-        b = -1
-        c = 1
-
-        eta_f = (a_1*p+a_2)*((i)**b)+c
-
-        return eta_f
     
     def calc_H2_production(self):                           #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch)) / Ausgangsprodukt: Wasserstoff
         
@@ -671,8 +657,8 @@ class ElectrolysisMoritz:
         # H2_mfr = (mfr*3600)/1000 #kg/dt
 
         """
-        :param:             self with Power DC in W
-        :return:            Timeseries with H2 production rate
+        :param:             Timeseries with 'P_dc' (Power DC in kW)
+        :return:            Timeseries with 'H2_mfr' (Hydrogen mass flow rate kg/(dt?))
         """
 
         self.timeseries["I"] = self.calculate_cell_current(self.timeseries["P_dc"])                         #[A]
@@ -716,20 +702,58 @@ class ElectrolysisMoritz:
 
         return self.timeseries["H2_mfr"]  
 
-    def heat_sys(self, q_cell, mfr_H2O):                    #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / Ausgangsprodukt: Wärme
-        '''
-        Q_cell: in kWh
-        mfr_H20: in kg/dt
-        return: q_loss in kW
-                q_H20_fresh in kW
-        '''
-        c_pH2O = 0.001162 #kWh/kg*k
-        dt = self.T - 20 #operate temp. - ambient temp.
+    def heat_cell(self):                                    #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / Ausgangsprodukt: Wärme der Zelle
+        # '''
+        # P_dc: in W
+        # return: q cell in W
+        # '''
+        # V_th = self.E_th_0 # 
+        # I = self.calculate_cell_current(P_dc) #[A]
+        # U_cell = self.calc_cell_voltage(I, self.temperature) # [V]
 
-        q_H2O_fresh = - c_pH2O * mfr_H2O * dt * 1.5 #multyplied with 1.5 for transport water
-        q_loss = - (q_cell + q_H2O_fresh) * 0.14
+        # q_cell = self.n_cells*(U_cell - V_th)*I
+        # return q_cell
+        
+        """
+        :param:             Timeseries with 'P_dc' (Power DC in kW)
+        :return:            Timeseries with 'q cell' (heat of cell in kW)
+        """
 
-        return q_loss, q_H2O_fresh
+        V_th = self.E_th_0                                                                                  #thermoneutral voltage at standard state
+        self.timeseries["I"] = self.calculate_cell_current(self.timeseries["P_dc"])                         #[A]
+        self.timeseries["U_cell"] = self.calc_cell_voltage(self.timeseries["I"], self.temperature)          #[V]
+
+        self.timeseries["q_cell"] = self.n_cells*(self.timeseries["U_cell"] - V_th)*self.timeseries["I"]
+        return self.timeseries["q_cell"]
+    
+    def heat_sys(self):                                     #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / Ausgangsprodukt: Wärme
+        # '''
+        # Q_cell: in kWh
+        # mfr_H20: in kg/dt
+        # return: q_loss in kW
+        #         q_H20_fresh in kW
+        # '''
+        # c_pH2O = 0.001162                   #kWh/kg*k
+        # dt = self.T - 20                    #operate temp. - ambient temp.
+
+        # q_H2O_fresh = - c_pH2O * mfr_H2O * dt * 1.5 #multyplied with 1.5 for transport water
+        # q_loss = - (q_cell + q_H2O_fresh) * 0.14
+
+        # return q_loss, q_H2O_fresh
+    
+        """
+        :param:             Timeseries with 'H2O_mfr' (needed water mass flow in kg)
+        :param:             Timeseries with 'q_cell' (heat of cell in kW)
+        :return:            Timeseries with 'q_loss' (heat loss of stack/system in kW)
+        :return:            Timeseries with 'q_H2O_fresh' (heat of cell in W)
+        """
+        c_pH2O = 0.001162                                   #kWh/kg*k
+        dt = self.T - 20                                    #operate temp. - ambient temp.
+
+        self.timeseries["q_H2O_fresh"] = - c_pH2O * self.timeseries["H2O_mfr"] * dt * 1.5         #multyplied with 1.5 for transport water
+        self.timeseries["q_loss"] = - (self.timeseries["q_cell"] + self.timeseries["q_H2O_fresh"]) * 0.14
+
+        return self.timeseries["q_loss"], self.timeseries["q_loss"]
         
     # def status_codes(self,dt,df):                         #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch))
     #     ''' 
