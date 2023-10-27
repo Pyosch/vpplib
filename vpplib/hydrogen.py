@@ -17,6 +17,14 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 #P_Elektrolyseur = P_nominal                                dc oder ac? P_Elektrolyseur
 #P_Elektrolyseur=p_in  wird nicht mehr benötigt  
 
+#Montag:
+#TODO: Woher beziehen wir P_ac als timeseries (Z. 434; 448) um den Code laufen zu lassen?
+#TODO: Brauchen wir () einen EIngabeparameter bei de Klasse? (Z. 418)
+#TODO: Wofür steht der Wert 40 bei der Wassermenge die benötigt wird? (Z. 523)
+#TODO: Funktion operate_storage: Was muss gemacht werden? Anstelle SIMSES
+#TODO: dt erst wieder gebraucht bei Funktion status codes? dt vorher als Eingabeparameter bei Funktion __init__
+#TODO: 
+
 from .component import Component
 import pandas as pd
 import numpy as np
@@ -377,12 +385,12 @@ class ElectrolysisSimses(Component):
 
         return observations
 
-class ElectrolysisMoritz():
+class ElectrolysisMoritz:
     
     def __init__(self,P_elektrolyseur):
 
         #P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
-        self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cell)     # Ist die Leistung des Elektrolyseurs in dc oder ac
+        self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cell)     #TODO: Ist die Leistung des Elektrolyseurs in dc oder ac
         # Constants
         self.F = 96485.34  # Faraday's constant [C/mol]
         self.R = 8.314  # ideal gas constant [J/(mol*K)]
@@ -413,7 +421,7 @@ class ElectrolysisMoritz():
         self.p_anode = self.p_atmo  # (Pa) pressure at anode, assumed atmo
         self.p_cathode = 3000000
 
-    def operate_storage(self, timestep, load):              #Ursprung: Saschas Modell /TODO: Name beibehalten / Rest anpassen / Load = Residuallast / Moritz Load = Spitzenlast
+    #def operate_storage(self, timestep, load):              #Ursprung: Saschas Modell /TODO: Name beibehalten / Rest anpassen / Load = Residuallast / Moritz Load = Spitzenlast
         
         # self.simses.run_one_simulation_step(                              #Was soll hier anstatt von Simses hin?
         #     time.mktime(
@@ -426,16 +434,10 @@ class ElectrolysisMoritz():
         # return (self.simses.state.soc,
         #         (self.simses.state.get(
         #             self.simses.state.AC_POWER_DELIVERED) / 1000))
-
-    def prepare_time_series(self):                          #Ursprung: Saschas Modell /TODO: Name beibehalten / in dieser Funktion soll das Dataframe initialisiert werden / nicht in __init__
-        '''
-        :param:             self
-        :return:            self.timeseries
-        '''
-
+        
+    def prepare_time_series(self):
         soc_lst = list()                
         ac_lst = list()
-
         for timestep in pd.date_range(start=self.environment.start,
                                         end=self.environment.end,
                                         freq=self.environment.time_freq):
@@ -447,7 +449,6 @@ class ElectrolysisMoritz():
 
             soc_lst.append(soc)
             ac_lst.append(ac)
-
         self.timeseries = pd.DataFrame(
             {"state_of_charge": soc_lst,
                 "P_ac": ac_lst},
@@ -455,7 +456,6 @@ class ElectrolysisMoritz():
                                 end=self.environment.end,
                                 freq=self.environment.time_freq)
         )
-
         return self.timeseries
 
     def power_electronics(self, P_nenn):                    #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / unverändert / notwendig für Funktion AC to DC
