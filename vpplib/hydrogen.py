@@ -17,7 +17,7 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 #P_Elektrolyseur = P_nominal                                dc oder ac? P_Elektrolyseur
 #P_Elektrolyseur=p_in  wird nicht mehr benötigt  
 
-#Montag:
+#Monday:
 #TODO: Ist die Leistung des Elektrolyseurs in dc oder ac (Z. 393)
 #TODO: Woher beziehen wir P_ac als timeseries (Z. 434; 448) um den Code laufen zu lassen?
 #TODO: Brauchen wir () einen Eingabeparameter bei de Klasse? (Z. 418)
