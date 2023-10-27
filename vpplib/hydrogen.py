@@ -428,20 +428,17 @@ class ElectrolysisMoritz():
         #             self.simses.state.AC_POWER_DELIVERED) / 1000))
 
     def prepare_time_series(self):                          #Ursprung: Saschas Modell /TODO: Name beibehalten / in dieser Funktion soll das Dataframe initialisiert werden / nicht in __init__
-        """.                                                # Kann man über self auf timseries zugreifen?
+        '''
+        :param:             self
+        :return:            self.timeseries
+        '''
 
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        """
         soc_lst = list()                
         ac_lst = list()
 
         for timestep in pd.date_range(start=self.environment.start,
-                                      end=self.environment.end,
-                                      freq=self.environment.time_freq):
+                                        end=self.environment.end,
+                                        freq=self.environment.time_freq):
 
             soc, ac = self.operate_storage(
                 timestep,
@@ -449,11 +446,11 @@ class ElectrolysisMoritz():
             )
 
             soc_lst.append(soc)
-            ac_lst.append(ac)                   #hier müssen wir irgendwie P_ac einbeziehen als timeseries
+            ac_lst.append(ac)
 
         self.timeseries = pd.DataFrame(
             {"state_of_charge": soc_lst,
-             "P_ac": ac_lst},
+                "P_ac": ac_lst},
             index=pd.date_range(start=self.environment.start,
                                 end=self.environment.end,
                                 freq=self.environment.time_freq)
@@ -461,9 +458,9 @@ class ElectrolysisMoritz():
 
         return self.timeseries
 
-    def power_electronics(self, P_nenn):              #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / unverändert / notwendig für Funktion AC to DC
+    def power_electronics(self, P_nenn):                    #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / unverändert / notwendig für Funktion AC to DC
         '''
-        :param self.timeseries['P_ac']:        Power AC in W 
+        :param:             self.timeseries['P_ac'] Power AC in W
         :param P_nenn:      nominal Power in W
         :return:            self-consumption in kW
         '''
@@ -486,14 +483,14 @@ class ElectrolysisMoritz():
     
     def power_dc(self):                                     #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / verändert
         '''
-        :param:                 DataFrame mit 'P_ac' (Power AC in W)
-        :return:                DataFrame mit 'P_dc' (Power DC in W)
+        :param:                 Timeseries mit 'P_ac' (Power AC in W)
+        :return:                Timeseries mit 'P_dc' (Power DC in W)
         '''
         
         self.timeseries['P_dc'] = self.timeseries['P_ac'] - self.timeseries.apply(lambda row: self.power_electronics(row['P_ac'], self.stack_nominal() / 100), axis=1)
-        return self.timeseries
+        return self.timeseries["P_dc"]
 
-    def calc_H2O_mfr(self, df):                #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / verändert / Eingangsprodukt: Wasser
+    def calc_H2O_mfr(self):                                 #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / verändert / Eingangsprodukt: Wasser
     
     #def calc_H2O_mfr(self, H2_mfr):                         
         # '''
@@ -509,58 +506,144 @@ class ElectrolysisMoritz():
         # #H2O_mfr = H2O_mfr_kg / roh_H2O
 
         # return H2O_mfr
+        '''
+        :param:             self
+        :return:            Timeseries of H2O mass flow rate
+        '''
 
-        '''
-        H2_mfr: Hydrogen mass flow in kg                            
-        O_mfr: Oxygen mass flow in kg
-        return: needed water mass flow in kg
-        '''
-        df['H20 [kg]'] = 0.0
-        df['heat energy [kW/h]'] = 0.0
-        df['Surplus electricity [kW]'] = 0.0
-        df['heat [kW/h]'] = 0.0
+        # self.timeseries['H20 [kg]'] = 0.0                                 #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch)) / verändert: df in timeseries / Ausgangsprodukt: Wasser
+        # self.timeseries['heat energy [kW/h]'] = 0.0
+        # self.timeseries['Surplus electricity [kW]'] = 0.0
+        # self.timeseries['heat [kW/h]'] = 0.0
 
         M_H2O = 18.010 #mol/g
         roh_H2O = 997 #kg/m3
 
         ratio_M = M_H2O/self.M # (mol/g)/(mol/g)
-        H2O_mfr = H2_mfr * ratio_M + 40#H2O_mfr in kg
+        self.timeseries["H2O_mfr"] = self.timeseries["H2_mfr"] * ratio_M + 40 #H2O_mfr in kg
 
-        for i in range(len(df.index)):                                      
-            P_elektrolyseur = df.loc[df.index[i], 'power total [kW]'] # P_elektrolyseur war vorher P_in #Was ist p_in
-            H2_mfr = df.loc[df.index[i], "hydrogen [Nm3]"]
-            # Check if the status is 'production'
-            if df.loc[df.index[i], 'status'] == 'production':
-                # Check if the power generation is less than or equal to the nominal power
-                if df.loc[df.index[i], 'power total [kW]'] <= self.P_max:    # P_nominal = P_maximal
-                    M_H2O = 18.010                                      # mol/g
-                    roh_H2O = 997                                       # kg/m3
-                    ratio_M = M_H2O/self.M                              # (mol/g)/(mol/g)
-                    H2O_mfr = H2_mfr * ratio_M + 40                     # H2O_mfr in kg
-                    df.loc[df.index[i], 'H2O [kg]'] = H2O_mfr
-                    df.loc[df.index[i], 'specific consumption'] = self.timeseries['P_dc'] 
-                else:
-                    # Calculate H2O production using nominal power and specific energy consumptio
-                    H2O_mfr = H2_mfr * ratio_M + 40                     # H2O_mfr in kg (TODO: Warum +40??)
-                    df.loc[df.index[i], 'specific consumption'] = self.timeseries['P_dc']  - self.P_max
-                    df.loc[df.index[i], 'Surplus electricity [kW]'] = df.loc[df.index[i], 'power total [kW]'] - self.P_max
-                # Update the H2O production column for the current time step
-                df.loc[df.index[i], 'H2O [kg]'] = H2O_mfr
+        # for i in range(len(df.index)):                                      
+        #     P_elektrolyseur = df.loc[df.index[i], 'power total [kW]'] # P_elektrolyseur war vorher P_in TODO: Was ist p_in? Frage an Moritz
+        #     H2_mfr = df.loc[df.index[i], "hydrogen [Nm3]"]
+        #     # Check if the status is 'production'
+        #     if df.loc[df.index[i], 'status'] == 'production':
+        #         # Check if the power generation is less than or equal to the nominal power
+        #         if df.loc[df.index[i], 'power total [kW]'] <= self.P_max:    # P_nominal = P_maximal
+        #             M_H2O = 18.010                                      # mol/g
+        #             roh_H2O = 997                                       # kg/m3
+        #             ratio_M = M_H2O/self.M                              # (mol/g)/(mol/g)
+        #             H2O_mfr = H2_mfr * ratio_M + 40                     # H2O_mfr in kg
+        #             df.loc[df.index[i], 'H2O [kg]'] = H2O_mfr
+        #             df.loc[df.index[i], 'specific consumption'] = self.timeseries['P_dc'] 
+        #         else:
+        #             # Calculate H2O production using nominal power and specific energy consumptio
+        #             H2O_mfr = H2_mfr * ratio_M + 40                     # H2O_mfr in kg (TODO: Warum +40??)
+        #             df.loc[df.index[i], 'specific consumption'] = self.timeseries['P_dc']  - self.P_max
+        #             df.loc[df.index[i], 'Surplus electricity [kW]'] = df.loc[df.index[i], 'power total [kW]'] - self.P_max
+        #         # Update the H2O production column for the current time step
+        #         df.loc[df.index[i], 'H2O [kg]'] = H2O_mfr
 
-            elif df.loc[df.index[i], 'status'] == 'booting':
-                    df.loc[df.index[i], 'heat energy loss [kW]'] = 0.0085*self.P_max #0.85% of P_nominal energy losses for heat
-                    df.loc[df.index[i], 'Surplus electricity [kW]'] = self.timeseries['P_dc']  - (0.0085*self.P_max)
-            else:
-                df.loc[df.index[i], 'Surplus electricity [kW]'] = self.timeseries['P_dc'] 
+        #     elif df.loc[df.index[i], 'status'] == 'booting':
+        #             df.loc[df.index[i], 'heat energy loss [kW]'] = 0.0085*self.P_max #0.85% of P_nominal energy losses for heat
+        #             df.loc[df.index[i], 'Surplus electricity [kW]'] = self.timeseries['P_dc']  - (0.0085*self.P_max)
+        #     else:
+        #         df.loc[df.index[i], 'Surplus electricity [kW]'] = self.timeseries['P_dc'] 
 
-        return df  
+        return self.timeseries["H2O_mfr"]
 
-    def calc_H2_production(self, df):                       #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch)) / Ausgangsprodukt: Wasserstoff
+    def calc_cell_voltage(self, I, T):
+        """
+        I [Adc]: stack current
+        T [degC]: stack temperature
+        return :: V_cell [Vdc/cell]: cell voltage
+        """
+        T_K = T + 273.15 #Celvin
+
+        # Cell reversible voltage:
+        E_rev_0 = self.gibbs / (self.n * self.F)  # Reversible cell voltage at standard state
+        p_atmo = self.p_atmo
+        p_anode = 200000
+        p_cathode = 3000000
+
+        # Arden Buck equation T=C, https://www.omnicalculator.com/chemistry/vapour-pressure-of-water#vapor-pressure-formulas
+        p_h2O_sat = (0.61121 * np.exp((18.678 - (T / 234.5)) * (T / (257.14 + T)))) * 1e3  # (Pa)
+
+       # General Nernst equation
+        E_rev = E_rev_0 + ((self.R * T_K) / (self.n * self.F)) * (
+           np.log( ((p_anode - p_h2O_sat) / p_atmo)* np.sqrt((p_cathode - p_h2O_sat) / p_atmo)))
+
+        #E_rev = E_rev_0 - ((E_rev_0* 10**-3 * T_K) + 9.523 * 10**-5 * np.log(T_K) + 9.84*10**-8* T_K**2) #empirical equation
+
+
+        T_anode = T_K #[K]
+
+        T_cathode = T_K #[K]
+
+        # anode charge transfer coefficient
+        alpha_a = 2
+
+        # cathode charge transfer coefficient
+        alpha_c = 0.5
+
+        # anode exchange current density
+        i_0_a = 2 * 10 ** (-7)
+
+        # cathode exchange current density
+        i_0_c = 10 ** (-3)
+
+        i = I / self.cell_area# A/cm^2
+
+        # derived from Butler-Volmer eqs
+        # V_act_a = ((self.R * T_anode) / (alpha_a * self.F)) * np.arcsinh(i / (2*i_0_a))
+        #V_act_c = ((self.R * T_cathode) / (alpha_c * self.F)) * np.arcsinh(i / (2*i_0_c))
+        # alternate equations for Activation overpotential
+        # Option 2: Dakota: I believe this may be more accurate, found more
+        # frequently in lit review
+        # https://www.sciencedirect.com/science/article/pii/S0360319918309017
+
+        z_a = 4 # stoichiometric coefficient of electrons transferred at anode
+        z_c = 2 # stoichometric coefficient of electrons transferred at cathode
+        i_0_a = 10**(-9) # anode exchange current density TODO: update to be f(T)?
+        i_0_c = 10**(-3) # cathode exchange current density TODO: update to be f(T)?
+
+        V_act_a = ((self.R*T_anode)/(alpha_a*z_a*self.F)) * np.log(i/i_0_a)
+        V_act_c = ((self.R*T_cathode)/(alpha_c*z_c*self.F)) * np.log(i/i_0_c)
+
+        # pulled from https://www.sciencedirect.com/science/article/pii/S0360319917309278?via%3Dihub
+        lambda_nafion = 25
+        t_nafion = 0.01  # cm
+
+        sigma_nafion = ((0.005139 * lambda_nafion) - 0.00326) * np.exp(
+            1268 * ((1 / 303) - (1 / T_K)))
+        R_ohmic_ionic = t_nafion / sigma_nafion
+
+        R_ohmic_elec = 50e-3
+
+        V_ohmic = i * (R_ohmic_elec + R_ohmic_ionic) #[V]
+
+        V_cell = E_rev + V_act_a + V_act_c + V_ohmic #[V]
+
+        return V_cell
         
-        """
-        :param P_dc:        Dataframe mit Power DC in W
-        :return:            Dataframe mit 'hydrogen mass flow rate [kg/dt]', 'specific consumption', 'Surplus electricity [kW]', 'heat energy loss [kW]'
-        """
+    def calculate_cell_current(self, P_dc):
+        '''
+        P_dc:       Power DC in Watt
+        P_cell:     Power each cell
+        return I:   Current each cell in Ampere
+        '''
+        P_cell = P_dc /self.n_cells  #[kW]
+        df = self.create_polarization()
+        x = df['power_W'].to_numpy()
+        y = df['current_A'].to_numpy()
+        f = interp1d(x, y, kind='linear')
+        return  f(P_cell)
+    
+    def calc_H2_production(self):                           #Ursprung: Moritz Modell (dynamic_operate_modell.py(dynamisch)) / Ausgangsprodukt: Wasserstoff
+        
+        # """
+        # :param P_dc:        Dataframe mit Power DC in W
+        # :return:            Dataframe mit 'hydrogen mass flow rate [kg/dt]', 'specific consumption', 'Surplus electricity [kW]', 'heat energy loss [kW]'
+        # """
         # power_left = P_dc #[kW]
 
         #I = self.calculate_cell_current(P_dc) #[A]
@@ -570,39 +653,51 @@ class ElectrolysisMoritz():
         # #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
         # H2_mfr = (mfr*3600)/1000 #kg/dt
 
-        #Initialisierung neuer Spalten für Wasserstoffproduktion, Wärmeenergie und überschüssigen Strom
-        df['hydrogen mass flow rate [kg/dt]'] = 0.0
-        df['heat energy [kW/h]'] = 0.0
-        df['Surplus electricity [kW]'] = 0.0
-        df['heat [kW/h]'] = 0.0
+        """
+        :param:             self with Power DC in W
+        :return:            Timeseries with H2 production rate
+        """
 
-        #Berechnung der Wasserstoffproduktion, der Wärmeenergie und des Stromüberschusses für jeden Zeitschritt
-        for i in range(len(df.index)):
-            P_ = df.loc[df.index[i], 'power total [kW]']          # Frage: Wo wird 'power total' vorher im df als Zeile hinzugefügt und um welches P handelt es sich? P_ac, P_in, P_nom?? (Katrin)
-            P_dc = df.loc[df.index[i], 'P_dc']                      # hier wird P_dc aus dem Dataframe 'df' genommen
+        self.timeseries["I"] = self.calculate_cell_current(self.timeseries["P_dc"])                         #[A]
+        self.timeseries["V"] = self.calc_cell_voltage(self.timeseries["I"], self.temperature)               #[V]
+        self.timeseries["eta_F"] = self.calc_faradaic_efficiency(self.timeseries["I"])
+        self.timeseries["mfr"] = (self.timeseries["eta_F"]  * self.timeseries["I"] * self.M * self.n_cells) / (self.n * self.F)
+        #power_left -= self.calc_stack_power(I, self.temperature) * 1e3
+        self.timeseries["H2_mfr"] = (self.timeseries["mfr"]*3600)/1000                                      #[kg/dt]]
+
+        # #Initialisierung neuer Spalten für Wasserstoffproduktion, Wärmeenergie und überschüssigen Strom
+        # df['hydrogen mass flow rate [kg/dt]'] = 0.0
+        # df['heat energy [kW/h]'] = 0.0
+        # df['Surplus electricity [kW]'] = 0.0
+        # df['heat [kW/h]'] = 0.0
+
+        # #Berechnung der Wasserstoffproduktion, der Wärmeenergie und des Stromüberschusses für jeden Zeitschritt
+        # for i in range(len(df.index)):
+        #     P_ = df.loc[df.index[i], 'power total [kW]']          # Frage: Wo wird 'power total' vorher im df als Zeile hinzugefügt und um welches P handelt es sich? P_ac, P_in, P_nom?? (Katrin)
+        #     P_dc = df.loc[df.index[i], 'P_dc']                      # hier wird P_dc aus dem Dataframe 'df' genommen
             
-            # Check if the status is 'production'
-            if df.loc[df.index[i], 'status'] == 'production':
-                # Check if the power generation is less than or equal to the nominal power
-                if df.loc[df.index[i], 'power total [kW]'] <= self.P_max: #P_nominal = P_MAXIMAL
-                    hydrogen_production = (((self.calc_faradaic_efficiency(self.calculate_cell_current(P_dc)) *(self.calculate_cell_current(P_dc)) * self.M * self.n_cells) / (self.n * self.F))*3600)/1000     #kg/dt
-                    df.loc[df.index[i], 'hydrogen [kg/dt]'] = hydrogen_production
-                    df.loc[df.index[i], 'specific consumption'] = P_dc
-                else:
-                    # Calculate hydrogen production using nominal power and specific energy consumptio
-                    hydrogen_production = (((self.calc_faradaic_efficiency(self.calculate_cell_current(P_dc)) *(self.calculate_cell_current(P_dc)) * self.M * self.n_cells) / (self.n * self.F))*3600)/1000     #kg/dt #P_nominal richtige variabel?
-                    df.loc[df.index[i], 'specific consumption'] = P_dc - self.P_max
-                    df.loc[df.index[i], 'Surplus electricity [kW]'] = df.loc[df.index[i], 'power total [kW]'] - self.P_max
-                # Update the hydrogen production column for the current time step
-                df.loc[df.index[i], 'hydrogen [kg/dt]'] = hydrogen_production
+        #     # Check if the status is 'production'
+        #     if df.loc[df.index[i], 'status'] == 'production':
+        #         # Check if the power generation is less than or equal to the nominal power
+        #         if df.loc[df.index[i], 'power total [kW]'] <= self.P_max: #P_nominal = P_MAXIMAL
+        #             hydrogen_production = (((self.calc_faradaic_efficiency(self.calculate_cell_current(P_dc)) *(self.calculate_cell_current(P_dc)) * self.M * self.n_cells) / (self.n * self.F))*3600)/1000     #kg/dt
+        #             df.loc[df.index[i], 'hydrogen [kg/dt]'] = hydrogen_production
+        #             df.loc[df.index[i], 'specific consumption'] = P_dc
+        #         else:
+        #             # Calculate hydrogen production using nominal power and specific energy consumptio
+        #             hydrogen_production = (((self.calc_faradaic_efficiency(self.calculate_cell_current(P_dc)) *(self.calculate_cell_current(P_dc)) * self.M * self.n_cells) / (self.n * self.F))*3600)/1000     #kg/dt #P_nominal richtige variabel?
+        #             df.loc[df.index[i], 'specific consumption'] = P_dc - self.P_max
+        #             df.loc[df.index[i], 'Surplus electricity [kW]'] = df.loc[df.index[i], 'power total [kW]'] - self.P_max
+        #         # Update the hydrogen production column for the current time step
+        #         df.loc[df.index[i], 'hydrogen [kg/dt]'] = hydrogen_production
 
-            elif df.loc[df.index[i], 'status'] == 'booting':
-                    df.loc[df.index[i], 'heat energy loss [kW]'] = 0.0085*self.P_max                         #0.85% of P_nominal energy losses for heat
-                    df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc - (0.0085*self.P_max)
-            else:
-                df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc
+        #     elif df.loc[df.index[i], 'status'] == 'booting':
+        #             df.loc[df.index[i], 'heat energy loss [kW]'] = 0.0085*self.P_max                         #0.85% of P_nominal energy losses for heat
+        #             df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc - (0.0085*self.P_max)
+        #     else:
+        #         df.loc[df.index[i], 'Surplus electricity [kW]'] = P_dc
 
-        return df    
+        return self.timeseries["H2_mfr"]  
 
     def heat_sys(self, q_cell, mfr_H2O):                    #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) / Ausgangsprodukt: Wärme
         '''
