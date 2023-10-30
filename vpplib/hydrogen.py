@@ -25,6 +25,7 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 #TODO: Müssen die Funktionen calculate_cell_current und calculate_cell_voltage auch zu timeseries? (Z.629) 
 #TODO: Funktion operate_storage: Was muss gemacht werden? Anstelle SIMSES
 #TODO: dt erst wieder gebraucht bei Funktion status codes? dt vorher als Eingabeparameter bei Funktion __init__
+#TODO: woher bekommen wir unser I vorgegeben oder über die Leistung?
 
 
 from .component import Component
@@ -552,14 +553,14 @@ class ElectrolysisMoritz:
 
         return self.timeseries["H2O_mfr"]
 
-    def calc_cell_voltage(self, I, T):                      #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) 
+    def calc_cell_voltage(self, I):                      #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch))  # wie kommt man an das I?
         '''
         :param:             I [Adc]: stack current
         :param:             T [degC]: stack temperature
         :return:            V_cell [Vdc/cell]: cell voltage
         '''
 
-        T_K = T + 273.15 #Celvin
+        T_K = self.T + 273.15 #Celvin
 
         # Cell reversible voltage:
         E_rev_0 = self.gibbs / (self.n * self.F)  # Reversible cell voltage at standard state
@@ -593,8 +594,7 @@ class ElectrolysisMoritz:
         # cathode exchange current density
         i_0_c = 10 ** (-3)
 
-        i = I / self.cell_area# A/cm^2                                                                          # ist unsere Stromstärke vorgegeben
-
+        i = I / self.cell_area# A/cm^2          I=(P/R)**0.5   # ist dann natürlich die frage welches R       P=P_DC                                                               
         # derived from Butler-Volmer eqs
         # V_act_a = ((self.R * T_anode) / (alpha_a * self.F)) * np.arcsinh(i / (2*i_0_a))
         #V_act_c = ((self.R * T_cathode) / (alpha_c * self.F)) * np.arcsinh(i / (2*i_0_c))
@@ -621,10 +621,14 @@ class ElectrolysisMoritz:
 
         R_ohmic_elec = 50e-3
 
-        V_ohmic = i * (R_ohmic_elec + R_ohmic_ionic) #[V]
-
-        V_cell = E_rev + V_act_a + V_act_c + V_ohmic #[V]
-
+        V_ohmic = i * (R_ohmic_elec + R_ohmic_ionic) #[V]       #V_ohmic = (((R_ohmic_elec + R_ohmic_ionic))*self.timeseries["P_dc"])**0.5     #muss noch eine forschleife eingebaut werden    # test damit I raus ist
+        V_cell = E_rev + V_act_a + V_act_c + V_ohmic #[V]          # da müssen noch timeseries raus gebmacht werden
+        
+        
+        
+                                        
+        
+        
         return V_cell
         
     def calculate_cell_current(self, P_dc):                 #Ursprung: Moritz Modell (elektrolyzer_modell.py(statisch)) 
