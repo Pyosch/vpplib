@@ -594,7 +594,7 @@ class ElectrolysisMoritz:
         # cathode exchange current density
         i_0_c = 10 ** (-3)
 
-        i = I / self.cell_area# A/cm^2          I=(P/R)**0.5   # ist dann natürlich die frage welches R       P=P_DC                                                               
+        i = I / self.cell_area# A/cm^2          I=(P/R)**0.5   # ist dann natürlich die frage welches R       P=P_DC         #Timeseries                                                      
         # derived from Butler-Volmer eqs
         # V_act_a = ((self.R * T_anode) / (alpha_a * self.F)) * np.arcsinh(i / (2*i_0_a))
         #V_act_c = ((self.R * T_cathode) / (alpha_c * self.F)) * np.arcsinh(i / (2*i_0_c))
@@ -608,8 +608,8 @@ class ElectrolysisMoritz:
         i_0_a = 10**(-9) # anode exchange current density TODO: update to be f(T)?
         i_0_c = 10**(-3) # cathode exchange current density TODO: update to be f(T)?
 
-        V_act_a = ((self.R*T_anode)/(alpha_a*z_a*self.F)) * np.log(i/i_0_a)
-        V_act_c = ((self.R*T_cathode)/(alpha_c*z_c*self.F)) * np.log(i/i_0_c)
+        V_act_a = ((self.R*T_anode)/(alpha_a*z_a*self.F)) * np.log(i/i_0_a)                                                    #Timeseries   
+        V_act_c = ((self.R*T_cathode)/(alpha_c*z_c*self.F)) * np.log(i/i_0_c)                                                   #Timeseries   
 
         # pulled from https://www.sciencedirect.com/science/article/pii/S0360319917309278?via%3Dihub
         lambda_nafion = 25
@@ -621,8 +621,8 @@ class ElectrolysisMoritz:
 
         R_ohmic_elec = 50e-3
 
-        V_ohmic = i * (R_ohmic_elec + R_ohmic_ionic) #[V]       #V_ohmic = (((R_ohmic_elec + R_ohmic_ionic))*self.timeseries["P_dc"])**0.5     #muss noch eine forschleife eingebaut werden    # test damit I raus ist
-        V_cell = E_rev + V_act_a + V_act_c + V_ohmic #[V]          # da müssen noch timeseries raus gebmacht werden
+        V_ohmic = i * (R_ohmic_elec + R_ohmic_ionic) #[V]       #V_ohmic = (((R_ohmic_elec + R_ohmic_ionic))*self.timeseries["P_dc"])**0.5     #Timeseries   
+        V_cell = E_rev + V_act_a + V_act_c + V_ohmic #[V]                                                                        #Timeseries   
         
         
         
