@@ -15,8 +15,7 @@ from scipy.optimize import minimize_scalar
 class ElectrolysisMoritz:
     def __init__(self,P_elektrolyseur):
 
-        #P_elektrolyseur = (self.cell_area*self.max_current_density*self.n_cell)*self.n_stacks   # wieso wird die Leistung vom Elektrolyseur berechnet und nicht zb die Stacks
-        self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cell)     
+           
         # Constants
         self.F = 96485.34  # Faraday's constant [C/mol]
         self.R = 8.314  # ideal gas constant [J/(mol*K)]
@@ -31,9 +30,9 @@ class ElectrolysisMoritz:
         self.T = 50 # Grad Celsius
         
         #Leistungen/Stromdichte
-        self.max_current_density = 2 * self.cell_area                                      # Habe ich hinzugefügt um eine maximale Stromdichte zu haben #self.max_current_density wie komme sonst auf diesen Wert durch I/A oder wird der festgelegt
+        #self.max_current_density = 2 * self.cell_area                                      # Habe ich hinzugefügt um eine maximale Stromdichte zu haben #self.max_current_density wie komme sonst auf diesen Wert durch I/A oder wird der festgelegt
         #self.P_nominal = self.P_stack * self.n_stacks
-        self.p_nominal = P_elektrolyseur
+        self.P_nominal = P_elektrolyseur
         self.P_min = self.P_nominal * 0.1
         self.P_max = self.P_nominal
 
@@ -46,13 +45,14 @@ class ElectrolysisMoritz:
         self.p_atmo = 101325#2000000  # (Pa) atmospheric pressure / pressure of water
         self.p_anode = self.p_atmo  # (Pa) pressure at anode, assumed atmo
         self.p_cathode = 3000000
-    
+        self_n_stacks= P_elektrolyseur/(self.cell_area*self.max_current*self.n_cells)      #max_current_density abgeändert zu self.max_current
 
-    def status_codes(self,df):   # Variablen überprüfen 
+    def status_codes(self,df):
+        
         long_gap_threshold = 60
         short_gap_threshold = 5
         # create a mask for power values below P_min
-        below_threshold_mask = df['P_in]'] < self.P_min
+        below_threshold_mask = df['P_in'] < self.P_min
 
         # find short gaps (up to 4 steps) where power is below P_min
         short_gaps = below_threshold_mask.rolling(window=short_gap_threshold).sum()
@@ -105,8 +105,6 @@ class ElectrolysisMoritz:
         })
         return df
     
-   
-
     def calc_cell_voltage(self, I, T):
         """
         I [Adc]: stack current
@@ -212,7 +210,7 @@ class ElectrolysisMoritz:
         P_nominal = (self.create_polarization().iloc[500,0] * self.create_polarization().iloc[500,1]*self.n_cells) /1000
         return P_nominal
 
-    def power_electronics(self, P_nenn, P_ac):
+    def power_electronics(self, P_nominal, P_ac):
         # Wirkungsgradkurve definieren
         relative_performance = [0.0,0.09,0.12,0.15,0.189,0.209,0.24,0.3,0.4,0.54,0.7,1.001]
         eta = [0.86,0.91,0.928,0.943,0.949,0.95,0.954,0.96,0.965,0.97,0.973,0.977]
@@ -220,7 +218,7 @@ class ElectrolysisMoritz:
         f_eta = interp1d(relative_performance, eta)
 
         # Eigenverbrauch berechnen
-        eta_interp = f_eta(P_ac / P_nenn)  # Interpoliere den eta-Wert
+        eta_interp = f_eta(P_ac / P_nominal)  # Interpoliere den eta-Wert
 
         P_electronics = P_ac * (1 - eta_interp)  # Berechne den Eigenverbrauch
 
@@ -240,7 +238,7 @@ class ElectrolysisMoritz:
         P_in [Wdc]: stack power input
         return :: H2_mfr [kg/dt]: hydrogen mass flow rate
         """
-        power_left = P_dc
+        power_left= P_dc
 
 
 
@@ -410,21 +408,35 @@ class ElectrolysisMoritz:
     #TODO: wenn eine Funktion in einer benötigten funktion aufgerufen wird muss ich die hier unten auch einfügen?
     #TODO:
     def prepare_timeseries(self, ts):
-        ts = self.status_codes(ts) # statuscodes vergeben
-        ts['P_ac [kW]'] = 0.0 # nicht nötig da p_ac die leistungsreihe ist ist nur zur erinnerung da
+         
+        
+        ts['P_in'] = 0.0
+        for i in range(len(ts.index)): #Syntax überprüfen! 
+            # power_dc funktion 
+            ts.loc[ts.index[i], 'P_in'] == self.power_dc(ts.loc[ts.index[i], 'P_ac'])   # Variablen überprüfen 
+
+            return ts    
+        ts = self.status_codes(ts)
+        
+        
+        
+        
         ts['hydrogen production [Nm3/dt]'] = 0.0 #neue Spalte mit hydrogenproduction = 0.0 "platzhalter"
         ts['surplus electricity [kW]'] = 0.0
         ts['H20 [kg/dt]'] = 0.0
         ts['Heat Cell [W/dt]'] = 0.0
         ts['Oxygen [kg/dt]'] = 0.0
 
+
         for i in range(len(ts.index)): #Syntax überprüfen! 
             # power_dc funktion 
-            ts.loc[ts.index[i], 'P_in'] == self.power_dc(ts.loc[ts.index[i], 'P_ac'])
+            #ts.loc[ts.index[i], 'P_in'] == self.power_dc(ts.loc[ts.index[i], 'P_ac'])
             # komtrolliert ob in der zeile status die zahl 4 steht (production)
             if ts.loc[ts.index[i], 'status'] == 'production':
+
+                
                 #wenn die Eingangsleistung kleiner als p_eletrolyseur ist
-                if ts.loc[ts.index[i], 'P_in'] <= self.p_nominal:
+                if ts.loc[ts.index[i], 'P_in'] <= self.P_nominal:
                     #hydrogen Nm3/dt
                     ts.loc[ts.index[i], 'hydrogen production [Nm3/dt]'] == self.run(ts.loc[ts.index[i], 'P_in'])
                     #H20  kg/dt
@@ -439,19 +451,19 @@ class ElectrolysisMoritz:
                 #wenn die Eingangsleistung größer als p_eletrolyseur ist
                 else:
                     #hydrogen Nm3/dt
-                    ts.loc[ts.index[i], 'hydrogen production [Nm3/dt]'] == self.run(self.p_nominal)
+                    ts.loc[ts.index[i], 'hydrogen production [Nm3/dt]'] == self.run(self.P_nominal)
                     #surplus electricity [kW]
-                    ts.loc[ts.index[i], 'surplus electricity [kW]'] == ts.loc[ts.index[i], 'P_in'] - self.p_nominal  
+                    ts.loc[ts.index[i], 'surplus electricity [kW]'] == ts.loc[ts.index[i], 'P_in'] - self.P_nominal  
                     #H20  kg/dt
                     ts.loc[ts.index[i], 'H20 [kg/dt]'] == self.calc_H2O_mfr(ts.loc[ts.index[i], 'hydrogen production [Nm3/dt]'])
                     #Heat Cell
-                    ts.loc[ts.index[i], 'Heat Cell [W/dt]'] == self.heat_cell(self.p_nominal)
+                    ts.loc[ts.index[i], 'Heat Cell [W/dt]'] == self.heat_cell(self.P_nominal)
                     #oxygen
                     ts.loc[ts.index[i], 'Oxygen [kg/dt]'] == self.calc_O_mfr(ts.loc[ts.index[i], 'hydrogen production [Nm3/dt]'])
 
 
             elif ts.loc[ts.index[i], 'status'] == 'booting':
-                ts.loc[ts.index[i], 'surplus electricity [kW]'] = ts.loc[ts.index[i], 'P_in'] - 0.0085*self.p_nominal
+                ts.loc[ts.index[i], 'surplus electricity [kW]'] = ts.loc[ts.index[i], 'P_in'] - 0.0085*self.P_nominal
             else:
                 ts.loc[ts.index[i], 'surplus electricity [kW]'] = ts.loc[ts.index[i], 'P_in']
         return ts
