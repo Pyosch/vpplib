@@ -409,18 +409,12 @@ class ElectrolysisMoritz:
     #TODO:
     def prepare_timeseries(self, ts):
          
-        
-        ts['P_in'] = 0.0
-        for i in range(len(ts.index)): #Syntax überprüfen! 
-            # power_dc funktion 
-            ts.loc[ts.index[i], 'P_in'] == self.power_dc(ts.loc[ts.index[i], 'P_ac'])   # Variablen überprüfen 
-
-            return ts    
         ts = self.status_codes(ts)
-        
-        
-        
-        
+        # ts['P_in'] = 0.0
+        # for i in range(len(ts.index)): #Syntax überprüfen! 
+        #         # power_dc funktion 
+        #     ts.loc[ts.index[i], 'P_in'] == self.power_dc(ts.loc[ts.index[i], 'P_ac'])
+         
         ts['hydrogen production [Nm3/dt]'] = 0.0 #neue Spalte mit hydrogenproduction = 0.0 "platzhalter"
         ts['surplus electricity [kW]'] = 0.0
         ts['H20 [kg/dt]'] = 0.0
@@ -429,11 +423,12 @@ class ElectrolysisMoritz:
 
 
         for i in range(len(ts.index)): #Syntax überprüfen! 
-            # power_dc funktion 
-            #ts.loc[ts.index[i], 'P_in'] == self.power_dc(ts.loc[ts.index[i], 'P_ac'])
+            
+            
             # komtrolliert ob in der zeile status die zahl 4 steht (production)
             if ts.loc[ts.index[i], 'status'] == 'production':
-
+                
+                 
                 
                 #wenn die Eingangsleistung kleiner als p_eletrolyseur ist
                 if ts.loc[ts.index[i], 'P_in'] <= self.P_nominal:
