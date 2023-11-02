@@ -42,66 +42,11 @@ class ElectrolysisMoritz:
         self.p_anode = self.p_atmo  # (Pa) pressure at anode, assumed atmo
         self.p_cathode = 3000000
         self.n_stacks = P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cells*self.calc_cell_voltage((self.max_current_density*self.cell_area), self.T))      #max_current_density abgeändert zu self.max_current
-        #self.P_stack_nominal = self.cell_area*self.max_current_density*self.n_cells*self.calc_cell_voltage((self.max_current_density*self.cell_area), self.T) # für calc_pump
+        self.P_stack_nominal = self.cell_area*self.max_current_density*self.n_cells*self.calc_cell_voltage((self.max_current_density*self.cell_area), self.T) # für calc_pump
         self.dt=dt
 
     def status_codes(self,df):      #tabelle
-        #     long_gap_threshold = 60
-    #     short_gap_threshold = 5
-    #     # create a mask for power values below P_min
-    #     below_threshold_mask = df['P_in'] < self.P_min
-
-    #     # find short gaps (up to 4 steps) where power is below P_min
-    #     short_gaps = below_threshold_mask.rolling(window=short_gap_threshold).sum()
-    #     hot_mask = (short_gaps <= 4) & below_threshold_mask
-    #     df.loc[hot_mask, 'status'] = 'hot'
-
-    #     # find middle gaps (between 5 and 60 steps) where power is below P_min
-    #     middle_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
-    #     hot_standby_mask = ((5 <= middle_gaps) & (middle_gaps < 60)) & below_threshold_mask
-    #     df.loc[hot_standby_mask, 'status'] = 'hot standby'
-    #     # find long gaps (over 60 steps) where power is below P_min
-    #     long_gaps = below_threshold_mask.rolling(window=long_gap_threshold).sum()
-    #     cold_standby_mask = (long_gaps >= 60) & below_threshold_mask
-    #     df.loc[cold_standby_mask, 'status'] = 'cold standby'
-
-    #     # mark production periods (above P_min)
-    #     production_mask = df['P_in'] >= self.P_min
-    #     df.loc[production_mask, 'status'] = 'production'
-
-    #     # add status codes
-    #     df['status codes'] = df['status'].replace({
-    #         'cold standby': 0,
-    #         'hot standby': 1,
-    #         'hot': 2,
-    #         'production': 4
-    #     })
-
-    #     # add 'booting' status
-    #     booting_mask = pd.Series(False, index=df.index)
-    #     # Identify rows where production is True and previous row is hot standby or cold standby
-    #     booting_mask |= (df['status'].eq('production') & df['status'].shift(1).isin(['hot standby', 'cold standby']))
-
-    #     # Identify rows where production is True and status is cold standby for up to 5 rows before
-
-    #     booting_mask |= (df['status'].eq('production') & df['status'].shift(30).eq('cold standby'))
-
-    #     # Identify rows where production is True and status is hot standby for up to 30 rows before
-    #     for i in range(1, 15):
-    #         booting_mask |= (df['status'].eq('production') & df['status'].shift(i).eq('hot standby'))
-
-    #     df.loc[booting_mask, 'status'] = 'booting'
-
-    #     # add status codes
-    #     df['status codes'] = df['status'].replace({
-    #         'cold standby': 0,
-    #         'hot standby': 1,
-    #         'hot': 2,
-    #         'production': 4,
-    #         'booting': 3
-    #     })
-
-
+      
         long_gap_threshold = math.ceil(60 / self.dt)
         short_gap_threshold = math.ceil(5 / self.dt)
         # create a mask for power values below P_min
@@ -428,7 +373,7 @@ class ElectrolysisMoritz:
 
         return mfr_cool
 
-    def calc_pump(self, H2O_mfr, P_dc):
+    def calc_pump(self, H2O_mfr, P_dc):     #tabelle
         '''
         mfr_H2o: in kg/h
         P_stack: kw
@@ -486,9 +431,10 @@ class ElectrolysisMoritz:
         ts['Oxygen [kg/dt]'] = 0.0
         ts['compression [kw/kg]'] = 0.0
         ts['gasdrying [kw/kg]'] = 0.0
+        ts['pump [kw/kg]'] = 0.0
         ts['efficiency [%]'] = 0.0
         ts['efficency with compression [%]'] = 0.0
-        ts['gasdrying [kw/kg]'] = 0.0
+        
 
 
         for i in range(len(ts.index)): #Syntax überprüfen! 
@@ -510,14 +456,17 @@ class ElectrolysisMoritz:
                     #oxygen
                     ts.loc[ts.index[i], 'Oxygen [kg/dt]'] = self.calc_O_mfr(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     #compression
-                    ts.loc[ts.index[i], 'compression [kw/kg]'] = self.compression(self.p2)*ts.loc[ts.index[i], 'hydrogen production [Kg/dt]']
+                    ts.loc[ts.index[i], 'compression [kw/kg]'] = self.compression(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     #gasdrying
-                    ts.loc[ts.index[i], 'gasdrying [kw/kg]'] = self.gas_drying(self.p2)*ts.loc[ts.index[i], 'hydrogen production [Kg/dt]']
-                    
+                    ts.loc[ts.index[i], 'gasdrying [kw/kg]'] = self.gas_drying(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
+                    #pump
+                    ts.loc[ts.index[i], 'pump [kw/kg]'] = self.calc_pump(ts.loc[ts.index[i], 'H20 [kg/dt]'], ts.loc[ts.index[i], 'P_in'])
+
+
                     #efficiency
-                    ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*39000)/(ts.loc[ts.index[i], 'P_in'])) *100
+                    ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/(ts.loc[ts.index[i], 'P_in']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]'])) *100
                     #efficency with compression
-                    ts.loc[ts.index[i], 'efficency with compression [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*39000)/((ts.loc[ts.index[i], 'P_in'])+1000*ts.loc[ts.index[i], 'compression [kw/kg]'])) *100
+                    ts.loc[ts.index[i], 'efficency with compression [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])+1000*ts.loc[ts.index[i], 'compression [kw/kg]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]'])) *100
                     
                 #wenn die Eingangsleistung größer als p_eletrolyseur ist
                 else:
@@ -532,13 +481,16 @@ class ElectrolysisMoritz:
                     #oxygen
                     ts.loc[ts.index[i], 'Oxygen [kg/dt]'] = self.calc_O_mfr(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     #compression
-                    ts.loc[ts.index[i], 'compression [kw/kg]'] = self.compression(self.p2)*ts.loc[ts.index[i], 'hydrogen production [Kg/dt]']
+                    ts.loc[ts.index[i], 'compression [kw/kg]'] = self.compression(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     #gasdrying
-                    ts.loc[ts.index[i], 'gasdrying [kw/kg]'] = self.gas_drying(self.p2)*ts.loc[ts.index[i], 'hydrogen production [Kg/dt]']
+                    ts.loc[ts.index[i], 'gasdrying [kw/kg]'] = self.gas_drying(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
+                    #pump
+                    ts.loc[ts.index[i], 'pump [kw/kg]'] = self.calc_pump(ts.loc[ts.index[i], 'H20 [kg/dt]'], ts.loc[ts.index[i], 'P_in'])
+
                     #efficiency
-                    ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*39000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]'])) *100
+                    ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]'])) *100
                     #efficency with compression
-                    ts.loc[ts.index[i], 'efficency with compression [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*39000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]']+1000*ts.loc[ts.index[i], 'compression [kw/kg]'])) *100
+                    ts.loc[ts.index[i], 'efficency with compression [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]']+1000*ts.loc[ts.index[i], 'compression [kw/kg]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]'])) *100
             
             #hochfahren
             elif ts.loc[ts.index[i], 'status'] == 'booting':
