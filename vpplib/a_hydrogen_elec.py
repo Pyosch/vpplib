@@ -7,11 +7,6 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize_scalar
 
-
-
-
-
-
 class ElectrolysisMoritz:
     def __init__(self,P_elektrolyseur,p2,dt):
 
@@ -466,7 +461,7 @@ class ElectrolysisMoritz:
     
     #TODO: woher kommt mfr_H2?
     #TODO: woher kommt mfr_H20?
-    #TODO: wenn windleistung 0 fehler
+    
     def prepare_timeseries(self, ts):
         
         # #power_dc 
