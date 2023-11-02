@@ -6,13 +6,13 @@ from a_hydrogen_elec import ElectrolysisMoritz #importieren der klasse
 
 
 #ts=pd.read_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\wind.csv', sep=',', decimal='.',nrows=29)#, header=3
-ts = pd.read_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_wind_energy_cologne.csv', sep=',', decimal='.',nrows=9)
+ts = pd.read_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_wind_energy_cologne.csv', sep=',', decimal='.',nrows=100)
 
 
 
 
 #definieren eines elektrolyseurs mit der Klasse Electrolyzer
-electrolyzer = ElectrolysisMoritz(1000) #in kW
+electrolyzer = ElectrolysisMoritz(10000,350,15) #in kW #bar speicher Druck #min zeitschritte 
 
 #Auführen von Funktionen
 #Hier Wasserstoffproduktion
@@ -21,6 +21,6 @@ electrolyzer.prepare_timeseries(ts)
 
 
 print(ts)
-ts.to_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\output.csv', index=False)
+ts.to_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_output.csv', index=False)
 
 #output ist eine timeseries mit zwei neuen Zeilen, Statuscodes und hydrogen production
