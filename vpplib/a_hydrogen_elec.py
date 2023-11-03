@@ -432,6 +432,7 @@ class ElectrolysisMoritz:
         ts['compression [kw/kg]'] = 0.0
         ts['gasdrying [kw/kg]'] = 0.0
         ts['pump [kw/kg]'] = 0.0
+        ts['Heat System [kW/dt]'] = 0.0
         ts['efficiency [%]'] = 0.0
         ts['efficency with compression [%]'] = 0.0
         
@@ -461,6 +462,8 @@ class ElectrolysisMoritz:
                     ts.loc[ts.index[i], 'gasdrying [kw/kg]'] = self.gas_drying(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     #pump
                     ts.loc[ts.index[i], 'pump [kw/kg]'] = self.calc_pump(ts.loc[ts.index[i], 'H20 [kg/dt]'], ts.loc[ts.index[i], 'P_in'])
+                    # heat system
+                    ts.loc[ts.index[i], 'heat system [kW/dt]'] = self.heat_sys(ts.loc[ts.index[i], 'Heat Cell [W/dt]'], ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
 
 
                     #efficiency
@@ -486,7 +489,9 @@ class ElectrolysisMoritz:
                     ts.loc[ts.index[i], 'gasdrying [kw/kg]'] = self.gas_drying(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     #pump
                     ts.loc[ts.index[i], 'pump [kw/kg]'] = self.calc_pump(ts.loc[ts.index[i], 'H20 [kg/dt]'], ts.loc[ts.index[i], 'P_in'])
-
+                    # heat system
+                    ts.loc[ts.index[i], 'heat system [kW/dt]'] = self.heat_sys(ts.loc[ts.index[i], 'Heat Cell [W/dt]'], ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
+                    
                     #efficiency
                     ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]'])) *100
                     #efficency with compression
