@@ -193,7 +193,7 @@ class ElectrolysisMoritz:
         P_cell: Power each cell
         return I: Current each cell in Ampere
         '''
-        P_stack = P_dc/self.n_stacks
+        P_stack = (P_dc/1000)/self.n_stacks
         P_cell = P_stack/self.n_cells
         df = self.create_polarization()
         x = df['power_W'].to_numpy()
@@ -358,9 +358,9 @@ class ElectrolysisMoritz:
         q_H2O_fresh = - c_pH2O * H2O_mfr * dt * 1.5 #multyplied with 1.5 for transport water
         q_loss = - (q_cell + q_H2O_fresh) * 0.14
 
-        return q_loss, q_H2O_fresh
+        return q_loss
 
-    def calc_mfr_cool(self, q_loss): #q_loss war vorher q_system
+    def calc_mfr_cool(self, q_loss): 
         '''
         q_system in kWh
         return: mfr cooling water in kg/h
