@@ -1,5 +1,6 @@
-from dash import dash, html, dcc
+from dash import dash, html, dcc, Input, Output, State, callback
 import dash_bootstrap_components as dbc
+import pandas as pd
 
 layout=dbc.Container([
 dbc.Row([
@@ -121,5 +122,33 @@ dbc.Row([
                                         
                                     ], width=3)
                                 ], align='center'),
+                            dbc.Row([
+                                dbc.Col([
+                                    dbc.Button('Submit Settings',
+                                               id='submit_environment',
+                                               color='primary')
+                                ])
+                            ]),
+
 ])                       
-                    
+
+# @callback(
+#     Output('submit_environment', 'n_clicks'),
+#     [Input('submit_environment', 'n_clicks')],
+#     [State('input_date_start', 'value'),
+#         State('input_date_end', 'value'),
+#         State('dropdown_timezone', 'value'),
+#         State('dropdown_time_step', 'value'),
+#         State('upload_weather_data', 'value')]
+# )
+# def update_df(n_clicks, date_start, date_end, timezone, time_step, weather_data):
+#     global df
+#     if n_clicks is not None:
+#         df = pd.concat([df, pd.DataFrame({'Date-Start':date_start,
+#                                           'Date-End': date_end,
+#                                           'Timezone': timezone,
+#                                           'Time Step': time_step,
+#                                           'Weather Data': weather_data}, index=[0])])
+#         print(df)
+#         df.to_csv('Settings.csv')
+#     return n_clicks

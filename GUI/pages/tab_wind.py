@@ -215,5 +215,12 @@ layout=dbc.Container([
                             ])
                         ])
                     ], style={'margin-top': '20px'}),
+                    dbc.Row([
+                                dbc.Col([
+                                    dbc.Button('Submit Settings',
+                                               id='submit_wind_settings',
+                                               color='primary')
+                                ])
+                            ])
                
 ])

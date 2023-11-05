@@ -72,6 +72,14 @@ dbc.Row([
                             dbc.InputGroupText('%')
                         ])
                     ], width=2),
-                ])
+                ]),
+                dbc.Row([
+                                dbc.Col([
+                                    dbc.Button('Submit Settings',
+                                               id='submit_bev_settings',
+                                               color='primary')
+                                ])
+                            ])
+
             
 ])

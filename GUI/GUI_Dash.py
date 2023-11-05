@@ -7,7 +7,7 @@ from plotly.subplots import make_subplots
 import dash 
 from dash import dcc
 from dash import html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc  
 
 from vpplib.environment import Environment
@@ -24,7 +24,7 @@ from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev
 
 
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])  
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY], suppress_callback_exceptions=True)  
 
 
 app.layout = dbc.Container([
@@ -67,14 +67,13 @@ dbc.Row([
                 active_label_style={'color': 'grey'})
         
 ]),
-html.Div(id='tab-content')
+dbc.Container(id='tab-content')
 ])
 
 
 # Define the callback to switch between tabs
 @app.callback(Output('tab-content', 'children'),
-            [Input('tabs', 'active_tab')],
-            supress_callback_exceptions=True
+            [Input('tabs', 'active_tab')]
             )
 def render_content(active_tab):
     if active_tab == 'tab_basic_settings':
@@ -96,6 +95,6 @@ def render_content(active_tab):
     elif active_tab == 'tab_results':
         return tab_results.layout
 
-
 if __name__ == '__main__':
     app.run_server(debug=True)
+
