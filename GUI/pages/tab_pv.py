@@ -114,7 +114,14 @@ dbc.Row([
                             placeholder='e.g. 2'
                         )
                     ], width=2)
-                ])
+                ]),
+                dbc.Row([
+                                dbc.Col([
+                                    dbc.Button('Submit Settings',
+                                               id='submit_pv_settings',
+                                               color='primary')
+                                ])
+                            ])
                
 ])
 

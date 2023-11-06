@@ -58,5 +58,12 @@ layout=dbc.Container([
                             ])
                         ], width=2)
                     ]),
+                    dbc.Row([
+                                dbc.Col([
+                                    dbc.Button('Submit Settings',
+                                               id='submit_storage_settings',
+                                               color='primary')
+                                ])
+                            ])
                 
 ])

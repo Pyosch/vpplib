@@ -47,6 +47,13 @@ dbc.Row([
                         dbc.InputGroupText('kW')
                     ])
                 ], width=2)
-            ])
+            ]),
+            dbc.Row([
+                                dbc.Col([
+                                    dbc.Button('Submit Settings',
+                                               id='submit_hp_settings',
+                                               color='primary')
+                                ])
+                            ])
                 
 ])

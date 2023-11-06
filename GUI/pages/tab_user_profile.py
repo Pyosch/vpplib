@@ -120,6 +120,13 @@ dbc.Row([
                                 'margin': '10px',
                             })
                         ], width=3)
-                    ], align='center')
+                    ], align='center'),
+                    dbc.Row([
+                                dbc.Col([
+                                    dbc.Button('Submit Settings',
+                                               id='submit_user_profile',
+                                               color='primary')
+                                ])
+                            ])
                 
 ])
