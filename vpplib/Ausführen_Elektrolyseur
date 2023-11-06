@@ -13,13 +13,12 @@ ts = pd.read_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib
 
 
 #definieren eines elektrolyseurs mit der Klasse Electrolyzer
-electrolyzer = ElectrolysisMoritz(10000,350,15) #in kW #bar speicher Druck #min zeitschritte 
+electrolyzer = ElectrolysisMoritz(530_000,350,15) #in W #bar speicher Druck #min zeitschritte
 
 #Auführen von Funktionen
 #Hier Wasserstoffproduktion
 
 electrolyzer.prepare_timeseries(ts)
-
 
 print(ts)
 ts.to_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_output.csv', index=False)

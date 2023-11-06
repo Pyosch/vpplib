@@ -33,22 +33,18 @@ class ElectrolysisMoritz:
         self.P_max = self.P_nominal         #W
         
         # Stack parameters
+        self.n_cells = 10  # Number of cells
         self.cell_area = 2500  # [cm^2] Cell active area
-        self.n_cells = 60
         self.temperature = 50  # [C] stack temperature
         self.max_current_density = 2.5  # [A/cm^2] current density #2 * self.cell_area              # Ist das nicht das selbe wie self.max_current_density
-        self.P_stack_nominal = 530000
-        self.n_stacks = P_elektrolyseur/self.P_stack_nominal
 
+        self.p_atmo = 101325#2000000  # (Pa) atmospheric pressure / pressure of water
+        self.p_anode = self.p_atmo  # (Pa) pressure at anode, assumed atmo
+        self.p_cathode = 3000000
+        self.n_stacks = P_elektrolyseur/(self.cell_area*self.max_current_density*self.n_cells*self.calc_cell_voltage((self.max_current_density*self.cell_area*self.n_cells), self.T))      #max_current_density abgeändert zu self.max_current
+        self.P_stack_nominal = self.cell_area*self.max_current_density*self.n_cells*self.calc_cell_voltage((self.max_current_density*self.cell_area*self.n_cells), self.T) # für calc_pump #W
         self.dt=dt
         self.P_elektrolyseur=P_elektrolyseur#W
-
-          # (Pa) pressure at anode, assumed atmo
-        self.p_cathode = 3000000
-        self.p_atmo = 101325#2000000  # (Pa) atmospheric pressure / pressure of water
-        self.p_anode = self.p_atmo
-        
-
         
     def status_codes(self,df):      #tabelle
       
@@ -198,13 +194,22 @@ class ElectrolysisMoritz:
         P_cell: Power each cell
         return I: Current each cell in Ampere
         '''
-        
-        P_cell = (P_dc/self.n_stacks)/self.n_cells
+        P_stack = (P_dc)/self.n_stacks
+        P_cell = P_stack/self.n_cells
         df = self.create_polarization()
         x = df['power_W'].to_numpy()
         y = df['current_A'].to_numpy()
         f = interp1d(x, y, kind='linear')
         return f(P_cell)
+
+    def stack_nominal(self):    #nicht in tabelle
+        '''
+        stack nominal in kW
+        :return:
+        '''
+        P_nominal = (self.create_polarization().iloc[500,0] * self.create_polarization().iloc[500,1]*self.n_cells) /1000
+        #P_nominal=self.P_elektrolyseur
+        return P_nominal
 
     def power_electronics(self, P_nominal, P_ac):  #nicht in tabelle     
         # Wirkungsgradkurve definieren
@@ -214,20 +219,20 @@ class ElectrolysisMoritz:
         f_eta = interp1d(relative_performance, eta)
 
         # Eigenverbrauch berechnen
-                            #w      #w
+                            #w      #kw
         eta_interp = f_eta(P_ac / P_nominal)  # Interpoliere den eta-Wert
 
         P_electronics = P_ac * (1 - eta_interp)  # Berechne den Eigenverbrauch
 
         return P_electronics
 
-    def power_dc(self, P_ac):       #tabelle                                                
+    def power_dc(self, P_ac):       #tabelle
         '''
         :param P_ac:
         :return:
         '''
-        P_dc = P_ac - self.power_electronics(self.P_nominal/100,P_ac)                                            #TODO: vorher
-        #P_dc = P_ac - self.power_electronics(self.stack_nominal(),P_ac)
+        P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100)
+
         return P_dc
 
     def run(self, P_dc):        #tabelle
@@ -380,7 +385,7 @@ class ElectrolysisMoritz:
         return: kW
         '''
         # Wirkungsgradkurve Kreiselpumpe: https://doi.org/10.1007/978-3-642-40032-2
-        relative_performance_pump = [0.0,0.05,0.1,0.15,0.2,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.2]
+        relative_performance_pump = [0.0,0.05,0.1,0.15,0.2,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.001]
         eta_pump = [0.627,0.644,0.661,0.677,0.691,0.704,0.715,0.738,0.754,0.769,0.782,0.792,0.797,0.80]
         # Interpolationsfunktion erstellen
         f_eta_pump = interp1d(relative_performance_pump, eta_pump, kind='linear')
@@ -403,18 +408,21 @@ class ElectrolysisMoritz:
         P_gesamt=P_pump_fresh+ P_pump_cool
 
         return P_gesamt
- 
-    def prepare_timeseries(self, ts):       
+
+    
+    
+    
+    def prepare_timeseries(self, ts):
         
         #power_dc 
-        # ts['P_in'] = 0.0
+        ts['P_in'] = 0.0
         
-        # for i in range(len(ts.index)):
-        #     if ts.loc[ts.index[i], 'P_ac'] > 0:
-        #         ts.loc[ts.index[i], 'P_in'] = self.power_dc(ts.loc[ts.index[i], 'P_ac'])
-        #     else:
+        for i in range(len(ts.index)):
+            if ts.loc[ts.index[i], 'P_ac'] > 0:
+                ts.loc[ts.index[i], 'P_in'] = self.power_dc(ts.loc[ts.index[i], 'P_ac'])
+            else:
                 
-        #         ts.loc[ts.index[i], 'P_in'] = 0  
+                ts.loc[ts.index[i], 'P_in'] = 0  
 
         #status_codes
         ts = self.status_codes(ts)
@@ -457,15 +465,15 @@ class ElectrolysisMoritz:
                     #gasdrying
                     ts.loc[ts.index[i], 'gasdrying [kw/kg]'] = self.gas_drying(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     #pump
-                    #ts.loc[ts.index[i], 'pump [kw/kg]'] = self.calc_pump(ts.loc[ts.index[i], 'H20 [kg/dt]'], ts.loc[ts.index[i], 'P_in'])
+                    ts.loc[ts.index[i], 'pump [kw/kg]'] = self.calc_pump(ts.loc[ts.index[i], 'H20 [kg/dt]'], ts.loc[ts.index[i], 'P_in'])
                     # heat system
                     ts.loc[ts.index[i], 'heat system [kW/dt]'] = self.heat_sys(ts.loc[ts.index[i], 'Heat Cell [W/dt]'], ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
 
 
                     #efficiency
-                    #ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/(ts.loc[ts.index[i], 'P_in']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]']+ts.loc[ts.index[i], 'heat system [kW/dt]'])) *100
+                    ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/(ts.loc[ts.index[i], 'P_in']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]']+ts.loc[ts.index[i], 'heat system [kW/dt]'])) *100
                     #efficency with compression
-                    #ts.loc[ts.index[i], 'efficency with compression [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])+1000*ts.loc[ts.index[i], 'compression [kw]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]']+ts.loc[ts.index[i], 'heat system [kW/dt]'])) *100
+                    ts.loc[ts.index[i], 'efficency with compression [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])+1000*ts.loc[ts.index[i], 'compression [kw]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]']+ts.loc[ts.index[i], 'heat system [kW/dt]'])) *100
                     
                 #wenn die Eingangsleistung größer als p_eletrolyseur ist
                 else:
@@ -484,14 +492,14 @@ class ElectrolysisMoritz:
                     #gasdrying
                     ts.loc[ts.index[i], 'gasdrying [kw/kg]'] = self.gas_drying(ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     #pump
-                    #ts.loc[ts.index[i], 'pump [kw/kg]'] = self.calc_pump(ts.loc[ts.index[i], 'H20 [kg/dt]'], ts.loc[ts.index[i], 'P_in'])
+                    ts.loc[ts.index[i], 'pump [kw/kg]'] = self.calc_pump(ts.loc[ts.index[i], 'H20 [kg/dt]'], ts.loc[ts.index[i], 'P_in'])
                     # heat system
                     ts.loc[ts.index[i], 'heat system [kW/dt]'] = self.heat_sys(ts.loc[ts.index[i], 'Heat Cell [W/dt]'], ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])
                     
                     #efficiency
-                    #ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]']+ts.loc[ts.index[i], 'heat system [kW/dt]'])) *100
+                    ts.loc[ts.index[i], 'efficiency [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]']+ts.loc[ts.index[i], 'heat system [kW/dt]'])) *100
                     #efficency with compression
-                    #ts.loc[ts.index[i], 'efficency with compression [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]']+1000*ts.loc[ts.index[i], 'compression [kw]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]']+ts.loc[ts.index[i], 'heat system [kW/dt]'])) *100
+                    ts.loc[ts.index[i], 'efficency with compression [%]'] = (((ts.loc[ts.index[i], 'hydrogen production [Kg/dt]'])*self.hhv*1000)/((ts.loc[ts.index[i], 'P_in'])-ts.loc[ts.index[i], 'surplus electricity [kW]']+1000*ts.loc[ts.index[i], 'compression [kw]']+ts.loc[ts.index[i], 'gasdrying [kw/kg]']+ts.loc[ts.index[i], 'pump [kw/kg]']+ts.loc[ts.index[i], 'heat system [kW/dt]'])) *100
             
             #hochfahren
             elif ts.loc[ts.index[i], 'status'] == 'booting':
