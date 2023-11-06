@@ -33,6 +33,8 @@ environment.get_wind_data(
     file="./input/wind/dwd_wind_data_2015.csv", utc=False
 )
 
+test_df = environment.wind_data
+
 # WindTurbine data
 turbine_type = "E-126/4200"
 hub_height = 135

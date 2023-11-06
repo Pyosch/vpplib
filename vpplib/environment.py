@@ -174,12 +174,6 @@ class Environment(object):
 
         return self.wind_data
     
-    """
-    TODO
-    Use timezone information of environment class instead of utc in function declaration
-    Change "get mean temperature"-functions to use dwd data (hourly and daily)
-    Check error handling for __get_dwd_data runturn = None
-    """
     def __dwd_process(self, df, end_datetime_self_tz):
         """
         Datensatzbeschreibung:
@@ -223,8 +217,11 @@ class Environment(object):
         df.where(cond=(df[df.columns] != -999), other=None, inplace=True)
         #Fill NaN
         df.interpolate(inplace=True)
-
-        df = df.resample(self.time_freq).mean().ffill()
+        
+        #Resample to given resulotion and interpolate between missing values
+        df = df.resample(self.time_freq).mean().interpolate(method = 'linear')
+            
+            
         df.index.rename("time", inplace=True)
         if df.index[-1] > end_datetime_self_tz:
             df = df[df.index[0]:end_datetime_self_tz]
@@ -233,7 +230,7 @@ class Environment(object):
     def __get_solar_parameter (self, input_df, lat, lon, height, methode = 'disc'):
         df             = input_df.copy()
         df.temperature = df.temperature - 273.15
-        df.taupunkt    = df.taupunkt - 273.15
+        df.drew_point    = df.drew_point - 273.15
         
         """
         PVLIB EINHEITEN
@@ -302,7 +299,7 @@ class Environment(object):
                             solar_zenith = solpos.zenith, 
                             times        = df.index, 
                             pressure     = df.pressure,
-                            temp_dew     = df.taupunkt
+                            temp_dew     = df.drew_point
                             )
         
             df_dirint = irradiance.complete_irradiance(
@@ -356,6 +353,8 @@ class Environment(object):
         return df_power
     
     def __get_dwd_data(self, dataset, lat, lon, min_quality_per_parameter = 60, distance = 30):
+        roughness_length = 0.15
+        
         start_datetime_self_tz = datetime.datetime.strptime(self.start, '%Y-%m-%d %H:%M:%S')  .replace(tzinfo=self.timezone)
         end_datetime_self_tz   = datetime.datetime.strptime(self.end  , '%Y-%m-%d %H:%M:%S')  .replace(tzinfo=self.timezone)
         start_datetime_utc     = (start_datetime_self_tz - start_datetime_self_tz.utcoffset()).replace(tzinfo = datetime.timezone.utc)
@@ -373,7 +372,7 @@ class Environment(object):
             "pressure"    : "pressure_air_site", 
             "temperature" : "temperature_air_mean_200",
             "wind_speed"  : "wind_speed", 
-            "taupunkt"    : "temperature_dew_point_mean_200"
+            "drew_point"    : "temperature_dew_point_mean_200"
                                 }
         
         #Create a dictionsry with the parameters to query
@@ -409,7 +408,7 @@ class Environment(object):
                 #dhi not available for mosmix
                 req_parameter_dict.pop("dhi")
                 #get additional parameter for calculating dhi with pvlib
-                additional_parameter_lst = ["pressure", "temperature", "taupunkt"]
+                additional_parameter_lst = ["pressure", "temperature", "drew_point"]
                 for additional_parameter in additional_parameter_lst:
                     req_parameter_dict.update({additional_parameter : avalible_parameter_dict[additional_parameter]}) 
             #pressure is called pressure_air_site_reduced in mosmix
@@ -499,7 +498,9 @@ class Environment(object):
             elif dataset == 'air':
                 dwd_result_processed.pressure    = dwd_result_processed.pressure * 100
                 dwd_result_processed.temperature = dwd_result_processed.temperature + 273.15
-            df = self.__dwd_process(dwd_result_processed, end_datetime_self_tz)
+            elif dataset == 'wind':
+                dwd_result_processed["roughness_length"] = roughness_length
+            
         if isinstance(wd_query_result,DwdMosmixRequest):
             if dataset == 'solar':
                 dwd_result_processed.update( self.__calc_solar_power(dwd_result_processed, 'MOSMIX'), overwrite=True)
@@ -518,7 +519,7 @@ class Environment(object):
                 """boarometrische höhenformel"""
                 height = pd_available_stations.loc[pd_available_stations['station_id'] == station_id]['height'].values[0]
                 """ var chatgpt """
-                dwd_result_processed['druck_neu_gpt'] = (
+                dwd_result_processed['pressure'] = (
                     dwd_result_processed.pressure * ( 1 - ( -0.0065  * height) / dwd_result_processed.temperature) ** ((9.81 * 0.02897) / (8.314 * -0.0065))
                     )
                 """var dwd
@@ -533,18 +534,26 @@ class Environment(object):
                         )
                     ))
                 """
-            df = self.__dwd_process(dwd_result_processed, end_datetime_self_tz)
+            elif dataset == 'wind':
+                dwd_result_processed["roughness_length"] = roughness_length
+            #Observation data discribes the value for the last timestep. Mosmix forecasts the value for the next timestep
+            #Shift by -1 to aling MOSMIX to Observation
+            dwd_result_processed = dwd_result_processed.shift(-1)
+             
         
-        return df
+        return self.__dwd_process(dwd_result_processed, end_datetime_self_tz)
     
     def get_dwd_pv_data(self,lat,lon,distance = 30):
-        self.pv_data = self.__get_dwd_data('solar', lat, lon) 
+        self.pv_data = self.__get_dwd_data('solar', lat, lon)
+        return self.pv_data
 
     def get_dwd_wind_data(self,lat,lon,distance = 30):
-        self.wind_data = self.__get_dwd_data('wind', lat, lon)   
+        self.wind_data = self.__get_dwd_data('wind', lat, lon)
+        return self.wind_data 
 
     def get_dwd_temp_data(self,lat,lon,distance = 30):
         self.mean_temp_hours = self.__get_dwd_data('air', lat, lon)
+        return self.mean_temp_hours 
 
 
 
