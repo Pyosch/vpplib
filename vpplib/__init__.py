@@ -6,7 +6,7 @@ from .electrical_energy_storage import ElectricalEnergyStorage
 from .electrical_energy_storage import ElectricalEnergyStorageSimses
 from .environment import Environment
 from .heat_pump import HeatPump
-from .operator import Operator
+from .vpp_operator import Operator
 from .photovoltaic import Photovoltaic
 from .thermal_energy_storage import ThermalEnergyStorage
 from .user_profile import UserProfile

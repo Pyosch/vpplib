@@ -17,7 +17,7 @@ from vpplib.heat_pump import HeatPump
 from vpplib.electrical_energy_storage import ElectricalEnergyStorage
 from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
-from vpplib.operator import Operator
+from vpplib.vpp_operator import Operator
 
 
 # environment
