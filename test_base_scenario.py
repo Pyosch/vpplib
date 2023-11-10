@@ -128,11 +128,17 @@ environment = Environment(
     year=year,
     time_freq=time_freq,
 )
-
+#%%
+"""
 environment.get_wind_data(file=wind_file, utc=False)
 environment.get_pv_data(file=pv_file)
 environment.get_mean_temp_days(file=temp_days_file)
 environment.get_mean_temp_hours(file=temp_hours_file)
+"""
+environment.get_dwd_wind_data(lat=latitude,lon=longitude)
+environment.get_dwd_pv_data(lat=latitude,lon=longitude)
+environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
+environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)
 
 # %% user profile
 

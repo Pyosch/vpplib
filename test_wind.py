@@ -18,22 +18,21 @@ from vpplib.wind_power import WindPower
 # import logging
 # logging.getLogger().setLevel(logging.DEBUG)
 
-
-start = "2015-01-01 00:00:00"
-end = "2015-01-31 23:45:00"
-timezone = "Europe/Berlin"
+latitude = 50.941357
+longitude = 6.958307
+#timezone = "Europe/Berlin"
 timestamp_int = 12
-timestamp_str = "2015-01-01 12:00:00"
+timestamp_str = "2023-11-09 12:00:00"
 
 # create environment and load wind data
-environment = Environment(start=start, end=end, timezone=timezone)
+environment = Environment(start="2023-10-09 00:00:00", end="2024-01-31 23:45:00")
 
 # to use custom wind data:
-environment.get_wind_data(
-    file="./input/wind/dwd_wind_data_2015.csv", utc=False
-)
+#environment.get_wind_data(
+#    file="./input/wind/dwd_wind_data_2015.csv", utc=False
+#)
+environment.get_dwd_wind_data(lat=latitude, lon=longitude)
 
-test_df = environment.wind_data
 
 # WindTurbine data
 turbine_type = "E-126/4200"
