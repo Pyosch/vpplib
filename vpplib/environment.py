@@ -17,17 +17,15 @@ import polars as pl
 import  datetime
 _ = pl.Config.set_tbl_hide_dataframe_shape(True)
 from wetterdienst.provider.dwd.observation import (
-    DwdObservationPeriod,
     DwdObservationRequest,
     DwdObservationResolution,
-    DwdObservationParameter
 )
 from wetterdienst.provider.dwd.mosmix import DwdMosmixRequest, DwdMosmixType
-import pvlib
 from wetterdienst import Settings
 from pvlib import irradiance
 from pvlib.solarposition import get_solarposition
-import matplotlib.pyplot as plt
+import numpy as np
+import collections
 
 class Environment(object):
     def __init__(
@@ -43,6 +41,7 @@ class Environment(object):
         pv_data=[],
         wind_data=[],
         temp_data=[],
+        surpress_output_globally = False
     ):
 
         """
@@ -89,10 +88,11 @@ class Environment(object):
         self.pv_data = pv_data
         self.wind_data = wind_data
         self.temp_data = temp_data
-        self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(self.start, '%Y-%m-%d %H:%M:%S').replace(tzinfo=self.timezone)
-        self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(self.end  , '%Y-%m-%d %H:%M:%S').replace(tzinfo=self.timezone)
-        self.__internal_start_datetime_utc = (self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()).replace(tzinfo=datetime.timezone.utc, microsecond=0)
-        self.__internal_end_datetime_utc   = (self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()).replace(tzinfo=datetime.timezone.utc, microsecond=0)
+        self.surpress_output_globally = surpress_output_globally
+        self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(self.start, '%Y-%m-%d %H:%M:%S').replace(tzinfo = self.timezone)
+        self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(self.end  , '%Y-%m-%d %H:%M:%S').replace(tzinfo = self.timezone)
+        self.__internal_start_datetime_utc = (self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+        self.__internal_end_datetime_utc   = (self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()    ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
         
         if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
             raise Exception("End date must be greater than start date")
@@ -105,12 +105,12 @@ class Environment(object):
     def __start_dt_utc(self, new___start_dt_utc):
         if new___start_dt_utc.tzinfo != datetime.timezone.utc:
             raise Exception('@__start_dt_utc.setter: new time not given in utc')
-        new___start_dt_utc = new___start_dt_utc.replace(microsecond=0)
+        new___start_dt_utc = new___start_dt_utc.replace(microsecond = 0)
         self.__internal_start_datetime_utc = new___start_dt_utc
-        time_wo_offset = new___start_dt_utc.replace(tzinfo=self.timezone)
+        time_wo_offset = new___start_dt_utc.replace(tzinfo = self.timezone)
         self.__internal_start_datetime_with_class_timezone = time_wo_offset + time_wo_offset.utcoffset()
-        self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo=None))
-        print("Setted new start time to: ", self.__internal_end_datetime_with_class_timezone)
+        self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
+        print("Setted new start time to: ", self.__internal_end_datetime_with_class_timezone) and not self.surpress_output_globally
     
     @property
     def __end_dt_utc(self):
@@ -122,10 +122,10 @@ class Environment(object):
             raise Exception('@__end_dt_utc.setter: new time not given in utc')
         new___end_dt_utc = new___end_dt_utc.replace(microsecond=0)
         self.__internal_end_datetime_utc = new___end_dt_utc
-        time_wo_offset = new___end_dt_utc.replace(tzinfo=self.timezone)
+        time_wo_offset = new___end_dt_utc.replace(tzinfo = self.timezone)
         self.__internal_end_datetime_with_class_timezone = time_wo_offset + time_wo_offset.utcoffset()
-        self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo=None))
-        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)
+        self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
+        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.surpress_output_globally
         
     @property
     def __start_dt_target_tz(self):
@@ -135,11 +135,11 @@ class Environment(object):
     def __start_dt_target_tz(self, new_start_dt):
         if new_start_dt.tzinfo != self.timezone:
             raise Exception('@__start_dt_target_tz.setter: new time not given in target timezone')
-        new_start_dt = new_start_dt.replace(microsecond=0)
+        new_start_dt = new_start_dt.replace(microsecond = 0)
         self.__internal_start_datetime_with_class_timezone = new_start_dt  
-        self.__internal_start_datetime_utc = (new_start_dt - new_start_dt.utcoffset()).replace(tzinfo=datetime.timezone.utc)
-        self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo=None))
-        print("Setted new start time to: ", self.__internal_start_datetime_with_class_timezone)
+        self.__internal_start_datetime_utc = (new_start_dt - new_start_dt.utcoffset()).replace(tzinf = datetime.timezone.utc)
+        self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
+        print("Setted new start time to: ", self.__internal_start_datetime_with_class_timezone)  and not self.surpress_output_globally
         
     @property
     def __end_dt_target_tz(self):
@@ -151,9 +151,9 @@ class Environment(object):
             raise Exception('@__end_dt_target_tz.setter: new time not given in target timezone')
         new_end_dt = new_end_dt.replace(microsecond=0)
         self.__internal_end_datetime_with_class_timezone = new_end_dt
-        self.__internal_end_datetime_utc = (new_end_dt - new_end_dt.utcoffset()).replace(tzinfo=datetime.timezone.utc)
-        self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo=None))
-        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)
+        self.__internal_end_datetime_utc = (new_end_dt - new_end_dt.utcoffset()).replace(tzinfo = datetime.timezone.utc)
+        self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
+        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.surpress_output_globally
 
 
 
@@ -348,7 +348,7 @@ class Environment(object):
    
      
     def __resample_data(self, df, time_freq = None):
-        df = df.copy()
+        #df = df.copy()
         if time_freq is None:
             time_freq =  self.time_freq
         df.index.rename("time", inplace=True)
@@ -361,9 +361,9 @@ class Environment(object):
                 )
                 
         df['time_tz'] = timezone_aware_date_list
-        df.set_index('time_tz',inplace=True)
-        df = df.drop('time', axis = 1)
-        df.index.rename("time", inplace=True)
+        df.set_index('time_tz',inplace = True)
+        df.drop('time', axis = 1, inplace = True)
+        df.index.rename("time", inplace = True)
         
             
         #Missing data is marked with -999. Replace by NaN
@@ -387,17 +387,20 @@ class Environment(object):
         pd_weather_data_for_station["roughness_length"] = 0.15
         
         """
-        Restructuring data for use with windpowerlib
-        merging of data frames and conversion of units
-        """
-
-        import numpy as np
-        import collections
+        TODO: Insert values for station height correctly --> Consult / compare with Windpower lib
+        
         rename_dict = {
             'wind_speed'       : pd_station_metadata['height'].values[0],
             'pressure'         : pd_station_metadata['height'].values[0],
             'temperature'      : pd_station_metadata['height'].values[0] + 2,
             'roughness_length' : pd_station_metadata['height'].values[0],
+            }
+        """
+        rename_dict = {
+            'wind_speed'       : 10,
+            'pressure'         : 0,
+            'temperature'      : 2,
+            'roughness_length' : 0,
             }
         od = collections.OrderedDict(sorted(rename_dict.items()))
         pd_weather_data_for_station = pd_weather_data_for_station.reindex(sorted(pd_weather_data_for_station.columns), axis=1)
@@ -476,22 +479,21 @@ class Environment(object):
             pd_weather_data_for_station = pd_weather_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             pd_weather_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
         elif dataset == 'air':
-            """boarometrische höhenformel"""
             height = pd_station_metadata['height'].values[0]
             """ https://de.wikipedia.org/wiki/Barometrische_Höhenformel """
             pd_weather_data_for_station['pressure'] = (
                 pd_weather_data_for_station.pressure * ( 1 - ( -0.0065  * height) / pd_weather_data_for_station.temperature) ** ((9.81 * 0.02897) / (8.314 * -0.0065))
                 )
         elif dataset == 'wind':
-            pd_weather_data_for_station = self.__prepare_data_for_windpowerlib(pd_weather_data_for_station=pd_weather_data_for_station,query_type='MOSMIX')
+            pd_weather_data_for_station = self.__prepare_data_for_windpowerlib(pd_weather_data_for_station=pd_weather_data_for_station,query_type='MOSMIX',pd_station_metadata=pd_station_metadata)
         #Observation data discribes the value for the last timestep. Mosmix forecasts the value for the next timestep
         #Shift by -1 to aling MOSMIX to Observation
         pd_weather_data_for_station = pd_weather_data_for_station.shift(-1)
         return self.__resample_data(pd_weather_data_for_station)
     
     
-    def __get_dwd_data(self, dataset, lat, lon, min_quality_per_parameter = 60, distance = 30, activate_output = True):
-
+    def __get_dwd_data(self, dataset, lat, lon, min_quality_per_parameter = 80, distance = 30):
+        activate_output = not self.surpress_output_globally
 
         dataset_dict = {
             'solar' : ['ghi', 'dhi'],
@@ -515,28 +517,29 @@ class Environment(object):
         time_now = self.get_time_from_dwd()
         settings = Settings.default()
         settings.ts_si_units = False
+        
+        observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0) #- datetime.timedelta(minutes = 10)
 
-        if self.__start_dt_utc <= time_now - datetime.timedelta(hours = 1):
+        if self.__start_dt_utc <= observation_end_date - datetime.timedelta(hours = 1):
             #Observation database
-            if self.__end_dt_utc > time_now - datetime.timedelta(hours = 1):
+            if self.__end_dt_utc > observation_end_date:
                 activate_output and print("End date is in the future.")
-                self.__end_dt_utc = time_now - datetime.timedelta(hours = 1)
+                self.__end_dt_utc = observation_end_date
 
             #Get weather data for your location from dwd observation database
             wd_query_result = DwdObservationRequest(
                 parameter  = list(req_parameter_dict.values()),
                 resolution = DwdObservationResolution.MINUTE_10,
                 start_date = self.__start_dt_utc,
-                end_date   = self.__end_dt_utc + datetime.timedelta(hours = 1),
+                end_date   = self.__end_dt_utc,
                 settings   = settings,
             )
         #MOSMIX database is updated every hour
-        elif self.__start_dt_utc > time_now - datetime.timedelta(hours = 1):
+        else:
             if self.__start_dt_utc > time_now + datetime.timedelta(hours = 240):
                 raise Exception("No forecast data avaliable for this time")
-            if self.__end_dt_utc > time_now + datetime.timedelta(hours = 240):
-                self.__end_dt_utc = time_now + datetime.timedelta(hours = 240)
-                
+            if self.__end_dt_utc > time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240):
+                self.__end_dt_utc = time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240)
             
             if dataset == 'solar':
                 #dhi is not available for mosmix
@@ -597,6 +600,21 @@ class Environment(object):
             for key in req_parameter_dict.keys():
                 pd_weather_data_for_station[key] = pd_data_for_all_stations.loc[pd_data_for_all_stations['parameter'] == req_parameter_dict[key]]['value']
                 
+            """
+            Not yet implemented: The MOSMIX database provided data for UP To 240 hours. 
+            The resulting data set does not consist of index 0-240 but 0-querying
+            TODO: Add variable in function call, depending on which the result is extended to 240 hours. 
+                  The end time must then also be adjusted
+            
+            if pd_weather_data_for_station.index[-1] < self.__end_dt_utc:
+                pd_missing_dates = pd.DataFrame(index = pd.date_range(
+                    start = pd_weather_data_for_station.index[-1] + datetime.timedelta(hours = 1),
+                    end   = self.__end_dt_utc,
+                    freq  = 'H'
+                    ))
+                pd_weather_data_for_station = pd.concat([pd_weather_data_for_station, pd_missing_dates])
+            """
+ 
             quality                         = pd.DataFrame()
             quality.index                   = [True,False,'quality']
             quality[list(req_parameter_dict.keys())] = ""
@@ -613,7 +631,7 @@ class Environment(object):
             quality.loc['quality'].name = None
             if activate_output:
                 print("Quality of the data set:")
-                print(quality.loc['quality'].to_string(header=False))
+                print(quality.loc['quality'].to_string(header = False))
             
             #If quality is good enough
             if quality.loc['quality'].min() >= min_quality_per_parameter:
@@ -628,10 +646,6 @@ class Environment(object):
             raise Exception("No station found")
         activate_output and print("Query successful!")
         
-        test = self.__start_dt_utc
-        test1 = self.__end_dt_utc
-        test3 = self.__start_dt_target_tz
-        test4 = self.__end_dt_target_tz
 
         if isinstance(wd_query_result,DwdObservationRequest):
            return self.__process_observation_parameter(
@@ -647,26 +661,26 @@ class Environment(object):
                 additional_parameter_lst = additional_parameter_lst if 'additional_parameter_lst' in locals() else None
                 )
     
-    def get_dwd_pv_data(self, lat, lon, distance = 30, activate_output = False):
-        self.pv_data = self.__get_dwd_data(dataset = 'solar', lat = lat,lon = lon, distance = distance, activate_output = False)
+    def get_dwd_pv_data(self, lat, lon, distance = 30):
+        self.pv_data = self.__get_dwd_data(dataset = 'solar', lat = lat,lon = lon, distance = distance)
         return self.pv_data
 
-    def get_dwd_wind_data(self,lat,lon,distance = 30, activate_output=False):
-        self.wind_data = self.__get_dwd_data(dataset = 'wind', lat = lat,lon = lon, distance = distance, activate_output = False)
+    def get_dwd_wind_data(self,lat,lon,distance = 30):
+        self.wind_data = self.__get_dwd_data(dataset = 'wind', lat = lat,lon = lon, distance = distance)
         return self.wind_data 
 
-    def get_dwd_temp_data(self,lat,lon,distance = 30, activate_output=False):
-        self.temp_data = self.__get_dwd_data(dataset = 'air', lat = lat,lon = lon, distance = distance, activate_output = False)
+    def get_dwd_temp_data(self,lat,lon,distance = 30):
+        self.temp_data = self.__get_dwd_data(dataset = 'air', lat = lat,lon = lon, distance = distance)
         return self.temp_data
     
-    def get_dwd_mean_temp_hours(self,lat,lon,distance = 30, activate_output=False):
+    def get_dwd_mean_temp_hours(self,lat,lon,distance = 30):
         if type(self.temp_data) == list:
-            self.get_dwd_temp_data(lat,lon,distance,activate_output)
+            self.get_dwd_temp_data(lat,lon,distance,)
         self.mean_temp_hours = self.__resample_data(self.temp_data,'60 min')
     
-    def get_dwd_mean_temp_days(self,lat,lon,distance = 30, activate_output=False):
+    def get_dwd_mean_temp_days(self,lat,lon,distance = 30):
         if type(self.temp_data) == list:
-            self.get_dwd_temp_data(lat,lon,distance,activate_output)
+            self.get_dwd_temp_data(lat,lon,distance)
         self.mean_temp_days = self.__resample_data(self.temp_data,'1440 min')
         
 
