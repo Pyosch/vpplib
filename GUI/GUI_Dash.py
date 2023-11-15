@@ -10,15 +10,15 @@ from dash import html
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc  
 
-from vpplib.environment import Environment
-from vpplib.user_profile import UserProfile
-from vpplib.photovoltaic import Photovoltaic
-from vpplib.battery_electric_vehicle import BatteryElectricVehicle
-from vpplib.heat_pump import HeatPump
-from vpplib.electrical_energy_storage import ElectricalEnergyStorage
-from vpplib.wind_power import WindPower
-from vpplib.virtual_power_plant import VirtualPowerPlant
-from vpplib.operator import Operator
+# from vpplib.environment import Environment
+# from vpplib.user_profile import UserProfile
+# from vpplib.photovoltaic import Photovoltaic
+# from vpplib.battery_electric_vehicle import BatteryElectricVehicle
+# from vpplib.heat_pump import HeatPump
+# from vpplib.electrical_energy_storage import ElectricalEnergyStorage
+# from vpplib.wind_power import WindPower
+# from vpplib.virtual_power_plant import VirtualPowerPlant
+# from vpplib.operator import Operator
 
 from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_results
 
@@ -67,7 +67,16 @@ dbc.Row([
                 active_label_style={'color': 'grey'})
         
 ]),
-dbc.Container(id='tab-content')
+dbc.Container(id='tab-content'),
+dcc.Store(id='store_basic_settings', data=[], storage_type='memory'),
+dcc.Store(id='store_environment', data=[], storage_type='memory'),
+dcc.Store(id='store_user_profile', data=[], storage_type='memory'),
+dcc.Store(id='store_bev', data=[], storage_type='memory'),
+dcc.Store(id='store_pv', data=[], storage_type='memory'),
+dcc.Store(id='store_wind', data=[], storage_type='memory'),
+dcc.Store(id='store_heatpump', data=[], storage_type='memory'),
+dcc.Store(id='store_storage', data=[], storage_type='memory'),
+dcc.Store(id='store_results', data=[], storage_type='memory'),
 ])
 
 

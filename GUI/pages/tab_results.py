@@ -1,38 +1,41 @@
 import pandas as pd
-from dash import dash, html, dcc, Input, Output, State, callback
+from dash import dash, html, dcc, Input, Output, State, callback, dash_table
 import dash_bootstrap_components as dbc
 
 
-layout=dbc.Container([
-    dbc.Row([
-        dbc.Col([
-            dbc.Button('Submit Settings', 
-                       id='store_button', 
-                       color='primary',)
-        ])
-    ]),
-    dbc.Container(id='store_button')
-])
+layout=dbc.Container(id='data_table_basic_settings', children=[])
 
-# @callback(
-#     Output('store_button', 'children'),
-#     [Input('store_button', 'n_clicks')],
-#     [State('input_pv_plants', 'value'),
-#      State('input_storage_units', 'value'),
-#      State('input_bev_number', 'value'),
-#      State('input_hp_number', 'value'),
-#      State('input_wind_number', 'value')]
-# )
+@callback(
+    Output('data_table_basic_settings', 'children'),
+    [Input('store_basic_settings', 'data'),
+     Input('store_bev', 'data')]
+)
+def update_table_basic_settings(store_basic_settings, store_bev):
+    df_basic_settings= pd.DataFrame(store_basic_settings)
+    print(df_basic_settings)
 
-# def store_settings(n_clicks, pv_plants, storage_units, bev_number, hp_number, wind_number):
-#     if n_clicks is None:
-#         raise dash.exceptions.PreventUpdate
-#     else:
-#         df=pd.DataFrame()
-#         df['PV Plants']=[pv_plants]
-#         df['Storage Units']=[storage_units]
-#         df['BEV Number']=[bev_number]
-#         df['Heat Pump Number']=[hp_number]
-#         df['Wind Number']=[wind_number]
-#         print(df)
-#         return df.to_json(date_format='iso', orient='split')
+    df_bev=pd.DataFrame(store_bev)
+    print(df_bev)
+    table_basic_settings=dash_table.DataTable(data=df_basic_settings.to_dict('records'), 
+                        page_action='native',  page_current=0,
+                        page_size=20, sort_action='native',
+                        style_header={'backgroundColor': 'rgb(30, 30, 30)',
+                                    'color': 'white', 'textAlign':'center'},
+                        style_data={'backgroundColor': 'rgb(50, 50, 50)',
+                                    'color': 'white', 'width':'auto'},
+                        style_cell={'font-family':'sans-serif'},
+                        style_table={'margin-bottom': '20px'}
+    )
+    
+
+    table_bev=dash_table.DataTable(data=df_bev.to_dict('records'), 
+                        page_action='native',  page_current=0,
+                        page_size=20, sort_action='native',
+                        style_header={'backgroundColor': 'rgb(30, 30, 30)',
+                                    'color': 'white', 'textAlign':'center'},
+                        style_data={'backgroundColor': 'rgb(50, 50, 50)',
+                                    'color': 'white', 'width':'auto'},
+                        style_cell={'font-family':'sans-serif'}
+    )
+
+    return table_basic_settings, table_bev
