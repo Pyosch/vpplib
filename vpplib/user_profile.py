@@ -19,6 +19,9 @@ class UserProfile(object):
         latitude=None,
         longitude=None,
         thermal_energy_demand_yearly=None,
+        mean_temp_days=None,
+        mean_temp_hours=None,
+        mean_temp_quarter_hours=None,
         building_type=None,  #'DE_HEF33'
         max_connection_power=None,
         comfort_factor=None,
@@ -79,11 +82,15 @@ class UserProfile(object):
         # Define the maximal connection power for a certain user
         self.max_connection_power = max_connection_power
 
-        self.mean_temp_days = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                                       'input/thermal/dwd_temp_days_2015.csv').replace('\\', '/'),
-                                          index_col='time')
+        if mean_temp_days is None:
+            self.mean_temp_days = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                                        'input/thermal/dwd_temp_days_2015.csv').replace('\\', '/'),
+                                            index_col='time')
+            self.mean_temp_days.index = pd.to_datetime(self.mean_temp_days.index)
+        else:
+            self.mean_temp_days = mean_temp_days
 
-        self.mean_temp_days.index = pd.to_datetime(self.mean_temp_days.index)
+        
         self.year = str(next(iter(self.mean_temp_days.index)))[:4]
 
         self.thermal_energy_demand = None
@@ -91,17 +98,25 @@ class UserProfile(object):
         # 'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.building_type = building_type
         # for cop
-        self.mean_temp_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
-            "input/thermal/dwd_temp_hours_2015.csv"), index_col="time"
-        )
-        self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
+        if mean_temp_hours is None:
+            self.mean_temp_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
+                "input/thermal/dwd_temp_hours_2015.csv"), index_col="time"
+            )
+            self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
+            
+        else:
+            self.mean_temp_hours = mean_temp_hours
 
-        self.mean_temp_quarter_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
-            "input/thermal/dwd_temp_15min_2015.csv"), index_col="time"
-        )
-        self.mean_temp_quarter_hours.index = pd.to_datetime(
-            self.mean_temp_quarter_hours.index
-        )
+        if mean_temp_quarter_hours is None:
+            self.mean_temp_quarter_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
+                "input/thermal/dwd_temp_15min_2015.csv"), index_col="time"
+            )
+            self.mean_temp_quarter_hours.index = pd.to_datetime(
+                self.mean_temp_quarter_hours.index
+            )
+        else:
+            self.mean_temp_quarter_hours = mean_temp_quarter_hours
+            
 
         self.demand_daily = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
                                                      "input/thermal/demand_daily.csv"))
@@ -515,9 +530,7 @@ class UserProfile(object):
 
         self.thermal_energy_demand_daily = pd.DataFrame(
             demand_daily_lst,
-            index=pd.date_range(
-                self.year, periods=8760, freq="H", name="time"
-            ),
+            index=self.mean_temp_hours.index
         )
 
         return self.thermal_energy_demand_daily
@@ -643,9 +656,7 @@ class UserProfile(object):
         """
 
         self.thermal_energy_demand = pd.DataFrame(
-            index=pd.date_range(
-                self.year, periods=35040, freq="15min", name="time"
-            )
+            index=self.mean_temp_quarter_hours.index
         )
         self.thermal_energy_demand[
             "thermal_energy_demand"
