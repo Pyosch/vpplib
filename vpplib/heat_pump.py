@@ -141,8 +141,8 @@ class HeatPump(Component):
             for i, tmp in self.environment.mean_temp_hours.iterrows():
                 cop = (
                     6.81
-                    - 0.121 * (self.heat_sys_temp - tmp)
-                    + 0.00063 * (self.heat_sys_temp - tmp) ** 2
+                    - 0.121 * (self.heat_sys_temp - tmp["temperature"])
+                    + 0.00063 * (self.heat_sys_temp - tmp["temperature"]) ** 2
                 )
                 cop_lst.append(cop)
 
@@ -150,8 +150,8 @@ class HeatPump(Component):
             for i, tmp in self.environment.mean_temp_hours.iterrows():
                 cop = (
                     8.77
-                    - 0.15 * (self.heat_sys_temp - tmp)
-                    + 0.000734 * (self.heat_sys_temp - tmp) ** 2
+                    - 0.15 * (self.heat_sys_temp - tmp["temperature"])
+                    + 0.000734 * (self.heat_sys_temp - tmp["temperature"]) ** 2
                 )
                 cop_lst.append(cop)
 
@@ -160,11 +160,10 @@ class HeatPump(Component):
 
         self.cop = pd.DataFrame(
             data=cop_lst,
-            index=pd.date_range(
-                self.environment.year, periods=8760, freq="H", name="time"
-            ),
+            index=self.environment.mean_temp_hours.index,
+            columns=["cop"],
         )
-        self.cop.columns = ["cop"]
+        # self.cop.columns = ["cop"]
 
         return self.cop
 
