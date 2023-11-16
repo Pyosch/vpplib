@@ -22,6 +22,8 @@ time_freq = "15 min"
 timestamp_int = 48
 timestamp_str = "2015-01-01 12:00:00"
 timebase = 15
+latitude = 50.941357
+longitude = 6.958307
 
 # Values for user_profile
 yearly_thermal_energy_demand = 12500
@@ -41,12 +43,17 @@ min_stop_time = 2  # timesteps
 environment = Environment(
     timebase=timebase, start=start, end=end, year=year, time_freq=time_freq
 )
+environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
+environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)
 
 user_profile = UserProfile(
     identifier=None,
     latitude=None,
     longitude=None,
     thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+    mean_temp_days=environment.mean_temp_days,
+    mean_temp_hours=environment.mean_temp_hours,
+    mean_temp_quarter_hours=environment.mean_temp_hours.resample("15 Min").interpolate(),
     building_type=building_type,
     comfort_factor=None,
     t_0=t_0,
