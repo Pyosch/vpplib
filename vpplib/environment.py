@@ -93,9 +93,9 @@ class Environment(object):
         self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(self.end  , '%Y-%m-%d %H:%M:%S').replace(tzinfo = self.timezone)
         self.__internal_start_datetime_utc = (self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
         self.__internal_end_datetime_utc   = (self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()    ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
-        
+          
         if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
-            raise Exception("End date must be greater than start date")
+            raise ValueError("End date must be greater than start date")
 
     @property
     def __start_dt_utc(self):
@@ -104,7 +104,7 @@ class Environment(object):
     @__start_dt_utc.setter
     def __start_dt_utc(self, new___start_dt_utc):
         if new___start_dt_utc.tzinfo != datetime.timezone.utc:
-            raise Exception('@__start_dt_utc.setter: new time not given in utc')
+            raise ValueError('@__start_dt_utc.setter: new time not given in utc')
         new___start_dt_utc = new___start_dt_utc.replace(microsecond = 0)
         self.__internal_start_datetime_utc = new___start_dt_utc
         time_wo_offset = new___start_dt_utc.replace(tzinfo = self.timezone)
@@ -119,7 +119,7 @@ class Environment(object):
     @__end_dt_utc.setter
     def __end_dt_utc(self, new___end_dt_utc):
         if new___end_dt_utc.tzinfo != datetime.timezone.utc:
-            raise Exception('@__end_dt_utc.setter: new time not given in utc')
+            raise ValueError('@__end_dt_utc.setter: new time not given in utc')
         new___end_dt_utc = new___end_dt_utc.replace(microsecond=0)
         self.__internal_end_datetime_utc = new___end_dt_utc
         time_wo_offset = new___end_dt_utc.replace(tzinfo = self.timezone)
@@ -134,7 +134,7 @@ class Environment(object):
     @__start_dt_target_tz.setter
     def __start_dt_target_tz(self, new_start_dt):
         if new_start_dt.tzinfo != self.timezone:
-            raise Exception('@__start_dt_target_tz.setter: new time not given in target timezone')
+            raise ValueError('@__start_dt_target_tz.setter: new time not given in target timezone')
         new_start_dt = new_start_dt.replace(microsecond = 0)
         self.__internal_start_datetime_with_class_timezone = new_start_dt  
         self.__internal_start_datetime_utc = (new_start_dt - new_start_dt.utcoffset()).replace(tzinf = datetime.timezone.utc)
@@ -148,7 +148,7 @@ class Environment(object):
     @__end_dt_target_tz.setter
     def __end_dt_target_tz(self, new_end_dt):
         if new_end_dt.tzinfo != self.timezone:
-            raise Exception('@__end_dt_target_tz.setter: new time not given in target timezone')
+            raise ValueError('@__end_dt_target_tz.setter: new time not given in target timezone')
         new_end_dt = new_end_dt.replace(microsecond=0)
         self.__internal_end_datetime_with_class_timezone = new_end_dt
         self.__internal_end_datetime_utc = (new_end_dt - new_end_dt.utcoffset()).replace(tzinfo = datetime.timezone.utc)
@@ -248,7 +248,7 @@ class Environment(object):
             parameter  = "wind_speed",
             resolution = DwdObservationResolution.HOURLY,
         )
-        return wd_time_result.now
+        return wd_time_result.now.replace(second=0,microsecond=0)
         
     def __get_solar_parameter (self, input_df, lat, lon, height, methode = 'disc'):
         df             = input_df.copy()
@@ -416,32 +416,20 @@ class Environment(object):
     
     def __process_observation_parameter (self, pd_weather_data_for_station, pd_station_metadata, dataset):
         """
-        Datensatzbeschreibung:
+        Datensatzbeschreibung OBSERVATION:
         SOLAR:
-            OBSERVATION:
-                dni: 10min-Summe der diffusen solaren Strahlung [J/cm^2]
-                ghi: 10min-Summe der  Globalstrahlung           [J/cm^2]
+            dni: 10min-Summe der diffusen solaren Strahlung [J/cm^2]
+            ghi: 10min-Summe der  Globalstrahlung           [J/cm^2]
         TEMPERATUR:
-            OBSERVATION:
-                temperatur: Lufttemperatur in 2 m Höhe        [°C]
-                pressure: Luftdruck in Stationshoehe          [hPa]       
+            temperatur: Lufttemperatur in 2 m Höhe  [°C]
+            pressure: Luftdruck in Stationshoehe    [hPa]       
         WIND:
-            OBSERVATION:
-                
-            MOSMIX:
-                wind_speed : Windgeschwindigkeit [m/s]
-        vpp_lib:
-            K
-            Pa
-            W/m2
-            m/s
+            wind_speed : Windgeschwindigkeit [m/s]
         """
         if dataset == 'solar': 
             pd_weather_data_for_station['dni'] = pd_weather_data_for_station.ghi - pd_weather_data_for_station.dhi
             #Calculate power from irradiance
             pd_weather_data_for_station.update(self.__get_solar_power_from_energy(pd_weather_data_for_station,'OBSERVATION'), overwrite=True)
-        elif dataset == 'air':
-            1 #Nothing to do here yet
         elif dataset == 'wind':
             pd_weather_data_for_station = self.__prepare_data_for_windpowerlib(pd_weather_data_for_station=pd_weather_data_for_station,query_type='OBSERVATION',pd_station_metadata = pd_station_metadata)
         return self.__resample_data(pd_weather_data_for_station)
@@ -449,21 +437,14 @@ class Environment(object):
         
     def __process_mosmix_parameter (self, pd_weather_data_for_station, dataset, pd_station_metadata, station_id = None, additional_parameter_lst= None):
         """
-        Datensatzbeschreibung:
+        Datensatzbeschreibung MOSMIX:
         SOLAR:
-            MOSMIX:
                 ghi: (Stundensumme?)  Globalstrahlung           [kJ/m^2]
         TEMPERATUR:
-            MOSMIX:
                 temperatur: Temperatur 2m über der Oberfläche [Kelvin]
                 pressure:   Luftdruck, reduziert              [Pa]
         WIND:
                 wind_speed : Windgeschwindigkeit [m/s]
-        vpp_lib:
-            K
-            Pa
-            W/m2
-            m/s
         """
         if dataset == 'solar':
             pd_weather_data_for_station.update( self.__get_solar_power_from_energy(pd_weather_data_for_station, 'MOSMIX'), overwrite=True)
@@ -478,7 +459,7 @@ class Environment(object):
             pd_weather_data_for_station = pd_weather_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             pd_weather_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
         elif dataset == 'air':
-            1 #Nothing to do here yet
+            pd_weather_data_for_station.temperature = pd_weather_data_for_station.temperature - 273.15  # °K to C
         elif dataset == 'wind':
             height = pd_station_metadata['height'].values[0]
             """ https://de.wikipedia.org/wiki/Barometrische_Höhenformel """
@@ -536,7 +517,7 @@ class Environment(object):
         #MOSMIX database is updated every hour
         else:
             if self.__start_dt_utc > time_now + datetime.timedelta(hours = 240):
-                raise Exception("No forecast data avaliable for this time")
+                raise ValueError("No forecast data avaliable for this time")
             if self.__end_dt_utc > time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240):
                 self.__end_dt_utc = time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240)
             
@@ -573,7 +554,7 @@ class Environment(object):
         else:
             empty = True
         if empty:
-            raise Exception("No station found!")
+            raise ValueError("No station found! Increase search radius or change location")
 
         valid_station_data = False
         #Check query result for the stations within the defined distance
@@ -642,7 +623,7 @@ class Environment(object):
                     print("Distance to location: " + distance + " km")
                 break
         if not valid_station_data:
-            raise Exception("No station found")
+            raise Exception("No station with vaild data found!")
         activate_output and print("Query successful!")
         
 
@@ -651,18 +632,18 @@ class Environment(object):
                 pd_weather_data_for_station, 
                 pd_station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id],
                 dataset = dataset
-                )
+                ), pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
         if isinstance(wd_query_result,DwdMosmixRequest):
            return self.__process_mosmix_parameter(
                 pd_weather_data_for_station = pd_weather_data_for_station, 
                 dataset = dataset, 
                 pd_station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id],
                 additional_parameter_lst = additional_parameter_lst if 'additional_parameter_lst' in locals() else None
-                )
+                ), pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
     
     def get_dwd_pv_data(self, lat, lon, distance = 30):
-        self.pv_data = self.__get_dwd_data(dataset = 'solar', lat = lat,lon = lon, distance = distance)
-        return self.pv_data
+        self.pv_data, station_mata_data = self.__get_dwd_data(dataset = 'solar', lat = lat,lon = lon, distance = distance)
+        return self.pv_data, station_mata_data
 
     def get_dwd_wind_data(self,lat,lon,distance = 30):
         self.wind_data = self.__get_dwd_data(dataset = 'wind', lat = lat,lon = lon, distance = distance)
@@ -673,12 +654,12 @@ class Environment(object):
         return self.temp_data
     
     def get_dwd_mean_temp_hours(self,lat,lon,distance = 30):
-        if type(self.temp_data) == list:
+        if len(self.temp_data) == 0:
             self.get_dwd_temp_data(lat,lon,distance,)
         self.mean_temp_hours = self.__resample_data(self.temp_data,'60 min')
     
     def get_dwd_mean_temp_days(self,lat,lon,distance = 30):
-        if type(self.temp_data) == list:
+        if len(self.temp_data) == 0:
             self.get_dwd_temp_data(lat,lon,distance)
         self.mean_temp_days = self.__resample_data(self.temp_data,'1440 min')
         
