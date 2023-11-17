@@ -145,7 +145,7 @@ class HeatPump(Component):
                     + 0.00063 * (self.heat_sys_temp - tmp) ** 2
                 )
                 cop_lst.append(cop)
-                print(cop)
+                
         elif self.heat_pump_type == "Ground":
             for i, tmp in self.environment.mean_temp_hours.iterrows():
                 cop = (
@@ -153,7 +153,6 @@ class HeatPump(Component):
                     - 0.15 * (self.heat_sys_temp - tmp)
                     + 0.000734 * (self.heat_sys_temp - tmp) ** 2
                 )
-                print(cop)
                 cop_lst.append(cop)
 
         else:
@@ -162,9 +161,7 @@ class HeatPump(Component):
         self.cop = pd.DataFrame(
             data=cop_lst,
             index=self.environment.mean_temp_hours.index,
-            columns=["cop"],
         )
-        a = self.cop
         self.cop.columns = ["cop"]
 
         return self.cop
