@@ -441,8 +441,7 @@ class Environment(object):
             #Calculate power from irradiance
             pd_weather_data_for_station.update(self.__get_solar_power_from_energy(pd_weather_data_for_station,'OBSERVATION'), overwrite=True)
         elif dataset == 'air':
-            pd_weather_data_for_station.pressure    = pd_weather_data_for_station.pressure * 100
-            pd_weather_data_for_station.temperature = pd_weather_data_for_station.temperature #+ 273.15
+            1 #Nothing to do here yet
         elif dataset == 'wind':
             pd_weather_data_for_station = self.__prepare_data_for_windpowerlib(pd_weather_data_for_station=pd_weather_data_for_station,query_type='OBSERVATION',pd_station_metadata = pd_station_metadata)
         return self.__resample_data(pd_weather_data_for_station)
@@ -479,12 +478,13 @@ class Environment(object):
             pd_weather_data_for_station = pd_weather_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             pd_weather_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
         elif dataset == 'air':
+            1 #Nothing to do here yet
+        elif dataset == 'wind':
             height = pd_station_metadata['height'].values[0]
             """ https://de.wikipedia.org/wiki/Barometrische_Höhenformel """
             pd_weather_data_for_station['pressure'] = (
                 pd_weather_data_for_station.pressure * ( 1 - ( -0.0065  * height) / pd_weather_data_for_station.temperature) ** ((9.81 * 0.02897) / (8.314 * -0.0065))
                 )
-        elif dataset == 'wind':
             pd_weather_data_for_station = self.__prepare_data_for_windpowerlib(pd_weather_data_for_station=pd_weather_data_for_station,query_type='MOSMIX',pd_station_metadata=pd_station_metadata)
         #Observation data discribes the value for the last timestep. Mosmix forecasts the value for the next timestep
         #Shift by -1 to aling MOSMIX to Observation
@@ -497,7 +497,7 @@ class Environment(object):
 
         dataset_dict = {
             'solar' : ['ghi', 'dhi'],
-            'air'   : ['pressure' , 'temperature'],
+            'air'   : ['temperature'],
             'wind'  : ['wind_speed', 'pressure', 'temperature']
             }
 
@@ -512,7 +512,6 @@ class Environment(object):
         
         #Create a dictionsry with the parameters to query
         req_parameter_dict = {param: avalible_parameter_dict[param] for param in dataset_dict[dataset]}
-        
         
         time_now = self.get_time_from_dwd()
         settings = Settings.default()
