@@ -141,18 +141,19 @@ class HeatPump(Component):
             for i, tmp in self.environment.mean_temp_hours.iterrows():
                 cop = (
                     6.81
-                    - 0.121 * (self.heat_sys_temp - tmp["temperature"])
-                    + 0.00063 * (self.heat_sys_temp - tmp["temperature"]) ** 2
+                    - 0.121 * (self.heat_sys_temp - tmp)
+                    + 0.00063 * (self.heat_sys_temp - tmp) ** 2
                 )
                 cop_lst.append(cop)
-
+                print(cop)
         elif self.heat_pump_type == "Ground":
             for i, tmp in self.environment.mean_temp_hours.iterrows():
                 cop = (
                     8.77
-                    - 0.15 * (self.heat_sys_temp - tmp["temperature"])
-                    + 0.000734 * (self.heat_sys_temp - tmp["temperature"]) ** 2
+                    - 0.15 * (self.heat_sys_temp - tmp)
+                    + 0.000734 * (self.heat_sys_temp - tmp) ** 2
                 )
+                print(cop)
                 cop_lst.append(cop)
 
         else:
@@ -163,7 +164,8 @@ class HeatPump(Component):
             index=self.environment.mean_temp_hours.index,
             columns=["cop"],
         )
-        # self.cop.columns = ["cop"]
+        a = self.cop
+        self.cop.columns = ["cop"]
 
         return self.cop
 

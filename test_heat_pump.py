@@ -43,8 +43,10 @@ min_stop_time = 2  # timesteps
 environment = Environment(
     timebase=timebase, start=start, end=end, year=year, time_freq=time_freq
 )
-environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
-environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)
+#environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
+#environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)
+environment.get_mean_temp_hours()
+environment.get_mean_temp_days()
 
 user_profile = UserProfile(
     identifier=None,
@@ -88,7 +90,7 @@ hp = HeatPump(
 def test_get_cop(hp):
 
     print("get_cop:")
-    hp.get_cop()
+    a = hp.get_cop()
     hp.cop.plot(figsize=(16, 9))
     plt.show()
 
