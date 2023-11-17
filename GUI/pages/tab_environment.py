@@ -1,6 +1,7 @@
-from dash import dash, html, dcc, Input, Output, State, callback
+from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
+from dash.exceptions import PreventUpdate
 
 layout=dbc.Container([
 dbc.Row([
@@ -132,23 +133,23 @@ dbc.Row([
 
 ])                       
 
-# @callback(
-#     Output('submit_environment', 'n_clicks'),
-#     [Input('submit_environment', 'n_clicks')],
-#     [State('input_date_start', 'value'),
-#         State('input_date_end', 'value'),
-#         State('dropdown_timezone', 'value'),
-#         State('dropdown_time_step', 'value'),
-#         State('upload_weather_data', 'value')]
-# )
-# def update_df(n_clicks, date_start, date_end, timezone, time_step, weather_data):
-#     global df
-#     if n_clicks is not None:
-#         df = pd.concat([df, pd.DataFrame({'Date-Start':date_start,
-#                                           'Date-End': date_end,
-#                                           'Timezone': timezone,
-#                                           'Time Step': time_step,
-#                                           'Weather Data': weather_data}, index=[0])])
-#         print(df)
-#         df.to_csv('Settings.csv')
-#     return n_clicks
+@callback(
+    Output('store_evironment', 'data'),
+    [Input('submit_environment', 'n_clicks')],
+    [State('input_date_start', 'value'),
+     State('input_date_end', 'value'),
+     State('dropdown_timezone', 'value'),
+     State('dropdown_time_step', 'value'),
+     State('upload_weather_data', 'value')]
+)
+def update_basic_settings_store(n_clicks, start_date, end_date, 
+                          timezone, timestep, weather_data):
+    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
+        data_basic_settings=pd.DataFrame({'Start Date': start_date,
+                 'Ende Date': end_date,
+                 'Time Zone': timezone,
+                 'Time Step': timestep,
+                 'Weather Data': weather_data}, index=[0])
+        return data_basic_settings.to_dict('records')
+    elif n_clicks is None:
+        raise PreventUpdate

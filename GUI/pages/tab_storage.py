@@ -1,5 +1,7 @@
-from dash import dash, html, dcc
+from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
+import pandas as pd
+from dash.exceptions import PreventUpdate
 
 layout=dbc.Container([
     dbc.Row([
@@ -67,3 +69,26 @@ layout=dbc.Container([
                             ])
                 
 ])
+
+@callback(
+    Output('store_storage', 'data'),
+    [Input('submit_storage_settings', 'n_clicks')],
+    [State('input_storage_charge_efficiency', 'value'),
+     State('input_storage_discharge_efficiency', 'value'),
+     State('input_storage_max_power', 'value'),
+     State('input_storage_max_capacity', 'value')]
+)
+def update_storage(n_clicks, storage_charge_effciency, storage_discharge_efficiency, 
+                                storage_max_power, storage_max_capacity):
+    
+    if 'submit_storage_settings' ==ctx.triggered_id and n_clicks is not None:
+
+        data_storage_settings=pd.DataFrame({'Charging Efficiency': storage_charge_effciency,
+                 'Discharging Efficiency': storage_discharge_efficiency,
+                 'Max. Power': storage_max_power,
+                 'Max. Capacity': storage_max_capacity}, index=[0])
+        
+        return data_storage_settings.to_dict('records')
+    
+    elif n_clicks is None:
+        raise PreventUpdate

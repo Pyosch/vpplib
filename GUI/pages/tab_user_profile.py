@@ -1,5 +1,8 @@
-from dash import dash, html, dcc
+from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
+import pandas as pd
+from dash.exceptions import PreventUpdate
+
 layout=dbc.Container([
 dbc.Row([
                     dbc.Col([
@@ -130,3 +133,32 @@ dbc.Row([
                             ])
                 
 ])
+
+@callback(
+    Output('store_user_profile', 'data'),
+    [Input('submit_user_profile', 'n_clicks')],
+    [State('input_identifier', 'value'),
+     State('input_latitude', 'value'),
+     State('input_longitude', 'value'),
+     State('input_thermal_energy_demand', 'value'),
+     State('input_comfort_factor', 'value'),
+     State('input_daily_vehicle_usage', 'value'),
+     State('dropwdown_building_type', 'value'),
+     State('input_t0', 'value')]
+)
+def update_user_profile(n_clicks, identifier, latitude, longitude, 
+                                thermal_energy_demand, comfort_factor,
+                                daily_vehicle_usage, building_type, t0):
+    if 'submit_user_profile' ==ctx.triggered_id and n_clicks is not None:
+        data_user_profile=pd.DataFrame({'Identifier': identifier,
+                                          'Latitude': latitude,
+                                          'Longitude': longitude,
+                                          'Thermal Energy Demand': thermal_energy_demand,
+                                          'Comfort Factor': comfort_factor,
+                                          'Daily Vehicle Usage': daily_vehicle_usage,
+                                          'Building Type': building_type,
+                                          'T0': t0
+                                          }, index=[0])
+        return data_user_profile.to_dict('records')
+    elif n_clicks is None:
+        raise PreventUpdate
