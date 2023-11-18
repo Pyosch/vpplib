@@ -96,6 +96,8 @@ class Environment(object):
           
         if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
             raise ValueError("End date must be greater than start date")
+        if self.__internal_start_datetime_utc + datetime.timedelta(hours=1) > self.__internal_end_datetime_utc:
+            raise ValueError("End date must be at least one hour longer than the start date")
 
     @property
     def __start_dt_utc(self):
@@ -501,7 +503,7 @@ class Environment(object):
         observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0) #- datetime.timedelta(minutes = 10)
 
         if self.__start_dt_utc <= observation_end_date - datetime.timedelta(hours = 1):
-            #Observation database
+            print("Using observation database.") and activate_output
             if self.__end_dt_utc > observation_end_date:
                 activate_output and print("End date is in the future.")
                 self.__end_dt_utc = observation_end_date
@@ -520,7 +522,7 @@ class Environment(object):
                 raise ValueError("No forecast data avaliable for this time")
             if self.__end_dt_utc > time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240):
                 self.__end_dt_utc = time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240)
-            
+            print("Using momsix database.") and activate_output
             if dataset == 'solar':
                 #dhi is not available for mosmix
                 req_parameter_dict.pop("dhi")
