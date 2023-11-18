@@ -1,5 +1,7 @@
-from dash import dash, html, dcc
+from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
+import pandas as pd
+from dash.exceptions import PreventUpdate
 
 layout=dbc.Container([
 dbc.Row([
@@ -57,3 +59,19 @@ dbc.Row([
                             ])
                 
 ])
+
+@callback(
+    Output('store_heatpump', 'data'),
+    [Input('submit_hp_settings', 'n_clicks')],
+    [State('dropdown_heatpump_type', 'value'),
+     State('input_heatpump_system_temperature', 'value'),
+     State('input_heatpump_electrical_power', 'value')]
+)
+def update_basic_settings_store(n_clicks, type_hp, temp_hp, power_hp):
+    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
+        data_basic_settings=pd.DataFrame({'Type Heatpump': type_hp,
+                 'Heat System Temperature': temp_hp,
+                 'Power': power_hp,}, index=[0])
+        return data_basic_settings.to_dict('records')
+    elif n_clicks is None:
+        raise PreventUpdate

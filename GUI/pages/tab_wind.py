@@ -1,5 +1,7 @@
-from dash import dash, html, dcc
+from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
+import pandas as pd
+from dash.exceptions import PreventUpdate
 
 layout=dbc.Container([
         dbc.Row([
@@ -224,3 +226,40 @@ layout=dbc.Container([
                             ])
                
 ])
+
+@callback(
+    Output('store_wind', 'data'),
+    [Input('submit_wind_settings', 'n_clicks')],
+    [State('input_wind_turbine_type', 'value'),
+     State('input_wind_hub_height', 'value'),
+     State('input_wind_rotor_diameter', 'value'),
+     State('input_wind_comfort_factor', 'value'),
+     State('dropdown_wind_data_source', 'value'),
+     State('dropdown_wind_speed_model', 'value'),
+     State('dropdown_wind_density_model', 'value'),
+     State('dropdown_wind_temperature_model', 'value'),
+     State('dropdown_wind_power_output_model', 'value'),
+     State('switch_wind_density_correction', 'on'),
+     State('input_wind_obstacle_height', 'value'),
+     State('input_hellmann_exponent', 'value')]
+)
+def update_basic_settings_store(n_clicks, turbine_type, hub_height, rotor_diameter,
+                                comfort_factor, data_source, speed_model, density_model,
+                                temperature_model, power_output_model, density_correction,
+                                obstacle_height, hellmann_exponent):
+    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
+        data_basic_settings=pd.DataFrame({'Turbine Type': turbine_type,
+                                            'Hub Height': hub_height,
+                                            'Rotor Diameter': rotor_diameter,
+                                            'Comfort Factor': comfort_factor,
+                                            'Data Source': data_source,
+                                            'Speed Model': speed_model,
+                                            'Density Model': density_model,
+                                            'Temperature Model': temperature_model,
+                                            'Power Output Model': power_output_model,
+                                            'Density Correction': density_correction,
+                                            'Obstacle Height': obstacle_height,
+                                            'Hellmann Exponent': hellmann_exponent}, index=[0])
+        return data_basic_settings.to_dict('records')
+    elif n_clicks is None:
+        raise PreventUpdate

@@ -1,6 +1,7 @@
-from dash import dash, html, dcc
+from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
-
+import pandas as pd
+from dash.exceptions import PreventUpdate
 layout=dbc.Container([
 dbc.Row([
                     dbc.Col([
@@ -125,3 +126,31 @@ dbc.Row([
                
 ])
 
+@callback(
+    Output('store_pv', 'data'),
+    [Input('submit_pv_settings', 'n_clicks')],
+    [State('dropdown_pv_module_library', 'value'),
+     State('dropdown_pv_module', 'value'),
+     State('dropdown_pv_inverter_library', 'value'),
+     State('dropdown_pv_inverter', 'value'),
+     State('input_pv_surface_tilt', 'value'),
+     State('input_pv_surface_azimuth', 'value'),
+     State('input_pv_modules_per_string', 'value'),
+     State('input_pv_strings_per_inverter', 'value')]
+)
+def update_basic_settings_store(n_clicks, pv_mod_lib, pv_mod, pv_inv_lib, 
+                                pv_inv, pv_tilt, pv_azimuth, pv_mod_per_string, 
+                                pv_string_per_inv):
+    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
+        data_basic_settings=pd.DataFrame({'PV Module Library':pv_mod_lib,
+                                          'PV Module': pv_mod,
+                                          'PV Inverter Library': pv_inv_lib,
+                                            'PV Inverter': pv_inv,
+                                            'PV Surface Tilt': pv_tilt,
+                                            'PV Surface Azimuth': pv_azimuth,
+                                            'PV Modules per String': pv_mod_per_string,
+                                            'PV Strings per Inverter': pv_string_per_inv
+                                            }, index=[0])
+        return data_basic_settings.to_dict('records')
+    elif n_clicks is None:
+        raise PreventUpdate
