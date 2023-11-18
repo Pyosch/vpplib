@@ -381,7 +381,6 @@ class Environment(object):
         
         df = df.reindex(sorted(df.columns), axis=1)
         df = round(df,2)
-        df.head(10)
         return df
     
     
@@ -634,18 +633,18 @@ class Environment(object):
                 pd_weather_data_for_station, 
                 pd_station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id],
                 dataset = dataset
-                ), pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
+                )
         if isinstance(wd_query_result,DwdMosmixRequest):
            return self.__process_mosmix_parameter(
                 pd_weather_data_for_station = pd_weather_data_for_station, 
                 dataset = dataset, 
                 pd_station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id],
                 additional_parameter_lst = additional_parameter_lst if 'additional_parameter_lst' in locals() else None
-                ), pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
+                )
     
     def get_dwd_pv_data(self, lat, lon, distance = 30):
-        self.pv_data, station_mata_data = self.__get_dwd_data(dataset = 'solar', lat = lat,lon = lon, distance = distance)
-        return self.pv_data, station_mata_data
+        self.pv_data = self.__get_dwd_data(dataset = 'solar', lat = lat,lon = lon, distance = distance)
+        return self.pv_data
 
     def get_dwd_wind_data(self,lat,lon,distance = 30):
         self.wind_data = self.__get_dwd_data(dataset = 'wind', lat = lat,lon = lon, distance = distance)
