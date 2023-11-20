@@ -252,7 +252,7 @@ class Environment(object):
         )
         return wd_time_result.now.replace(second=0,microsecond=0)
         
-    def __get_solar_parameter (self, input_df, lat, lon, height, methode = 'disc'):
+    def __get_solar_parameter (self, input_df, lat, lon, height, methode = 'disc', use_methode_name_in_columns = False):
         df             = input_df.copy()
         df.temperature = df.temperature - 273.15
         df.drew_point  = df.drew_point - 273.15
@@ -323,6 +323,8 @@ class Environment(object):
                             max_zenith      = 87
                             )
             out_df = out_boland.drop(['kt'], axis = 1)
+        
+        if use_methode_name_in_columns: out_df.columns = [str(col) + '_' + methode for col in out_df.columns]
 
         return out_df
 
@@ -456,6 +458,7 @@ class Environment(object):
                     lat      = pd_station_metadata['latitude' ].values[0], 
                     lon      = pd_station_metadata['longitude'].values[0],
                     height   = pd_station_metadata['height'   ].values[0])
+                    #methode  = methode)
             
             pd_weather_data_for_station = pd_weather_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             pd_weather_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
@@ -504,7 +507,7 @@ class Environment(object):
         if self.__start_dt_utc <= observation_end_date - datetime.timedelta(hours = 1):
             print("Using observation database.") and activate_output
             if self.__end_dt_utc > observation_end_date:
-                activate_output and print("End date is in the future.")
+                print("End date is in the future.") and activate_output
                 self.__end_dt_utc = observation_end_date
 
             #Get weather data for your location from dwd observation database
@@ -561,7 +564,7 @@ class Environment(object):
         #Check query result for the stations within the defined distance
         for station_id in pd_nearby_stations["station_id"].values:
             station_name  = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]['name'].values[0]
-            activate_output and print('Checking query result for station ' + station_name, station_id + " ...")
+            print('Checking query result for station ' + station_name, station_id + " ...") and activate_output
             
             #Get query result for the actual station
             wd_data_for_station = wd_query_result.filter_by_station_id(station_id=station_id).values.all().df
@@ -573,8 +576,7 @@ class Environment(object):
             else:
                 raise Exception("Data type incorrect")
                 
-                
-            pd_weather_data_for_station        = pd.DataFrame()
+            pd_weather_data_for_station = pd.DataFrame()
             pd_data_for_all_stations.set_index('date', inplace=True)
 
             #Format data to get a df with one column for each parameter
@@ -625,7 +627,7 @@ class Environment(object):
                 break
         if not valid_station_data:
             raise Exception("No station with vaild data found!")
-        activate_output and print("Query successful!")
+        print("Query successful!") and activate_output
         
 
         if isinstance(wd_query_result,DwdObservationRequest):
