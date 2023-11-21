@@ -191,28 +191,6 @@ layout=dbc.Container([
                                             )
                                         ], width=4)
                                     ]),
-                                    dbc.Row([
-                                        dbc.Col([
-                                            html.P('Upload Wind Data', style={'margin-top': '15%'})
-                                        ], width=4),
-                                        dbc.Col([
-                                            dcc.Upload(
-                                                id='upload_wind_data',
-                                                style={'width': 'auto',
-                                                    'height': 'auto',
-                                                    'lineHeight': '60px',
-                                                    'borderWidth': '1px',
-                                                    'borderStyle': 'dashed',
-                                                    'textAlign': 'center',
-                                                    'margin': '10px'
-                                                },
-                                                children=dbc.Container([
-                                                    'Drag and Drop or ',
-                                                    html.A('Select Files')
-                                                ]),
-                                            )
-                                        ])
-                                    ])
                                 ])
                             ])
                         ])
@@ -247,8 +225,8 @@ def update_basic_settings_store(n_clicks, turbine_type, hub_height, rotor_diamet
                                 comfort_factor, data_source, speed_model, density_model,
                                 temperature_model, power_output_model, density_correction,
                                 obstacle_height, hellmann_exponent):
-    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_basic_settings=pd.DataFrame({'Turbine Type': turbine_type,
+    if 'submit_wind_settings' ==ctx.triggered_id and n_clicks is not None:
+        data_wind_settings=pd.DataFrame({'Turbine Type': turbine_type,
                                             'Hub Height': hub_height,
                                             'Rotor Diameter': rotor_diameter,
                                             'Comfort Factor': comfort_factor,
@@ -260,6 +238,6 @@ def update_basic_settings_store(n_clicks, turbine_type, hub_height, rotor_diamet
                                             'Density Correction': density_correction,
                                             'Obstacle Height': obstacle_height,
                                             'Hellmann Exponent': hellmann_exponent}, index=[0])
-        return data_basic_settings.to_dict('records')
+        return data_wind_settings.to_dict('records')
     elif n_clicks is None:
         raise PreventUpdate

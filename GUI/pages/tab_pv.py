@@ -138,11 +138,11 @@ dbc.Row([
      State('input_pv_modules_per_string', 'value'),
      State('input_pv_strings_per_inverter', 'value')]
 )
-def update_basic_settings_store(n_clicks, pv_mod_lib, pv_mod, pv_inv_lib, 
+def update_pv_settings_store(n_clicks, pv_mod_lib, pv_mod, pv_inv_lib, 
                                 pv_inv, pv_tilt, pv_azimuth, pv_mod_per_string, 
                                 pv_string_per_inv):
-    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_basic_settings=pd.DataFrame({'PV Module Library':pv_mod_lib,
+    if 'submit_pv_settings' ==ctx.triggered_id and n_clicks is not None:
+        data_pv_settings=pd.DataFrame({'PV Module Library':pv_mod_lib,
                                           'PV Module': pv_mod,
                                           'PV Inverter Library': pv_inv_lib,
                                             'PV Inverter': pv_inv,
@@ -151,6 +151,6 @@ def update_basic_settings_store(n_clicks, pv_mod_lib, pv_mod, pv_inv_lib,
                                             'PV Modules per String': pv_mod_per_string,
                                             'PV Strings per Inverter': pv_string_per_inv
                                             }, index=[0])
-        return data_basic_settings.to_dict('records')
+        return data_pv_settings.to_dict('records')
     elif n_clicks is None:
         raise PreventUpdate

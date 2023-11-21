@@ -68,10 +68,11 @@ dbc.Row([
      State('input_heatpump_electrical_power', 'value')]
 )
 def update_basic_settings_store(n_clicks, type_hp, temp_hp, power_hp):
-    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_basic_settings=pd.DataFrame({'Type Heatpump': type_hp,
+    if 'submit_hp_settings' ==ctx.triggered_id and n_clicks is not None:
+        data_heatpump=pd.DataFrame({'Type Heatpump': type_hp,
                  'Heat System Temperature': temp_hp,
                  'Power': power_hp,}, index=[0])
-        return data_basic_settings.to_dict('records')
+        print(data_heatpump)
+        return data_heatpump.to_dict('records')
     elif n_clicks is None:
         raise PreventUpdate

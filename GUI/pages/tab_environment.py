@@ -123,33 +123,33 @@ dbc.Row([
                                         
                                     ], width=3)
                                 ], align='center'),
-                            dbc.Row([
+                           dbc.Row([
                                 dbc.Col([
                                     dbc.Button('Submit Settings',
-                                               id='submit_environment',
+                                               id='submit_environment_settings',
                                                color='primary')
                                 ])
-                            ]),
+                            ])
 
 ])                       
 
 @callback(
-    Output('store_evironment', 'data'),
-    [Input('submit_environment', 'n_clicks')],
+    Output('store_environment', 'data'),
+    [Input('submit_environment_settings', 'n_clicks')],
     [State('input_date_start', 'value'),
      State('input_date_end', 'value'),
      State('dropdown_timezone', 'value'),
-     State('dropdown_time_step', 'value'),
-     State('upload_weather_data', 'value')]
+     State('dropdown_time_step', 'value')]
 )
-def update_basic_settings_store(n_clicks, start_date, end_date, 
-                          timezone, timestep, weather_data):
-    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_basic_settings=pd.DataFrame({'Start Date': start_date,
+def update_environment(n_clicks, start_date, end_date, 
+                          timezone, timestep):
+    if 'submit_environment_settings' == ctx.triggered_id and n_clicks is not None:
+        data_environment=pd.DataFrame({'Start Date': start_date,
                  'Ende Date': end_date,
                  'Time Zone': timezone,
-                 'Time Step': timestep,
-                 'Weather Data': weather_data}, index=[0])
-        return data_basic_settings.to_dict('records')
+                 'Time Step': timestep
+                 }, index=[0])
+        print(data_environment)
+        return data_environment.to_dict('records')
     elif n_clicks is None:
         raise PreventUpdate
