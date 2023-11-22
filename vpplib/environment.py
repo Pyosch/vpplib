@@ -471,13 +471,13 @@ class Environment(object):
                 pd_weather_data_for_station.pressure * ( 1 - ( -0.0065  * height) / pd_weather_data_for_station.temperature) ** ((9.81 * 0.02897) / (8.314 * -0.0065))
                 )
             pd_weather_data_for_station = self.__prepare_data_for_windpowerlib(pd_weather_data_for_station=pd_weather_data_for_station,query_type='MOSMIX',pd_station_metadata=pd_station_metadata)
-        #Observation data discribes the value for the last timestep. Mosmix forecasts the value for the next timestep
+        #Observation data discribes the value for the last timestep. MOSMIX forecasts the value for the next timestep
         #Shift by -1 to aling MOSMIX to Observation
         pd_weather_data_for_station = pd_weather_data_for_station.shift(-1)
         return self.__resample_data(pd_weather_data_for_station)
     
     
-    def __get_dwd_data(self, dataset, lat, lon, min_quality_per_parameter = 80, distance = 30):
+    def __get_dwd_data(self, dataset, lat, lon, distance = 30, min_quality_per_parameter = 80):
         activate_output = not self.surpress_output_globally
 
         dataset_dict = {
@@ -493,7 +493,7 @@ class Environment(object):
             "temperature" : "temperature_air_mean_200",
             "wind_speed"  : "wind_speed", 
             "drew_point"  : "temperature_dew_point_mean_200"
-                                }
+            }
         
         #Create a dictionsry with the parameters to query
         req_parameter_dict = {param: avalible_parameter_dict[param] for param in dataset_dict[dataset]}
@@ -502,7 +502,8 @@ class Environment(object):
         settings = Settings.default()
         settings.ts_si_units = False
         
-        observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0) #- datetime.timedelta(minutes = 10)
+        #observation data is updated every full hour
+        observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
 
         if self.__start_dt_utc <= observation_end_date - datetime.timedelta(hours = 1):
             print("Using observation database.") and activate_output
@@ -518,21 +519,19 @@ class Environment(object):
                 end_date   = self.__end_dt_utc,
                 settings   = settings,
             )
-        #MOSMIX database is updated every hour
         else:
             if self.__start_dt_utc > time_now + datetime.timedelta(hours = 240):
                 raise ValueError("No forecast data avaliable for this time")
-            if self.__end_dt_utc > time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240):
+            if self.__end_dt_utc >  time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240):
                 self.__end_dt_utc = time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240)
             print("Using momsix database.") and activate_output
             if dataset == 'solar':
-                #dhi is not available for mosmix
+                #dhi is not available for MOSMIX
                 req_parameter_dict.pop("dhi")
                 #get additional parameter for calculating dhi with pvlib
                 additional_parameter_lst = ["pressure", "temperature", "drew_point"]
-                for additional_parameter in additional_parameter_lst:
-                    req_parameter_dict.update({additional_parameter : avalible_parameter_dict[additional_parameter]}) 
-            #pressure is called pressure_air_site_reduced in mosmix
+                req_parameter_dict.update({param: avalible_parameter_dict[param] for param in additional_parameter_lst})
+            #pressure is called pressure_air_site_reduced in MOSMIX
             if "pressure" in req_parameter_dict:
                 req_parameter_dict.update({"pressure" : "pressure_air_site_reduced"})
             
@@ -584,7 +583,7 @@ class Environment(object):
                 pd_weather_data_for_station[key] = pd_data_for_all_stations.loc[pd_data_for_all_stations['parameter'] == req_parameter_dict[key]]['value']
                 
             """
-            Not yet implemented: The MOSMIX database provided data for UP To 240 hours. 
+            Not yet implemented: The MOSMIX database provided data for !UP TO! 240 hours. 
             The resulting data set does not consist of index 0-240 but 0-querying
             TODO: Add variable in function call, depending on which the result is extended to 240 hours. 
                   The end time must then also be adjusted
@@ -644,26 +643,54 @@ class Environment(object):
                 additional_parameter_lst = additional_parameter_lst if 'additional_parameter_lst' in locals() else None
                 )
     
-    def get_dwd_pv_data(self, lat, lon, distance = 30):
-        self.pv_data = self.__get_dwd_data(dataset = 'solar', lat = lat,lon = lon, distance = distance)
+    def get_dwd_pv_data(self, lat, lon, distance = 30, min_quality_per_parameter = 80):
+        self.pv_data = self.__get_dwd_data(
+            dataset = 'solar', 
+            lat = lat, 
+            lon = lon, 
+            distance = distance, 
+            min_quality_per_parameter = min_quality_per_parameter
+            )
         return self.pv_data
 
-    def get_dwd_wind_data(self,lat,lon,distance = 30):
-        self.wind_data = self.__get_dwd_data(dataset = 'wind', lat = lat,lon = lon, distance = distance)
+    def get_dwd_wind_data(self, lat, lon, distance = 30, min_quality_per_parameter = 80):
+        self.wind_data = self.__get_dwd_data(
+            dataset = 'wind', 
+            lat = lat, 
+            lon = lon, 
+            distance = distance, 
+            min_quality_per_parameter = min_quality_per_parameter
+            )
         return self.wind_data 
 
-    def get_dwd_temp_data(self,lat,lon,distance = 30):
-        self.temp_data = self.__get_dwd_data(dataset = 'air', lat = lat,lon = lon, distance = distance)
+    def get_dwd_temp_data(self,lat,lon,distance = 30, min_quality_per_parameter = 80):
+        self.temp_data = self.__get_dwd_data(
+            dataset = 'air', 
+            lat = lat, 
+            lon = lon, 
+            distance = distance, 
+            min_quality_per_parameter = min_quality_per_parameter
+            )
         return self.temp_data
     
-    def get_dwd_mean_temp_hours(self,lat,lon,distance = 30):
+    def get_dwd_mean_temp_hours(self, lat, lon, distance = 30, min_quality_per_parameter = 80):
         if len(self.temp_data) == 0:
-            self.get_dwd_temp_data(lat,lon,distance,)
+            self.get_dwd_temp_data(
+                lat = lat,
+                lon = lon, 
+                distance = distance, 
+                min_quality_per_parameter = min_quality_per_parameter
+                )
         self.mean_temp_hours = self.__resample_data(self.temp_data,'60 min')
     
-    def get_dwd_mean_temp_days(self,lat,lon,distance = 30):
+    def get_dwd_mean_temp_days(self,lat,lon,distance = 30, min_quality_per_parameter = 80):
         if len(self.temp_data) == 0:
-            self.get_dwd_temp_data(lat,lon,distance)
+            self.get_dwd_temp_data(
+                lat = lat, 
+                lon = lon, 
+                distance = distance, 
+                min_quality_per_parameter = min_quality_per_parameter
+                )
         self.mean_temp_days = self.__resample_data(self.temp_data,'1440 min')
         
 
