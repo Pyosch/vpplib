@@ -21,7 +21,7 @@ def update_tables(store_basic_settings, store_environment, store_user_profile, s
                   store_pv, store_wind, store_heatpump, store_storage):
 
     table_basic_settings=dbc.Container([html.Div(html.H3('Basic Settings')),
-    dash_table.DataTable(data=store_basic_settings, 
+    dash_table.DataTable(data=pd.DataFrame(store_basic_settings, index=[0]).to_dict('records'), 
                         page_action='native',  page_current=0,
                         page_size=20, sort_action='native',
                         style_header={'backgroundColor': 'rgb(30, 30, 30)',
@@ -32,7 +32,7 @@ def update_tables(store_basic_settings, store_environment, store_user_profile, s
                         style_table={'margin-bottom': '20px'}
     )])
     table_environment=dbc.Container([html.Div(html.H3('Environment')),
-                                     dash_table.DataTable(data=store_environment, 
+                                     dash_table.DataTable(data=pd.DataFrame(store_environment, index=[0]).to_dict('records'),
                                         page_action='native',  page_current=0,
                                         page_size=20, sort_action='native',
                                         style_header={'backgroundColor': 'rgb(30, 30, 30)',
@@ -43,7 +43,7 @@ def update_tables(store_basic_settings, store_environment, store_user_profile, s
                                         style_table={'margin-bottom': '20px'}
 )]) 
     table_user_profile=dbc.Container([html.Div(html.H3('User Profile')),
-                                      dash_table.DataTable(data=store_user_profile,
+                                      dash_table.DataTable(data=pd.DataFrame(store_user_profile, index=[0]).to_dict('records'),
                                         page_action='native',  page_current=0,
                                         page_size=20, sort_action='native',
                                         style_header={'backgroundColor': 'rgb(30, 30, 30)',
@@ -55,7 +55,7 @@ def update_tables(store_basic_settings, store_environment, store_user_profile, s
     )])
     
     table_bev=dbc.Container([html.Div(html.H3('BEV')),
-                             dash_table.DataTable(data=store_bev, 
+                             dash_table.DataTable(data=pd.DataFrame(store_bev, index=[0]).to_dict('records'), 
                                 page_action='native',  page_current=0,
                                 page_size=20, sort_action='native',
                                 style_header={'backgroundColor': 'rgb(30, 30, 30)',
@@ -66,7 +66,7 @@ def update_tables(store_basic_settings, store_environment, store_user_profile, s
                                 style_table={'margin-bottom': '20px'}
     )])
     table_pv=dbc.Container([html.Div(html.H3('Photovoltaic')),
-                            dash_table.DataTable(data=store_pv, 
+                            dash_table.DataTable(data=pd.DataFrame(store_pv, index=[0]).to_dict('records'), 
                                 page_action='native',  page_current=0,
                                 page_size=20, sort_action='native',
                                 style_header={'backgroundColor': 'rgb(30, 30, 30)',
@@ -77,7 +77,7 @@ def update_tables(store_basic_settings, store_environment, store_user_profile, s
                                 style_table={'margin-bottom': '20px'}
     )])
     table_wind=dbc.Container([html.Div(html.H3('Wind')),
-                              dash_table.DataTable(data=store_wind, 
+                              dash_table.DataTable(data=pd.DataFrame(store_wind, index=[0]).to_dict('records'), 
                                 page_action='native',  page_current=0,
                                 page_size=20, sort_action='native',
                                 style_header={'backgroundColor': 'rgb(30, 30, 30)',
@@ -88,7 +88,7 @@ def update_tables(store_basic_settings, store_environment, store_user_profile, s
                                 style_table={'margin-bottom': '20px'}
     )])
     table_heatpump=dbc.Container([html.Div(html.H3('Heatpump')),
-                                  dash_table.DataTable(data=store_heatpump, 
+                                  dash_table.DataTable(data=pd.DataFrame(store_heatpump, index=[0]).to_dict('records'), 
                                     page_action='native',  page_current=0,
                                     page_size=20, sort_action='native',
                                     style_header={'backgroundColor': 'rgb(30, 30, 30)',
@@ -99,7 +99,7 @@ def update_tables(store_basic_settings, store_environment, store_user_profile, s
                                     style_table={'margin-bottom': '20px'}
     )])
     table_storage=dbc.Container([html.Div(html.H3('Storage')),
-                                 dash_table.DataTable(data=store_storage, 
+                                 dash_table.DataTable(data=pd.DataFrame(store_storage, index=[0]).to_dict('records'), 
                                     page_action='native',  page_current=0,
                                     page_size=20, sort_action='native',
                                     style_header={'backgroundColor': 'rgb(30, 30, 30)',

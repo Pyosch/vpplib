@@ -81,35 +81,15 @@ layout=dbc.Container([
 def update_basic_settings_store(n_clicks, pv_plants, storage_units, 
                           bev_number, hp_number, wind_number):
     if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_basic_settings=pd.DataFrame({'pv_plants': pv_plants,
+        data_basic_settings={'pv_plants': pv_plants,
                  'storage_units': storage_units,
                  'bev_number': bev_number,
                  'hp_number': hp_number,
-                 'wind_number': wind_number}, index=[0])
-        return data_basic_settings.to_dict('records')
+                 'wind_number': wind_number}
+        print(data_basic_settings)
+        return data_basic_settings
     elif n_clicks is None:
         raise PreventUpdate
-
-
-# @callback(
-#     Output('submit_basic_settings', 'n_clicks'),
-#     [Input('submit_basic_settings', 'n_clicks')],
-#     [State('input_pv_plants', 'value'),
-#      State('input_storage_units', 'value'),
-#      State('input_bev_number', 'value'),
-#      State('input_hp_number', 'value'),
-#      State('input_wind_number', 'value')]
-# )
-# def update_df(n_clicks, pv_plants, storage_units, bev_number, hp_number, wind_number):
-#     global df
-#     if n_clicks is not None:
-#         df = pd.concat([df, pd.DataFrame({'pv_plants': pv_plants,
-#                         'storage_units': storage_units,
-#                         'bev_number': bev_number,
-#                         'hp_number': hp_number,
-#                         'wind_number': wind_number}, index=[0])])
-#         print(df)
-    # return n_clicks
 
 
 

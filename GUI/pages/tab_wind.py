@@ -226,18 +226,18 @@ def update_basic_settings_store(n_clicks, turbine_type, hub_height, rotor_diamet
                                 temperature_model, power_output_model, density_correction,
                                 obstacle_height, hellmann_exponent):
     if 'submit_wind_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_wind_settings=pd.DataFrame({'Turbine Type': turbine_type,
-                                            'Hub Height': hub_height,
-                                            'Rotor Diameter': rotor_diameter,
-                                            'Comfort Factor': comfort_factor,
-                                            'Data Source': data_source,
-                                            'Speed Model': speed_model,
-                                            'Density Model': density_model,
-                                            'Temperature Model': temperature_model,
-                                            'Power Output Model': power_output_model,
-                                            'Density Correction': density_correction,
-                                            'Obstacle Height': obstacle_height,
-                                            'Hellmann Exponent': hellmann_exponent}, index=[0])
-        return data_wind_settings.to_dict('records')
+        data_wind_settings={'Turbine Type': turbine_type,
+                            'Hub Height': hub_height,
+                            'Rotor Diameter': rotor_diameter,
+                            'Comfort Factor': comfort_factor,
+                            'Data Source': data_source,
+                            'Speed Model': speed_model,
+                            'Density Model': density_model,
+                            'Temperature Model': temperature_model,
+                            'Power Output Model': power_output_model,
+                            'Density Correction': density_correction,
+                            'Obstacle Height': obstacle_height,
+                            'Hellmann Exponent': hellmann_exponent}
+        return data_wind_settings
     elif n_clicks is None:
         raise PreventUpdate

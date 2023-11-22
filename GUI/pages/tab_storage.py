@@ -83,12 +83,12 @@ def update_storage(n_clicks, storage_charge_effciency, storage_discharge_efficie
     
     if 'submit_storage_settings' ==ctx.triggered_id and n_clicks is not None:
 
-        data_storage_settings=pd.DataFrame({'Charging Efficiency': storage_charge_effciency,
+        data_storage_settings={'Charging Efficiency': storage_charge_effciency,
                  'Discharging Efficiency': storage_discharge_efficiency,
                  'Max. Power': storage_max_power,
-                 'Max. Capacity': storage_max_capacity}, index=[0])
+                 'Max. Capacity': storage_max_capacity}
         
-        return data_storage_settings.to_dict('records')
+        return data_storage_settings
     
     elif n_clicks is None:
         raise PreventUpdate

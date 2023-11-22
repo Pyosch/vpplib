@@ -99,12 +99,12 @@ def update_bev_settings_store(n_clicks, max_battery_capacity,
                               min_battery_capacity, battery_usage, 
                               charging_power, charging_efficiency):
     if 'submit_bev_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_bev_settings=pd.DataFrame({'max_battery_capacity': max_battery_capacity,
-                                        'min_battery_capacity': min_battery_capacity,
-                                        'battery_usage': battery_usage,
-                                        'charging_power': charging_power,
-                                        'charging_efficiency': charging_efficiency}, index=[0])
-        return data_bev_settings.to_dict('records')
+        data_bev_settings={'max_battery_capacity': max_battery_capacity,
+                            'min_battery_capacity': min_battery_capacity,
+                            'battery_usage': battery_usage,
+                            'charging_power': charging_power,
+                            'charging_efficiency': charging_efficiency}
+        return data_bev_settings
     
     elif n_clicks is None:
         raise PreventUpdate

@@ -19,7 +19,6 @@ from vpplib.electrical_energy_storage import ElectricalEnergyStorage
 from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
-from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_results
 
 # environment
 start = "2015-03-01 00:00:00"
@@ -29,8 +28,8 @@ year = "2015"
 time_freq = "15 min"
 timebase = 15
 index = pd.date_range(start=start, end=end, freq=time_freq)
-temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
-temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
+temp_days_file = "GUI/pages/input/thermal/dwd_temp_days_2015.csv"
+temp_hours_file = "GUI/pages/input/thermal/dwd_temp_hours_2015.csv"
 
 # user_profile
 identifier = "bus_1"
@@ -46,7 +45,8 @@ week_trip_end = []
 weekend_trip_start = []
 weekend_trip_end = []
 
-baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
+
+baseload = pd.read_csv("GUI/pages/input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
 baseload.index = pd.date_range(
     start=year, periods=35040, freq=time_freq, name="time"
@@ -62,7 +62,7 @@ fetch_curve = "power_curve"
 data_source = "oedb"
 
 # WindPower ModelChain data
-wind_file = "./input/wind/dwd_wind_data_2015.csv"
+wind_file = "GUI/pages/input/wind/dwd_wind_data_2015.csv"
 wind_speed_model = "logarithmic"
 density_model = "ideal_gas"
 temperature_model = "linear_gradient"
@@ -72,7 +72,7 @@ obstacle_height = 0
 hellman_exp = None
 
 # PV data
-pv_file = "./input/pv/dwd_pv_data_2015.csv"
+pv_file = "GUI/pages/input/pv/dwd_pv_data_2015.csv"
 module_lib = "SandiaMod"
 module = "Canadian_Solar_CS5P_220M___2009_"
 inverter_lib = "cecinverter"
@@ -158,83 +158,6 @@ user_profile.get_thermal_energy_demand()
 # %% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
 
-#net = pn.panda_four_load_branch()
-
-# %% assign names and types to baseloads for later p and q assignment
-#for bus in net.bus.index:
-
-#    net.load.name[net.load.bus == bus] = net.bus.name[bus] + "_baseload"
-#    net.load.type[net.load.bus == bus] = "baseload"
-
-# %% assign components to random bus names
-
-
-#def test_get_buses_with_components(vpp):
- #   vpp.get_buses_with_components(
-  #      net,
-   #     method="random",
-    #    pv_percentage=pv_percentage,
-     #   hp_percentage=hp_percentage,
-      #  bev_percentage=bev_percentage,
-       # wind_percentage=wind_percentage,
-#        storage_percentage=storage_percentage,
- #   )
-
-
-# %% assign components to the bus names for testing purposes
-
-
-# def test_get_assigned_buses_with_components(
-#     vpp,
-#     buses_with_pv,
-#     buses_with_hp,
-#     buses_with_bev,
-#     buses_with_storage,
-#     buses_with_wind,
-# ):
-
-#     vpp.buses_with_pv = buses_with_pv
-
-#     vpp.buses_with_hp = buses_with_hp
-
-#     vpp.buses_with_bev = buses_with_bev
-
-#     vpp.buses_with_wind = buses_with_wind
-
-#     # storages should only be assigned to buses with pv
-#     vpp.buses_with_storage = buses_with_storage
-
-
-# # %% assign components to the loadbuses
-
-
-# def test_get_loadbuses_with_components(vpp):
-
-#     vpp.get_buses_with_components(
-#         net,
-#         method="random_loadbus",
-#         pv_percentage=pv_percentage,
-#         hp_percentage=hp_percentage,
-#         bev_percentage=bev_percentage,
-#         wind_percentage=wind_percentage,
-#         storage_percentage=storage_percentage,
-#     )
-
-
-# # %% Choose assignment methode for component distribution
-
-# # test_get_buses_with_components(vpp)
-
-# test_get_assigned_buses_with_components(
-#     vpp,
-#     buses_with_pv=["bus3", "bus4", "bus5", "bus6"],
-#     buses_with_hp=["bus4"],
-#     buses_with_bev=["bus5"],
-#     buses_with_storage=["bus5"],
-#     buses_with_wind=["bus1"],
-# )
-
-# # test_get_loadbuses_with_components(vpp)
 
 # %% create components and assign components to the Virtual Powerplant
 
@@ -350,86 +273,6 @@ for bus in vpp.buses_with_wind:
 
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
-# %% create elements in the pandapower.net
 
-# for bus in vpp.buses_with_pv:
-
-#     pp.create_sgen(
-#         net,
-#         bus=net.bus[net.bus.name == bus].index[0],
-#         p_mw=(
-#             vpp.components[bus + "_PV"].module.Impo
-#             * vpp.components[bus + "_PV"].module.Vmpo
-#             / 1000000
-#         ),
-#         name=(bus + "_PV"),
-#         type="PV",
-#     )
-
-# for bus in vpp.buses_with_storage:
-
-#     pp.create_storage(
-#         net,
-#         bus=net.bus[net.bus.name == bus].index[0],
-#         p_mw=0,
-#         max_e_mwh=capacity,
-#         name=(bus + "_storage"),
-#         type="LiIon",
-#     )
-
-# for bus in vpp.buses_with_bev:
-
-#     pp.create_load(
-#         net,
-#         bus=net.bus[net.bus.name == bus].index[0],
-#         p_mw=(vpp.components[bus + "_BEV"].charging_power / 1000),
-#         name=(bus + "_BEV"),
-#         type="BEV",
-#     )
-
-# for bus in vpp.buses_with_hp:
-
-#     pp.create_load(
-#         net,
-#         bus=net.bus[net.bus.name == bus].index[0],
-#         p_mw=(vpp.components[bus + "_HP"].el_power / 1000),
-#         name=(bus + "_HP"),
-#         type="HP",
-#     )
-
-# for bus in vpp.buses_with_wind:
-
-#     pp.create_sgen(
-#         net,
-#         bus=net.bus[net.bus.name == bus].index[0],
-#         p_mw=(
-#             vpp.components[bus + "_Wind"].wind_turbine.nominal_power / 1000000
-#         ),
-#         name=(bus + "_Wind"),
-#         type="WindPower",
-#     )
-
-# %% initialize operator
-
-#operator = Operator(virtual_power_plant=vpp, net=net, target_data=None)
-
-# %% run base_scenario without operation strategies
-
-#net_dict = operator.run_base_scenario(baseload)
-
-# %% extract results from powerflow
-
-#results = operator.extract_results(net_dict)
-#single_result = operator.extract_single_result(
-#    net_dict, res="ext_grid", value="p_mw"
-#)
-
-# %% plot results of powerflow and storage values
-
-#single_result.plot(
-#    figsize=(16, 9), title="ext_grid from single_result function"
-# )
-# operator.plot_results(results)
-# operator.plot_storages()
 df_timeseries, df_no_timeseries = vpp.export_component_timeseries()
 df_timeseries.plot()

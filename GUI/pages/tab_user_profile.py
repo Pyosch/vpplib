@@ -150,7 +150,7 @@ def update_user_profile(n_clicks, identifier, latitude, longitude,
                                 thermal_energy_demand, comfort_factor,
                                 daily_vehicle_usage, building_type, t0):
     if 'submit_user_profile' ==ctx.triggered_id and n_clicks is not None:
-        data_user_profile=pd.DataFrame({'Identifier': identifier,
+        data_user_profile={'Identifier': identifier,
                                           'Latitude': latitude,
                                           'Longitude': longitude,
                                           'Thermal Energy Demand': thermal_energy_demand,
@@ -158,7 +158,7 @@ def update_user_profile(n_clicks, identifier, latitude, longitude,
                                           'Daily Vehicle Usage': daily_vehicle_usage,
                                           'Building Type': building_type,
                                           'T0': t0
-                                          }, index=[0])
-        return data_user_profile.to_dict('records')
+                                          }
+        return data_user_profile
     elif n_clicks is None:
         raise PreventUpdate
