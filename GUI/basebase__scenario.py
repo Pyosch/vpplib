@@ -28,8 +28,8 @@ year = "2015"
 time_freq = "15 min"
 timebase = 15
 index = pd.date_range(start=start, end=end, freq=time_freq)
-temp_days_file = "input/thermal/dwd_temp_days_2015.csv"
-temp_hours_file = "input/thermal/dwd_temp_hours_2015.csv"
+temp_days_file = "/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/thermal/dwd_temp_days_2015.csv"
+temp_hours_file = "/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/thermal/dwd_temp_15min_2015.csv"
 
 # user_profile
 identifier = "bus_1"
@@ -46,7 +46,7 @@ weekend_trip_start = []
 weekend_trip_end = []
 
 
-baseload = pd.read_csv("input/baseload/df_S_15min.csv")
+baseload = pd.read_csv("/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
 baseload.index = pd.date_range(
     start=year, periods=35040, freq=time_freq, name="time"
@@ -62,7 +62,7 @@ fetch_curve = "power_curve"
 data_source = "oedb"
 
 # WindPower ModelChain data
-wind_file = "input/wind/dwd_wind_data_2015.csv"
+wind_file = "/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/wind/dwd_wind_data_2015.csv"
 wind_speed_model = "logarithmic"
 density_model = "ideal_gas"
 temperature_model = "linear_gradient"
@@ -72,7 +72,7 @@ obstacle_height = 0
 hellman_exp = None
 
 # PV data
-pv_file = "input/pv/dwd_pv_data_2015.csv"
+pv_file = "/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/pv/dwd_pv_data_2015.csv"
 module_lib = "SandiaMod"
 module = "Canadian_Solar_CS5P_220M___2009_"
 inverter_lib = "cecinverter"
@@ -166,7 +166,7 @@ for pv in range(num_pv):
     vpp.add_component(
         Photovoltaic(
             unit=unit,
-            identifier=(pv + "_PV"),
+            identifier=(str(pv) + "_PV"),
             environment=environment,
             user_profile=user_profile,
             module_lib=module_lib,
@@ -275,4 +275,4 @@ for bus in vpp.buses_with_wind:
 
 
 df_timeseries, df_no_timeseries = vpp.export_component_timeseries()
-df_timeseries.plot()
+df_timeseries.head()
