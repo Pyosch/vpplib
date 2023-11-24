@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue Jul  2 10:38:17 2019
 
@@ -8,7 +7,7 @@ Created on Tue Jul  2 10:38:17 2019
 import pandas as pd
 import pandapower as pp
 import pandapower.networks as pn
-
+import os
 
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
@@ -20,6 +19,8 @@ from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
 
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # environment
 start = "2015-03-01 00:00:00"
 end = "2015-03-01 23:45:00"
@@ -28,8 +29,8 @@ year = "2015"
 time_freq = "15 min"
 timebase = 15
 index = pd.date_range(start=start, end=end, freq=time_freq)
-temp_days_file = "/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/thermal/dwd_temp_days_2015.csv"
-temp_hours_file = "/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/thermal/dwd_temp_15min_2015.csv"
+temp_days_file = f"{parentdir}/input/thermal/dwd_temp_days_2015.csv"
+temp_hours_file = f"{parentdir}/input/thermal/dwd_temp_15min_2015.csv"
 
 # user_profile
 identifier = "bus_1"
@@ -46,7 +47,7 @@ weekend_trip_start = []
 weekend_trip_end = []
 
 
-baseload = pd.read_csv("/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/baseload/df_S_15min.csv")
+baseload = pd.read_csv(f"{parentdir}/input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
 baseload.index = pd.date_range(
     start=year, periods=35040, freq=time_freq, name="time"
@@ -62,7 +63,7 @@ fetch_curve = "power_curve"
 data_source = "oedb"
 
 # WindPower ModelChain data
-wind_file = "/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/wind/dwd_wind_data_2015.csv"
+wind_file = f"{parentdir}/input/wind/dwd_wind_data_2015.csv"
 wind_speed_model = "logarithmic"
 density_model = "ideal_gas"
 temperature_model = "linear_gradient"
@@ -72,7 +73,7 @@ obstacle_height = 0
 hellman_exp = None
 
 # PV data
-pv_file = "/Users/jean-claudepillemann/Documents/Uni/Master/MGP/vpplib/my_env/lib/python3.10/site-packages/input/pv/dwd_pv_data_2015.csv"
+pv_file = f"{parentdir}/input/pv/dwd_pv_data_2015.csv"
 module_lib = "SandiaMod"
 module = "Canadian_Solar_CS5P_220M___2009_"
 inverter_lib = "cecinverter"
