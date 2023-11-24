@@ -12,6 +12,14 @@ import pandas as pd
 import sqlite3
 from tqdm import tqdm
 
+from vpplib.photovoltaic import Photovoltaic
+from vpplib.battery_electric_vehicle import BatteryElectricVehicle
+from vpplib.heat_pump import HeatPump
+from vpplib.electrical_energy_storage import ElectricalEnergyStorage
+from vpplib.wind_power import WindPower
+from vpplib.combined_heat_and_power import CombinedHeatAndPower
+from vpplib.thermal_energy_storage import ThermalEnergyStorage
+
 class VirtualPowerPlant(object):
     def __init__(self, name):
 
@@ -454,98 +462,43 @@ class VirtualPowerPlant(object):
 
     def export_component_timeseries(self):
 
-        df_timeseries = pd.DataFrame(
-            columns=("time",
-                     "name",
-                     "cop",
-                     "feed_in",
-                     "th_energy")
-        )
-        
-        rows_list = list()
+        ts_dict = dict()
 
         #List to catch components without timeseries. Usually only tes
         no_timeseries_lst = list()
 
         print("Export component timeseries:")
-        for idx in tqdm(self.components[next(iter(self.components.keys()))].timeseries.index):
-            for component in self.components.keys():
+        for component in self.components:
 
-                if '_pv' in component:
+            if isinstance(self.components[component], (Photovoltaic, WindPower)):
 
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                    {"time": str(idx),
-                     "name": component,
-                     "feed_in": (self.components[component].value_for_timestamp(str(idx)) * -1)
-                     })#,
-                     #ignore_index=True)
+                ts_dict[component] = self.components[component].timeseries.loc[:, component]
 
-                elif '_wea' in component:
 
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                    {"time": str(idx),
-                     "name": component,
-                     "feed_in": (self.components[component].value_for_timestamp(str(idx)) * -1)
-                     })#,
-                     #ignore_index=True
-                     #)
+            elif isinstance(self.components[component], BatteryElectricVehicle):
 
-                elif '_bev' in component:
+                ts_dict[component] = self.components[component].timeseries.loc[:,'car_charger']
 
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                        {"time": str(idx),
-                         "name": component,
-                         "feed_in": float(self.components[component].timeseries["at_home"][str(idx)])
-                         })#,
-                     #ignore_index=True
-                     #)
+            elif isinstance(self.components[component], HeatPump):
+                    
+                ts_dict[component] = self.components[component].timeseries.loc[:,'el_demand']
 
-                elif '_hp' in component:
-
-                    # Check if the variable cop exists.
-                    # COP is the same for all heat pumps!
-                    if 'cop' not in locals():
-                        cop = pd.DataFrame(
-                            index = self.components[
-                                next(iter(self.components.keys()))
-                                ].timeseries.index,
-                            columns=["cop"])
-
-                        cop.cop = self.components[component].get_cop().cop
-                        cop.interpolate(inplace=True)
+            elif isinstance(self.components[component], CombinedHeatAndPower):
+                    
+                ts_dict[component] = self.components[component].timeseries.loc[:,'el_demand']
+                
+            elif isinstance(self.components[component], ElectricalEnergyStorage):
                         
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                        {"time": str(idx),
-                         "name": component,
-                         "cop": cop.cop[str(idx)],
-                         "th_energy": self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
-                         })#,
-                     #ignore_index=True
-                     #)
+                    ts_dict[component] = self.components[component].timeseries.loc[:,'residual_load']
 
-                elif '_chp' in component:
+            elif isinstance(self.components[component], ThermalEnergyStorage):
+                # Thermal energy storage has no timeseries
+                no_timeseries_lst.append(component)
 
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                        {"time": str(idx),
-                         "name": component,
-                         "th_energy": self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
-                         })#,
-                     #ignore_index=True
-                     #)
+            else:
+                no_timeseries_lst.append(component)
 
-                elif '_tes' in component:
-                    # Thermal energy storage has no timeseries
-                    no_timeseries_lst.append(component)
-
-                else:
-                    no_timeseries_lst.append(component)
-
-        df_timeseries = pd.DataFrame(rows_list)
+        df_timeseries = pd.DataFrame(ts_dict)
 
         return df_timeseries, no_timeseries_lst
 

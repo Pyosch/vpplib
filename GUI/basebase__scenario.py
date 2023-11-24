@@ -111,7 +111,7 @@ max_power = 4  # kW
 capacity = 4  # kWh
 max_c = 1  # factor between 0.5 and 1.2
 
-# %% define the amount of components in the grid
+# define the amount of components in the grid
 # NOT VALID for all component distribution methods (see line 220-234)
 
 pv_number = 50
@@ -121,7 +121,7 @@ hp_number = 10
 wind_number = 0
 
 num_pv = 5
-# %% environment
+# environment
 
 environment = Environment(
     timebase=timebase,
@@ -137,7 +137,7 @@ environment.get_pv_data(file=pv_file)
 environment.get_mean_temp_days(file=temp_days_file)
 environment.get_mean_temp_hours(file=temp_hours_file)
 
-# %% user profile
+# user profile
 
 user_profile = UserProfile(
     identifier=identifier,
@@ -156,18 +156,18 @@ user_profile = UserProfile(
 
 user_profile.get_thermal_energy_demand()
 
-# %% create instance of VirtualPowerPlant and the designated grid
+# create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
 
 
-# %% create components and assign components to the Virtual Powerplant
+# create components and assign components to the Virtual Powerplant
 
 for pv in range(num_pv):
 
     vpp.add_component(
         Photovoltaic(
             unit=unit,
-            identifier=(str(pv) + "_PV"),
+            identifier=(str(pv) + "_pv"),
             environment=environment,
             user_profile=user_profile,
             module_lib=module_lib,
