@@ -145,7 +145,7 @@ def update_environment(n_clicks, start_date, end_date,
                           timezone, timestep):
     if 'submit_environment_settings' == ctx.triggered_id and n_clicks is not None:
         data_environment={'Start Date': start_date,
-                            'Ende Date': end_date,
+                            'End Date': end_date,
                             'Time Zone': timezone,
                             'Time Step': timestep
                             }
