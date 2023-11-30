@@ -20,30 +20,31 @@ from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
 
 
-def simulation(start_date, end_date, time_zone, time_freq):
+def simulation(store_basic_settings, store_environment, store_user_profile, store_bev,
+               store_pv, store_wind, store_heatpump, store_storage):
 
     parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # environment
-    start = start_date
-    end = end_date
-    timezone = time_zone
-    year = int(start_date[:4])
-    time_freq = time_freq
-    timebase = int(time_freq[:2])*10^9
+    start = store_environment['Start Date']
+    end = store_environment['End Date']
+    timezone = store_environment['Time Zone']
+    year = int(end[:4])
+    time_freq = store_environment['Time Step']
+    timebase = int(time_freq[:2])
     index = pd.date_range(start=start, end=end, freq=time_freq)
     temp_days_file = f"{parentdir}/input/thermal/dwd_temp_days_2015.csv"
     temp_hours_file = f"{parentdir}/input/thermal/dwd_temp_15min_2015.csv"
 
     # user_profile
-    identifier = "bus_1"
-    latitude = 50.941357 #TODO: get value from tab_user_profile
-    longitude = 6.958307
-    yearly_thermal_energy_demand = 12500
-    comfort_factor = None
-    daily_vehicle_usage = None
-    building_type = "DE_HEF33"
-    t_0 = 40
+    identifier = store_user_profile['Identifier']
+    latitude = store_user_profile['Latitude']
+    longitude = store_user_profile['Longitude']
+    yearly_thermal_energy_demand = store_user_profile['Thermal Energy Demand']
+    comfort_factor = store_user_profile['Comfort Factor']
+    daily_vehicle_usage = store_user_profile['Daily Vehicle Usage']
+    building_type = store_user_profile['Building Type']
+    t_0 = store_user_profile['T0']
     week_trip_start = []
     week_trip_end = []
     weekend_trip_start = []
@@ -59,48 +60,48 @@ def simulation(start_date, end_date, time_zone, time_freq):
     unit = "kW"
 
     # WindTurbine data
-    turbine_type = "E-126/4200"
-    hub_height = 135
-    rotor_diameter = 127
+    turbine_type = 'E-126/4200'
+    hub_height = store_wind['Hub Height']
+    rotor_diameter = store_wind['Rotor Diameter']
     fetch_curve = "power_curve"
     data_source = "oedb"
 
     # WindPower ModelChain data
     wind_file = f"{parentdir}/input/wind/dwd_wind_data_2015.csv"
-    wind_speed_model = "logarithmic"
-    density_model = "ideal_gas"
-    temperature_model = "linear_gradient"
-    power_output_model = "power_curve"
-    density_correction = True
-    obstacle_height = 0
+    wind_speed_model = store_wind['Speed Model']
+    density_model = store_wind['Density Model']
+    temperature_model = store_wind['Temperature Model']
+    power_output_model = store_wind['Power Output Model']
+    density_correction = False
+    obstacle_height = store_wind['Obstacle Height']
     hellman_exp = None
 
     # PV data
     pv_file = f"{parentdir}/input/pv/dwd_pv_data_2015.csv"
-    module_lib = "SandiaMod"
-    module = "Canadian_Solar_CS5P_220M___2009_"
-    inverter_lib = "cecinverter"
-    inverter = "ABB__MICRO_0_25_I_OUTD_US_208__208V_"
-    surface_tilt = (20,)
-    surface_azimuth = 200
-    modules_per_string = 2
-    strings_per_inverter = 2
+    module_lib = store_pv['PV Module Library']
+    module = store_pv['PV Module']
+    inverter_lib = store_pv['PV Inverter Library']
+    inverter = store_pv['PV Inverter']
+    surface_tilt = store_pv['PV Surface Tilt']
+    surface_azimuth = store_pv['PV Surface Azimuth']    
+    modules_per_string = store_pv['PV Modules per String']
+    strings_per_inverter = store_pv['PV Strings per Inverter']
     temp_lib = 'sapm'
     temp_model = 'open_rack_glass_glass'
 
     # BEV data
-    battery_max = 16
-    battery_min = 0
-    battery_usage = 1
-    charging_power = 11
-    charge_efficiency_bev = 0.98
+    battery_max = store_bev['max_battery_capacity']
+    battery_min = store_bev['min_battery_capacity']
+    battery_usage = store_bev['battery_usage']
+    charging_power = store_bev['charging_power']
+    charge_efficiency_bev = store_bev['charging_efficiency']
     load_degradation_begin = 0.8
 
     # heat pump data
-    heatpump_type = "Air"
-    heat_sys_temp = 60
-    el_power = 5
-    building_type = "DE_HEF33"
+    heatpump_type = store_heatpump['Type Heatpump']
+    heat_sys_temp = store_heatpump['Heat System Temperature']
+    el_power = store_heatpump['Power']
+    building_type = store_user_profile['Building Type']
     th_power = 3
     ramp_up_time = 0
     ramp_down_time = 0
@@ -108,22 +109,21 @@ def simulation(start_date, end_date, time_zone, time_freq):
     min_stop_time = 0
 
     # storage
-    charge_efficiency_storage = 0.98
-    discharge_efficiency_storage = 0.98
-    max_power = 4  # kW
-    capacity = 4  # kWh
+    charge_efficiency_storage = store_storage['Charging Efficiency']
+    discharge_efficiency_storage = store_storage['Discharging Efficiency']
+    max_power = store_storage['Max. Power']  # kW
+    capacity = store_storage['Max. Capacity']  # kWh
     max_c = 1  # factor between 0.5 and 1.2
 
     # define the amount of components in the grid
     # NOT VALID for all component distribution methods (see line 220-234)
 
-    pv_number = 50
-    storage_number = 50
-    bev_number = 10
-    hp_number = 10
-    wind_number = 0
+    num_pv = store_basic_settings['pv_plants']
+    num_storage = store_basic_settings['storage_units']
+    num_bev = store_basic_settings['bev_number']
+    num_hp = store_basic_settings['hp_number']
+    num_wind = store_basic_settings['wind_number']
 
-    num_pv = 5
     # environment
 
     environment = Environment(
@@ -170,7 +170,7 @@ def simulation(start_date, end_date, time_zone, time_freq):
         vpp.add_component(
             Photovoltaic(
                 unit=unit,
-                identifier=(str(pv) + "_pv"),
+                identifier=("pv_" + str(pv)),
                 environment=environment,
                 user_profile=user_profile,
                 module_lib=module_lib,
@@ -189,12 +189,12 @@ def simulation(start_date, end_date, time_zone, time_freq):
         vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
-    for bus in vpp.buses_with_storage:
+    for units in range(num_storage):
 
         vpp.add_component(
             ElectricalEnergyStorage(
                 unit=unit,
-                identifier=(bus + "_storage"),
+                identifier=("storage_" + str(units)),
                 environment=environment,
                 user_profile=user_profile,
                 capacity=capacity,
@@ -211,12 +211,12 @@ def simulation(start_date, end_date, time_zone, time_freq):
         )
 
 
-    for bus in vpp.buses_with_bev:
+    for bev in range(num_bev):
 
         vpp.add_component(
             BatteryElectricVehicle(
                 unit=unit,
-                identifier=(bus + "_BEV"),
+                identifier=("BEV_" + str(bev)),
                 environment=environment,
                 user_profile=user_profile,
                 battery_max=battery_max,
@@ -231,12 +231,12 @@ def simulation(start_date, end_date, time_zone, time_freq):
         vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
-    for bus in vpp.buses_with_hp:
+    for hp in range(num_hp):
 
         vpp.add_component(
             HeatPump(
                 unit=unit,
-                identifier=(bus + "_HP"),
+                identifier=("HP_" + str(hp)),
                 environment=environment,
                 user_profile=user_profile,
                 heat_pump_type=heatpump_type,
@@ -252,12 +252,12 @@ def simulation(start_date, end_date, time_zone, time_freq):
 
         vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
-    for bus in vpp.buses_with_wind:
+    for wind in range(num_wind):
 
         vpp.add_component(
             WindPower(
                 unit=unit,
-                identifier=(bus + "_Wind"),
+                identifier=("Wind_" + str(wind)),
                 environment=environment,
                 user_profile=user_profile,
                 turbine_type=turbine_type,
@@ -278,5 +278,6 @@ def simulation(start_date, end_date, time_zone, time_freq):
         vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
-    df_timeseries, df_no_timeseries = vpp.export_component_timeseries()
-    df_timeseries.to_csv(f"{parentdir}/input/df_timeseries.csv")
+    df_timeseries=vpp.export_component_timeseries()
+    print(df_timeseries)
+    # df_timeseries.to_csv(f"{parentdir}/input/df_timeseries.csv")

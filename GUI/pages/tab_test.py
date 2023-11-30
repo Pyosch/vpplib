@@ -3,6 +3,8 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from dash.exceptions import PreventUpdate
 import basebase__scenario
+import os
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 layout=dbc.Container([
     dbc.Row([
@@ -29,11 +31,9 @@ layout=dbc.Container([
 def simulate(n_clicks, store_basic_settings, store_environment, store_user_profile, store_bev, 
                     store_pv, store_wind, store_heatpump, store_storage):
     if 'simulate_button' == ctx.triggered_id and n_clicks is not None:
-        start_date=store_environment['Start Date']
-        end_date=store_environment['End Date']
-        time_zone=store_environment['Time Zone']
-        time_freq=store_environment['Time Step']
-        basebase__scenario.simulation(start_date, end_date, time_zone, time_freq)
+        basebase__scenario.simulation(store_basic_settings, store_environment, 
+                                      store_user_profile, store_bev, store_pv, 
+                                      store_wind, store_heatpump, store_storage)
         df=pd.read_csv('input/df_timeseries.csv')
         print(df)
     else:

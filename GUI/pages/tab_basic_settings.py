@@ -86,7 +86,6 @@ def update_basic_settings_store(n_clicks, pv_plants, storage_units,
                  'bev_number': bev_number,
                  'hp_number': hp_number,
                  'wind_number': wind_number}
-        print(data_basic_settings)
         return data_basic_settings
     elif n_clicks is None:
         raise PreventUpdate

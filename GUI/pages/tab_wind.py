@@ -111,7 +111,7 @@ layout=dbc.Container([
                                         ], width=4),
                                         dbc.Col([
                                             dcc.Dropdown(
-                                                ['barometric', 'ideal gas', 'interpolation_extrapolation'],
+                                                ['barometric', 'ideal_gas', 'interpolation_extrapolation'],
                                                 id='dropdown_wind_density_model',
                                                 clearable=True,
                                                 style={'color': 'black',
@@ -127,7 +127,7 @@ layout=dbc.Container([
                                         ], width=4),
                                         dbc.Col([
                                             dcc.Dropdown(
-                                                ['linear gradient', 'interpolation extrapolation'],
+                                                ['linear_gradient', 'interpolation_extrapolation'],
                                                 id='dropdown_wind_temperature_model',
                                                 clearable=True,
                                                 style={'color': 'black',
@@ -143,7 +143,7 @@ layout=dbc.Container([
                                         ], width=4),
                                         dbc.Col([
                                             dcc.Dropdown(
-                                                ['power curve', 'power coefficient curve'],
+                                                ['power_curve', 'power_coefficient_curve'],
                                                 id='dropdown_wind_power_output_model',
                                                 clearable=True,
                                                 style={'color': 'black',

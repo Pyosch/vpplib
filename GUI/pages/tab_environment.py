@@ -98,31 +98,6 @@ dbc.Row([
                                             )
                                     ], width=2)
                                 ],align='center'),
-                            dbc.Row([
-                                dbc.Col([
-                                        html.P('Upload Weather Data')
-                                    ],width=3, 
-                                    ),
-                                dbc.Col([
-                                    dcc.Upload(
-                                        id='upload_weather_data',
-                                        children=dbc.Container([
-                                            'Drag and Drop or ',
-                                            html.A('Select Files')
-                                        ]),
-                                        style={
-                                            'width': 'auto',
-                                            'height': 'auto',
-                                            'lineHeight': '60px',
-                                            'borderWidth': '1px',
-                                            'borderStyle': 'dashed',
-                                            'textAlign': 'center',
-                                            'margin': '10px'
-                                        },
-                                    )
-                                        
-                                    ], width=3)
-                                ], align='center'),
                            dbc.Row([
                                 dbc.Col([
                                     dbc.Button('Submit Settings',

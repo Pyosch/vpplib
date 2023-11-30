@@ -31,7 +31,10 @@ dbc.Row([
                             id='dropdown_pv_module',
                             clearable=True,
                             style={'color': 'black'},
-                            placeholder='e.g. Canadian_Solar_CS5P_220M___2009_'
+                            placeholder='e.g. Canadian_Solar_CS5P_220M___2009_',
+                            options=[
+                                {'label': 'Canadian_Solar_CS5P_220M___2009_', 'value': 'Canadian_Solar_CS5P_220M___2009_'}
+                            ]
                         )
                     ], width=2)
 
@@ -45,7 +48,10 @@ dbc.Row([
                         id='dropdown_pv_inverter_library',
                         clearable=True,
                         style={'color': 'black'},
-                        placeholder='e.g. cecinverter'
+                        placeholder='e.g. cecinverter',
+                        options=[
+                            {'label': 'cecinverter', 'value': 'cecinverter'}
+                        ]
                     )
                     ], width=2)
                 ]),
@@ -58,7 +64,10 @@ dbc.Row([
                             id='dropdown_pv_inverter',
                             clearable=True,
                             style={'color': 'black'},
-                            placeholder='e.g. ABB__MICRO_0_25_I_OUTD_US_208__208V_'
+                            placeholder='e.g. ABB__MICRO_0_25_I_OUTD_US_208__208V_',
+                            options=[
+                                {'label': 'ABB__MICRO_0_25_I_OUTD_US_208__208V_', 'value': 'ABB__MICRO_0_25_I_OUTD_US_208__208V_'}
+                            ]
                         )
                     ], width=2)
                 ]),
