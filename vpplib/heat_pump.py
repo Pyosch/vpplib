@@ -161,7 +161,7 @@ class HeatPump(Component):
         self.cop = pd.DataFrame(
             data=cop_lst,
             index=pd.date_range(
-                self.environment.year, periods=8760, freq="H", name="time"
+                self.environment.year, periods=len(cop_lst), freq=self.environment.time_freq, name="time"
             ),
         )
         self.cop.columns = ["cop"]
