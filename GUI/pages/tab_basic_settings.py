@@ -13,7 +13,8 @@ layout=dbc.Container([
                             dbc.Input(
                                 id='input_pv_plants',
                                 type='number',
-                                placeholder='5')
+                                placeholder='5',
+                                value=5)
                         ],width=1)
                         ],style={'margin-top': '20px'}, align='center'),
                         dbc.Row([
@@ -24,7 +25,8 @@ layout=dbc.Container([
                                 dbc.Input(
                                     id='input_storage_units',
                                     type='number',
-                                    placeholder='2'),
+                                    placeholder='2',
+                                    value=5),
                                 ], width=1)
                             ],align='center'),
                         dbc.Row([
@@ -35,7 +37,8 @@ layout=dbc.Container([
                                 dbc.Input(
                                     id='input_bev_number',
                                     type='number',
-                                    placeholder='3')
+                                    placeholder='3',
+                                    value=5)
                                 ], width=1)
                             ],align='center'),
                         dbc.Row([
@@ -46,7 +49,8 @@ layout=dbc.Container([
                                 dbc.Input(
                                     id='input_hp_number',
                                     type='number',
-                                    placeholder='1'),
+                                    placeholder='1',
+                                    value=5),
                                 ], width=1)
                             ],align='center'),
                         dbc.Row([
@@ -57,7 +61,8 @@ layout=dbc.Container([
                                 dbc.Input(
                                     id='input_wind_number',
                                     type='number',
-                                    placeholder='3'),
+                                    placeholder='3',
+                                    value=5),
                                 ], width=1)    
                         ],align='center'),
                         dbc.Row([

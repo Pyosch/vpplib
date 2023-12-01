@@ -13,7 +13,7 @@ dbc.Row([
                                         id='input_date_start',
                                         type='date',
                                         style={'width': 'auto'},
-                                        placeholder='YYYY-MM-DD',
+                                        value='2015-03-01'
                                         ),
                                 ], width= 3)
                             ],align='center', style={'width':'auto', 'margin-top': '20px'}),
@@ -26,7 +26,7 @@ dbc.Row([
                                         id='input_date_end',
                                         type='date',
                                         style={'width': 'auto'},
-                                        placeholder='YYYY-MM-DD'
+                                        value='2015-03-01'
                                         )
                                     ], width='auto')
                                 ],align='center'),
@@ -72,6 +72,7 @@ dbc.Row([
                                                 'width': '2'
                                                 },
                                         placeholder='Choose a Timezone',
+                                        value='Europe/Berlin UTC+1',
                                         clearable=False
                                         )
                                     ], width='3')
@@ -94,6 +95,7 @@ dbc.Row([
                                                     'width': '3'
                                                     },
                                             placeholder='Choose a Time Step',
+                                            value='15 min',
                                             clearable=False
                                             )
                                     ], width=2)

@@ -16,7 +16,8 @@ dbc.Row([
                                 'color': 'black',
                                 'bgcolor': 'white',
                                 },
-                        placeholder='e.g. Air'
+                        placeholder='e.g. Air',
+                        value='Air'
                     )
                 ], width=2)
             ], style={'margin-top': '20px'}),
@@ -29,7 +30,8 @@ dbc.Row([
                         dbc.Input(
                             id='input_heatpump_system_temperature',
                             type='number',
-                            placeholder='e.g. 20.5 °C'
+                            placeholder='e.g. 20.5 °C',
+                            value=60
                         ),
                         dbc.InputGroupText('°C')
                     ])
@@ -44,7 +46,8 @@ dbc.Row([
                         dbc.Input(
                             id='input_heatpump_electrical_power',
                             type='number',
-                            placeholder='e.g. 5 kW'
+                            placeholder='e.g. 5 kW',
+                            value= 5
                         ),
                         dbc.InputGroupText('kW')
                     ])

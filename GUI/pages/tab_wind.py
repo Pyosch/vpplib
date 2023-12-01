@@ -19,6 +19,7 @@ layout=dbc.Container([
                                                 id='input_wind_turbine_type',
                                                 type='text',
                                                 placeholder='e.g. E-126/4200',
+                                                value='E-126/4200'
                                             )
                                         ], width=4),
                                     ]),
@@ -31,7 +32,8 @@ layout=dbc.Container([
                                                 dbc.Input(
                                                     id='input_wind_hub_height',
                                                     type='number',
-                                                    placeholder='e.g. 135 m'
+                                                    placeholder='e.g. 135 m',
+                                                    value=135
                                                 ),
                                                 dbc.InputGroupText('m')
                                             ])
@@ -46,7 +48,8 @@ layout=dbc.Container([
                                                 dbc.Input(
                                                     id='input_wind_rotor_diameter',
                                                     type='number',
-                                                    placeholder='e.g. 127 m'
+                                                    placeholder='e.g. 127 m',
+                                                    value=127
                                                 ),
                                                 dbc.InputGroupText('m')
                                             ])
@@ -60,7 +63,8 @@ layout=dbc.Container([
                                             dbc.Input( #TODO: What is this? Compare with Screeenshot
                                                 id='input_wind_comfort_factor',
                                                 type='number',
-                                                placeholder='e.g. 0.9'
+                                                placeholder='e.g. 0.9',
+                                                value=0
                                             )
                                         ], width=4)
                                     ]),
@@ -78,6 +82,7 @@ layout=dbc.Container([
                                                        'bgcolor': 'white',
                                                        },
                                                 placeholder='e.g. WindTurbines',
+                                                value='oedb'
                                             )
                                         ], width =4)
                                     ])
@@ -102,6 +107,7 @@ layout=dbc.Container([
                                                        'bgcolor': 'white',
                                                        },
                                                 placeholder='e.g. logarithmic',
+                                                value='logarithmic'
                                             )
                                         ], width=4)
                                     ]),
@@ -118,6 +124,7 @@ layout=dbc.Container([
                                                        'bgcolor': 'white',
                                                        },
                                                 placeholder='e.g. barometric',
+                                                value='ideal_gas'
                                             )
                                         ], width=4)
                                     ]),
@@ -134,6 +141,7 @@ layout=dbc.Container([
                                                        'bgcolor': 'white',
                                                        },
                                                 placeholder='e.g. linear gradient',
+                                                value='linear_gradient'
                                             )
                                         ], width=4)
                                     ]),
@@ -150,6 +158,7 @@ layout=dbc.Container([
                                                        'bgcolor': 'white',
                                                        },
                                                 placeholder='power curve',
+                                                value='power_curve'
                                             )
                                         ], width=4)
                                     ]),
@@ -161,6 +170,7 @@ layout=dbc.Container([
                                             dbc.Switch(
                                                 id='switch_wind_density_correction',
                                                 style={'width': 'auto', 'margin-top': '5%'},
+                                                value=False
                                             )
                                         ])
                                     ]),
@@ -173,7 +183,8 @@ layout=dbc.Container([
                                                 dbc.Input(
                                                     id='input_wind_obstacle_height',
                                                     type='number',
-                                                    placeholder='e.g. 0 m'
+                                                    placeholder='e.g. 0 m',
+                                                    value=0
                                                 ),
                                                 dbc.InputGroupText('m')
                                             ])
@@ -187,7 +198,8 @@ layout=dbc.Container([
                                             dbc.Input( 
                                                 id='input_hellmann_exponent',
                                                 type='text',
-                                                placeholder='e.g. 0.2'
+                                                placeholder='e.g. 0.2',
+                                                value=0
                                             )
                                         ], width=4)
                                     ]),

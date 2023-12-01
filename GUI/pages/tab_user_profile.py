@@ -12,7 +12,8 @@ dbc.Row([
                             dbc.Input(
                                     id='input_identifier',
                                     type='text',
-                                    placeholder='bus 1')
+                                    placeholder='bus_1',
+                                    value='bus_1')
                             ], width=2)
                     ],style={'margin-top': '20px'}),      
                 dbc.Row([
@@ -23,7 +24,8 @@ dbc.Row([
                         dbc.Input(
                                 id='input_latitude',
                                 type='number',
-                                placeholder='e.g. 50.7498321')
+                                placeholder='e.g. 50.7498321',
+                                value=50.7498321)
                         ], width=2)
                     ]),
                 dbc.Row([
@@ -34,7 +36,8 @@ dbc.Row([
                                 dbc.Input(
                                 id='input_longitude',
                                 type='number',
-                                placeholder='e.g. 6.473982')
+                                placeholder='e.g. 6.473982',
+                                value=6.473982)
                             ], width=2)
                     ]),
                 dbc.Row([
@@ -45,7 +48,8 @@ dbc.Row([
                             dbc.InputGroup([
                                 dbc.Input(id='input_thermal_energy_demand',
                                     type='number',
-                                    placeholder='e.g. 10000 kWh'),
+                                    placeholder='e.g. 10000 kWh',
+                                    value=12500),
                                 dbc.InputGroupText('kWh')
                             ])      
                             ], width=2)
@@ -58,7 +62,8 @@ dbc.Row([
                             dbc.Input(
                                     id='input_comfort_factor',
                                     type='number',
-                                    placeholder='e.g. ?')
+                                    placeholder='e.g. ?',
+                                    value=0)
                             ], width=2)
                     ]),
                 dbc.Row([
@@ -70,7 +75,8 @@ dbc.Row([
                             dbc.Input(
                                     id='input_daily_vehicle_usage',
                                     type='number',
-                                    placeholder='e.g. 100 km'),
+                                    placeholder='e.g. 100 km',
+                                    value=0),
                             dbc.InputGroupText('km')
                         ])
                     ], width=2)
@@ -88,7 +94,8 @@ dbc.Row([
                                         'bgcolor': 'white',
                                         'width': '100%'
                                         },
-                                placeholder='Choose a Building Type')
+                                placeholder='Choose a Building Type',
+                                value='DE_HEF33')
                             ], width=3)
                     ]),
                 dbc.Row([
@@ -100,7 +107,8 @@ dbc.Row([
                             dbc.Input(
                                 id='input_t0',
                                 type='number',
-                                placeholder='e.g. 20 °C'),
+                                placeholder='e.g. 20 °C',
+                                value=40),
                             dbc.InputGroupText('°C')])
                             ], width=2)
                     ], align='center'),

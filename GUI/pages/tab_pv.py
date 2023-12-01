@@ -15,6 +15,7 @@ dbc.Row([
                                     'bg-color':'white' 
                                     },
                             placeholder='e.g. SandiaMod',
+                            value='SandiaMod',
                             options=[
                                 {'label': 'SandiaMod', 'value': 'SandiaMod'},
                                 {'label': 'CECMod', 'value': 'CECMod'}
@@ -32,6 +33,7 @@ dbc.Row([
                             clearable=True,
                             style={'color': 'black'},
                             placeholder='e.g. Canadian_Solar_CS5P_220M___2009_',
+                            value='Canadian_Solar_CS5P_220M___2009_',
                             options=[
                                 {'label': 'Canadian_Solar_CS5P_220M___2009_', 'value': 'Canadian_Solar_CS5P_220M___2009_'}
                             ]
@@ -49,6 +51,7 @@ dbc.Row([
                         clearable=True,
                         style={'color': 'black'},
                         placeholder='e.g. cecinverter',
+                        value='cecinverter',
                         options=[
                             {'label': 'cecinverter', 'value': 'cecinverter'}
                         ]
@@ -65,6 +68,7 @@ dbc.Row([
                             clearable=True,
                             style={'color': 'black'},
                             placeholder='e.g. ABB__MICRO_0_25_I_OUTD_US_208__208V_',
+                            value='ABB__MICRO_0_25_I_OUTD_US_208__208V_',
                             options=[
                                 {'label': 'ABB__MICRO_0_25_I_OUTD_US_208__208V_', 'value': 'ABB__MICRO_0_25_I_OUTD_US_208__208V_'}
                             ]
@@ -80,7 +84,8 @@ dbc.Row([
                             dbc.Input(
                                 id='input_pv_surface_tilt',
                                 type='number',
-                                placeholder='e.g. 20°'
+                                placeholder='e.g. 20°',
+                                value=20
                             ),
                             dbc.InputGroupText('°')
                         ])
@@ -95,7 +100,8 @@ dbc.Row([
                             dbc.Input(
                                 id='input_pv_surface_azimuth',
                                 type='number',
-                                placeholder='e.g. 200°'
+                                placeholder='e.g. 200°',
+                                value=200
                             ),
                             dbc.InputGroupText('°')
                         ])
@@ -109,7 +115,8 @@ dbc.Row([
                         dbc.Input(
                             id='input_pv_modules_per_string',
                             type='number',
-                            placeholder='e.g. 6'
+                            placeholder='e.g. 6',
+                            value=6
                         )
                     ], width=2)
                 ]),
@@ -121,7 +128,8 @@ dbc.Row([
                         dbc.Input(
                             id='input_pv_strings_per_inverter',
                             type='number',
-                            placeholder='e.g. 2'
+                            placeholder='e.g. 2',
+                            value=2
                         )
                     ], width=2)
                 ]),
