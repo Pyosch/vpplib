@@ -98,31 +98,6 @@ dbc.Row([
                                             )
                                     ], width=2)
                                 ],align='center'),
-                            dbc.Row([
-                                dbc.Col([
-                                        html.P('Upload Weather Data')
-                                    ],width=3, 
-                                    ),
-                                dbc.Col([
-                                    dcc.Upload(
-                                        id='upload_weather_data',
-                                        children=dbc.Container([
-                                            'Drag and Drop or ',
-                                            html.A('Select Files')
-                                        ]),
-                                        style={
-                                            'width': 'auto',
-                                            'height': 'auto',
-                                            'lineHeight': '60px',
-                                            'borderWidth': '1px',
-                                            'borderStyle': 'dashed',
-                                            'textAlign': 'center',
-                                            'margin': '10px'
-                                        },
-                                    )
-                                        
-                                    ], width=3)
-                                ], align='center'),
                            dbc.Row([
                                 dbc.Col([
                                     dbc.Button('Submit Settings',
@@ -145,7 +120,7 @@ def update_environment(n_clicks, start_date, end_date,
                           timezone, timestep):
     if 'submit_environment_settings' == ctx.triggered_id and n_clicks is not None:
         data_environment={'Start Date': start_date,
-                            'Ende Date': end_date,
+                            'End Date': end_date,
                             'Time Zone': timezone,
                             'Time Step': timestep
                             }

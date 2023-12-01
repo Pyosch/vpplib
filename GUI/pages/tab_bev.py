@@ -103,7 +103,7 @@ def update_bev_settings_store(n_clicks, max_battery_capacity,
                             'min_battery_capacity': min_battery_capacity,
                             'battery_usage': battery_usage,
                             'charging_power': charging_power,
-                            'charging_efficiency': charging_efficiency}
+                            'charging_efficiency': charging_efficiency/100}
         return data_bev_settings
     
     elif n_clicks is None:

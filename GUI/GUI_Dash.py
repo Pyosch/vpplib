@@ -71,15 +71,15 @@ dbc.Row([
         
 ]),
 dbc.Container(id='tab-content'),
-dcc.Store(id='store_basic_settings', data={}, storage_type='memory'),
-dcc.Store(id='store_environment', data={}, storage_type='memory'),
-dcc.Store(id='store_user_profile', data={}, storage_type='memory'),
-dcc.Store(id='store_bev', data={}, storage_type='memory'),
-dcc.Store(id='store_pv', data={}, storage_type='memory'),
-dcc.Store(id='store_wind', data={}, storage_type='memory'),
-dcc.Store(id='store_heatpump', data={}, storage_type='memory'),
-dcc.Store(id='store_storage', data={}, storage_type='memory'),
-dcc.Store(id='store_results', data={}, storage_type='memory'),
+dcc.Store(id='store_basic_settings', data={}, storage_type='session'),
+dcc.Store(id='store_environment', data={}, storage_type='session'),
+dcc.Store(id='store_user_profile', data={}, storage_type='session'),
+dcc.Store(id='store_bev', data={}, storage_type='session'),
+dcc.Store(id='store_pv', data={}, storage_type='session'),
+dcc.Store(id='store_wind', data={}, storage_type='session'),
+dcc.Store(id='store_heatpump', data={}, storage_type='session'),
+dcc.Store(id='store_storage', data={}, storage_type='session'),
+dcc.Store(id='store_results', data={}, storage_type='session'),
 ])
 
 

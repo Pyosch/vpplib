@@ -2,7 +2,9 @@ from dash import dash, dcc, html, callback, Input, Output, State, callback_conte
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash.exceptions import PreventUpdate
-
+import basebase__scenario
+import os
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 layout=dbc.Container([
     dbc.Row([
@@ -26,13 +28,13 @@ layout=dbc.Container([
      Input('store_storage', 'data'),
      ]
 )
-def simulate_button(n_clicks, store_basic_settings, store_environment, store_user_profile, store_bev, 
+def simulate(n_clicks, store_basic_settings, store_environment, store_user_profile, store_bev, 
                     store_pv, store_wind, store_heatpump, store_storage):
     if 'simulate_button' == ctx.triggered_id and n_clicks is not None:
-
-        print(store_basic_settings['pv_plants'])
-
-        return 
-        
+        basebase__scenario.simulation(store_basic_settings, store_environment, 
+                                      store_user_profile, store_bev, store_pv, 
+                                      store_wind, store_heatpump, store_storage)
+        df=pd.read_csv('input/df_timeseries.csv')
+        print(df)
     else:
         raise PreventUpdate
