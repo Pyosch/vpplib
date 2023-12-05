@@ -15,12 +15,12 @@ from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
 
 # Values for environment
-start = "2015-01-01 00:00:00"
-end = "2015-01-14 23:45:00"
-year = "2015"
+start = "2023-12-06 00:00:00"
+end = "2023-12-10 23:45:00"
+year = "2023"
 time_freq = "15 min"
 timestamp_int = 48
-timestamp_str = "2015-01-01 12:00:00"
+timestamp_str = "2023-12-07 12:00:00"
 timebase = 15
 latitude = 50.941357
 longitude = 6.958307

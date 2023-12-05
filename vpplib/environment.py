@@ -14,7 +14,7 @@ import pandas as pd
 import os
 import zoneinfo
 import polars as pl
-import  datetime
+import datetime
 _ = pl.Config.set_tbl_hide_dataframe_shape(True)
 from wetterdienst.provider.dwd.observation import (
     DwdObservationRequest,
@@ -25,7 +25,6 @@ from wetterdienst import Settings
 from pvlib import irradiance
 from pvlib.solarposition import get_solarposition
 import numpy as np
-import collections
 
 class Environment(object):
     def __init__(
@@ -41,7 +40,8 @@ class Environment(object):
         pv_data=[],
         wind_data=[],
         temp_data=[],
-        surpress_output_globally = False
+        surpress_output_globally=False,
+        force_end_time = False
     ):
 
         """
@@ -88,25 +88,27 @@ class Environment(object):
         self.pv_data = pv_data
         self.wind_data = wind_data
         self.temp_data = temp_data
-        self.surpress_output_globally = surpress_output_globally
-        self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
-            self.start, '%Y-%m-%d %H:%M:%S'
-            ).replace(tzinfo = self.timezone)
-        self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(
-            self.end  , '%Y-%m-%d %H:%M:%S'
-            ).replace(tzinfo = self.timezone)
-        self.__internal_start_datetime_utc = (
-            self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()
-            ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
-        self.__internal_end_datetime_utc   = (
-            self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()
-            ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
-        self.__temp_station_metadata = 0 
-        
-        if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
-            raise ValueError("End date must be greater than start date")
-        if self.__internal_start_datetime_utc + datetime.timedelta(hours=1) > self.__internal_end_datetime_utc:
-            raise ValueError("End date must be at least one hour longer than the start date")
+        self.__surpress_output_globally = surpress_output_globally
+        self.__force_end_time = force_end_time
+        if not start is None and not end is None:
+            self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
+                self.start, '%Y-%m-%d %H:%M:%S'
+                ).replace(tzinfo = self.timezone)
+            self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(
+                self.end  , '%Y-%m-%d %H:%M:%S'
+                ).replace(tzinfo = self.timezone)
+            self.__internal_start_datetime_utc = (
+                self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()
+                ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+            self.__internal_end_datetime_utc   = (
+                self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()
+                ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+            self.__temp_station_metadata = 0 
+            
+            if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
+                raise ValueError("End date must be greater than start date")
+            if self.__internal_start_datetime_utc + datetime.timedelta(hours=1) > self.__internal_end_datetime_utc:
+                raise ValueError("End date must be at least one hour longer than the start date")
 
     @property
     def __start_dt_utc(self):
@@ -121,7 +123,7 @@ class Environment(object):
         time_wo_offset = new___start_dt_utc.replace(tzinfo = self.timezone)
         self.__internal_start_datetime_with_class_timezone = time_wo_offset + time_wo_offset.utcoffset()
         self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
-        print("Setted new start time to: ", self.__internal_end_datetime_with_class_timezone) and not self.surpress_output_globally
+        print("Setted new start time to: ", self.__internal_end_datetime_with_class_timezone) and not self.__surpress_output_globally
     
     @property
     def __end_dt_utc(self):
@@ -136,7 +138,7 @@ class Environment(object):
         time_wo_offset = new___end_dt_utc.replace(tzinfo = self.timezone)
         self.__internal_end_datetime_with_class_timezone = time_wo_offset + time_wo_offset.utcoffset()
         self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
-        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.surpress_output_globally
+        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.__surpress_output_globally
         
     @property
     def __start_dt_target_tz(self):
@@ -150,7 +152,7 @@ class Environment(object):
         self.__internal_start_datetime_with_class_timezone = new_start_dt  
         self.__internal_start_datetime_utc = (new_start_dt - new_start_dt.utcoffset()).replace(tzinf = datetime.timezone.utc)
         self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
-        print("Setted new start time to: ", self.__internal_start_datetime_with_class_timezone)  and not self.surpress_output_globally
+        print("Setted new start time to: ", self.__internal_start_datetime_with_class_timezone)  and not self.__surpress_output_globally
         
     @property
     def __end_dt_target_tz(self):
@@ -164,7 +166,7 @@ class Environment(object):
         self.__internal_end_datetime_with_class_timezone = new_end_dt
         self.__internal_end_datetime_utc = (new_end_dt - new_end_dt.utcoffset()).replace(tzinfo = datetime.timezone.utc)
         self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
-        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.surpress_output_globally
+        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.__surpress_output_globally
 
 
 
@@ -497,15 +499,24 @@ class Environment(object):
                 
         df['time_tz'] = timezone_aware_date_list
         df.set_index('time_tz',inplace = True)
-        df.drop('time', axis = 1, inplace = True)
+ 
+        #Drop time column. Use level = 0 if df has MultiIndex to prevent performance warning
+        df.drop('time', axis = 1, inplace = True, level = 0 if isinstance(df.columns, pd.MultiIndex) else None )
         df.index.rename("time", inplace = True)
             
         #Missing data is marked with -999. Replace by NaN
         df.where(cond=(df[df.columns] != -999), other=None, inplace=True)
-        #Fill NaN
-        df.interpolate(inplace=True, limit_area='inside')
+        
+        #Fill NaN - if force_end_time == True keep the missing values at the end
+        df.interpolate(
+            inplace=True, 
+            limit_area = 'inside' if not self.__force_end_time else None)
+        
         #Resample to given resulotion and interpolate over missing values
-        df = df.resample(time_freq).mean().interpolate(method = 'linear', limit_area='inside')
+        #if force_end_time == True keep the missing values at the end
+        df = df.resample(time_freq).mean().interpolate(
+            method = 'linear', 
+            limit_area = 'inside' if not self.__force_end_time else None)
         
         if df.index[-1] > self.__end_dt_target_tz:
             df = df[df.index[0]:self.__end_dt_target_tz]
@@ -606,7 +617,9 @@ class Environment(object):
         return self.__resample_data(pd_sorted_data_for_station)
         
         
-    def __process_mosmix_parameter (self, pd_sorted_data_for_station, dataset, pd_station_metadata, additional_parameter_lst = None):
+    def __process_mosmix_parameter (
+            self, pd_sorted_data_for_station, dataset, pd_station_metadata, additional_parameter_lst = None, estimation_methode_lst = ['disc']
+            ):
         """
             Processes MOSMIX parameters based on the dataset.
 
@@ -620,7 +633,8 @@ class Environment(object):
                 DataFrame containing station metadata.
             additional_parameter_lst : list, optional
                 List of additional parameters, which where retrieved for calculating missing parameters such as dhi dni, to drop from the DataFrame, by default None.
-
+            estimation_methode_lst : list, optional
+                List of estimation methode names, which where used for calculating missing parameters such as dhi dni, by default ['disc'].
             Returns
             -------
             resampled_data : pandas.DataFrame
@@ -646,17 +660,16 @@ class Environment(object):
                 temperature = pd_sorted_data_for_station.temperature)
             """
             Available methods for solar parameter calculation:
-            lst_methodes = ['disc','erbs','dirint','boland']
+             ['disc','erbs','dirint','boland']
             """
-            lst_methodes = ['disc']
-            for methode in lst_methodes:
+            for methode in estimation_methode_lst:
                 calculated_solar_parameter = self.__get_solar_parameter(
                         input_df = pd_sorted_data_for_station, 
                         lat      = pd_station_metadata['latitude' ].values[0], 
                         lon      = pd_station_metadata['longitude'].values[0],
                         height   = pd_station_metadata['height'   ].values[0],
                         methode  = methode,
-                        use_methode_name_in_columns = (len(lst_methodes) > 1))
+                        use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
             
             pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
@@ -680,7 +693,7 @@ class Environment(object):
     
     
     def __get_dwd_data(
-        self, dataset, lat = None, lon = None, user_station_id = None, distance = 30, min_quality_per_parameter = 80, force_end_time = False
+        self, dataset, lat = None, lon = None, user_station_id = None, distance = 30, min_quality_per_parameter = 80
         ):
         """
             Retrieves weather data from the DWD database.
@@ -699,9 +712,7 @@ class Environment(object):
                 Search radius [m] for stations, by default 30.
             min_quality_per_parameter : int, optional
                 Minimum percentage of valid data required for each parameter, by default 80.
-            force_end_time : Bool, optional
-                Flag to surpress the adjustment of the class-end-time if query result is not available for this period, by default False
-
+        
             Returns
             -------
             processed_data : pandas.DataFrame
@@ -728,10 +739,12 @@ class Environment(object):
             - It retrieves weather data for the specified dataset from the DWD database.
             - The function filters stations based on the user-specified station ID or location.
             - It checks the validity of the query result for each station based on the percentage of valid data for each parameter.
-            - If a station with valid data is found, the function processes the data based on the dataset and returns the resampled and processed weather data along with station metadata.
+            - If a station with valid data is found, the function preturns the raw dwd data
          """
-        activate_output = not self.surpress_output_globally
+        activate_output = not self.__surpress_output_globally
 
+        if  self.start is None or self.end is None:
+            raise ValueError("Class instance does not contain start or end time!")
         if (lat is None or lon is None) and user_station_id is None:
             raise ValueError("No location or station-ID given!")
             
@@ -762,9 +775,11 @@ class Environment(object):
         observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
 
         if self.__start_dt_utc <= observation_end_date - datetime.timedelta(hours = 1):
-            print("Using observation database.") and activate_output
-            if self.__end_dt_utc > observation_end_date and not force_end_time:
-                print("End date is in the future.") and activate_output
+            if activate_output:
+                print("Using observation database.") 
+            if self.__end_dt_utc > observation_end_date and not self.__force_end_time:
+                if activate_output:
+                    print("End date is in the future.")
                 self.__end_dt_utc = observation_end_date
 
             #Get weather data for your location from dwd observation database
@@ -782,14 +797,14 @@ class Environment(object):
                 minute = 0 , 
                 second = 0, 
                 microsecond = 0
-                ) + datetime.timedelta(hours = 240)) and not force_end_time:
+                ) + datetime.timedelta(hours = 240)) and not self.__force_end_time:
                 self.__end_dt_utc = time_now.replace(
                     minute = 0, 
                     second = 0, 
                     microsecond = 0
                     )+ datetime.timedelta(hours = 240)
-                
-            print("Using momsix database.") and activate_output
+            if activate_output:  
+                print("Using momsix database.")
             if dataset == 'solar':
                 #dhi is not available for MOSMIX
                 req_parameter_dict.pop("dhi")
@@ -836,7 +851,8 @@ class Environment(object):
         #Check query result for the stations within the defined distance
         for station_id in pd_nearby_stations["station_id"].values:
             station_name  = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]['name'].values[0]
-            print('Checking query result for station ' + station_name, station_id + " ...") and activate_output
+            if activate_output:
+                print('Checking query result for station ' + station_name, station_id + " ...")
             
             #Get query result for the actual station
             wd_unsorted_data_for_station = wd_query_result.filter_by_station_id(station_id=station_id).values.all().df
@@ -856,7 +872,7 @@ class Environment(object):
                 pd_sorted_data_for_station[key] = pd_unsorted_data_for_station.loc[pd_unsorted_data_for_station['parameter'] == req_parameter_dict[key]]['value']
 
             #Fill missing values with NaN, if end time is forced    
-            if pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
+            if pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
                 pd_missing_dates = pd.DataFrame(index = pd.date_range(
                     start = pd_sorted_data_for_station.index[-1] + datetime.timedelta(hours = 1),
                     end   = self.__end_dt_utc,
@@ -895,27 +911,22 @@ class Environment(object):
                 break
         if not valid_station_data:
             raise Exception("No station with vaild data found!")
-        print("Query successful!") and activate_output
-        
-        if isinstance(wd_query_result,DwdObservationRequest):
-           return self.__process_observation_parameter(
-                pd_sorted_data_for_station = pd_sorted_data_for_station, 
-                pd_station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id],
-                dataset = dataset
-                ),pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
-        if isinstance(wd_query_result,DwdMosmixRequest):
-           return self.__process_mosmix_parameter(
-                pd_sorted_data_for_station = pd_sorted_data_for_station, 
-                dataset = dataset, 
-                pd_station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id],
-                additional_parameter_lst = additional_parameter_lst if 'additional_parameter_lst' in locals() else None
-                ),pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
-    
+        if activate_output:
+            print("Query successful!")
+            
+        station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
+        station_metadata ['station_type'] = 'OBSERVATION' if isinstance(wd_query_result,DwdObservationRequest) else 'MOSMIX',
+            
+        return (
+            pd_sorted_data_for_station,
+            station_metadata,
+            additional_parameter_lst if 'additional_parameter_lst' in locals() else None )
+       
     def get_dwd_pv_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, force_end_time = False
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, estimation_methode_lst = ['disc']
         ):
         """
-        Retrieves solar weather data from the DWD database.
+        Retrieves solar weather data from the DWD database and processes it.
 
         Parameters
         ----------
@@ -929,9 +940,7 @@ class Environment(object):
             Search radius [m] for stations, by default 30.
         min_quality_per_parameter : int, optional
             Minimum percentage of valid data required for each parameter, by default 80.
-        force_end_time : bool, optional
-            Flag to suppress the adjustment of the class-end-time if the query result is not available for this period, by default False.
-
+        
         Returns
         -------
         station_metadata : pandas.DataFrame
@@ -941,22 +950,37 @@ class Environment(object):
             - The query result is saved in class variable pv_data  
             - Station metadate is not saved in class      
     """
-        self.pv_data, station_metadata  = self.__get_dwd_data(
-            dataset = 'solar', 
+        dataset = 'solar'
+        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+            dataset = dataset, 
             lat = lat, 
             lon = lon, 
             user_station_id = station_id,
             distance = distance, 
-            min_quality_per_parameter = min_quality_per_parameter,
-            force_end_time = force_end_time
-            )
+            min_quality_per_parameter = min_quality_per_parameter
+            )    
+        if station_metadata.station_type.iloc[0] == 'OBSERVATION':
+            self.pv_data = self.__process_observation_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
+        elif station_metadata.station_type.iloc[0] == 'MOSMIX':
+            self.pv_data = self.__process_mosmix_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset,
+                 additional_parameter_lst = additional_parameter_lst,
+                 estimation_methode_lst = estimation_methode_lst
+                 )
+            
         return station_metadata
 
     def get_dwd_wind_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, force_end_time = False
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
         ):
         """
-        Retrieves wind weather data from the DWD database.
+        Retrieves wind weather data from the DWD database and processes it.
 
         Parameters
         ----------
@@ -970,9 +994,7 @@ class Environment(object):
             Search radius [m] for stations, by default 30.
         min_quality_per_parameter : int, optional
             Minimum percentage of valid data required for each parameter, by default 80.
-        force_end_time : bool, optional
-            Flag to suppress the adjustment of the class-end-time if the query result is not available for this period, by default False.
-
+       
         Returns
         -------
         station_metadata : pandas.DataFrame
@@ -982,22 +1004,34 @@ class Environment(object):
             - The query result is saved in class variable wind_data  
             - Station meta data is not saved in class      
         """
-        self.wind_data, station_metadata = self.__get_dwd_data(
-            dataset = 'wind', 
+        dataset = 'wind'
+        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+            dataset = dataset, 
             lat = lat, 
-            lon = lon,
+            lon = lon, 
             user_station_id = station_id,
             distance = distance, 
-            min_quality_per_parameter = min_quality_per_parameter,
-            force_end_time = force_end_time
-            )
+            min_quality_per_parameter = min_quality_per_parameter
+            )    
+        if station_metadata.station_type.iloc[0] == 'OBSERVATION': 
+            self.wind_data = self.__process_observation_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
+        elif station_metadata.station_type.iloc[0] == 'MOSMIX': 
+            self.wind_data = self.__process_mosmix_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
         return station_metadata
 
     def get_dwd_temp_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, force_end_time = False
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
         ):
         """
-        Retrieves temperature weather data from the DWD database.
+        Retrieves temperature weather data from the DWD database and processes it.
 
         Parameters
         ----------
@@ -1011,9 +1045,7 @@ class Environment(object):
             Search radius [m] for stations, by default 30.
         min_quality_per_parameter : int, optional
             Minimum percentage of valid data required for each parameter, by default 80.
-        force_end_time : bool, optional
-            Flag to suppress the adjustment of the class-end-time if the query result is not available for this period, by default False.
-
+        
         Returns
         -------
         station_metadata : pandas.DataFrame
@@ -1023,23 +1055,35 @@ class Environment(object):
             - The query result is saved in class variable temp_data  
             - Station meta data is saved in class variable __temp_station_metadata for usage in get_dwd_mean_temp_hours / get_dwd_mean_temp_days
         """
-        self.temp_data, self.__temp_station_metadata = self.__get_dwd_data(
-            dataset = 'air', 
+        dataset = 'air'
+        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+            dataset = dataset, 
             lat = lat, 
-            lon = lon,
+            lon = lon, 
             user_station_id = station_id,
             distance = distance, 
-            min_quality_per_parameter = min_quality_per_parameter,
-            force_end_time = force_end_time
-            )
+            min_quality_per_parameter = min_quality_per_parameter
+            )    
+        if station_metadata.station_type.iloc[0] == 'OBSERVATION':
+            self.temp_data = self.__process_observation_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
+        elif station_metadata.station_type.iloc[0] == 'MOSMIX': 
+            self.temp_data = self.__process_mosmix_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
         return self.__temp_station_metadata
     
     def get_dwd_mean_temp_hours(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, force_end_time = False
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
         ):
         """
         Resamples temperature data to horly resulution. 
-        If there are no temperature data in temp_data, it retrieves temperature weather data from the DWD database.
+        If there are no temperature data in temp_data, it retrieves temperature weather data from the DWD database and processes it.
 
         Parameters
         ----------
@@ -1053,9 +1097,7 @@ class Environment(object):
             Search radius [m] for stations, by default 30.
         min_quality_per_parameter : int, optional
             Minimum percentage of valid data required for each parameter, by default 80.
-        force_end_time : bool, optional
-            Flag to suppress the adjustment of the class-end-time if the query result is not available for this period, by default False.
-
+       
         Returns
         -------
         station_metadata : pandas.DataFrame
@@ -1071,18 +1113,17 @@ class Environment(object):
                 lon = lon,
                 station_id = station_id,
                 distance = distance, 
-                min_quality_per_parameter = min_quality_per_parameter,
-                force_end_time = force_end_time
+                min_quality_per_parameter = min_quality_per_parameter
                 )
         self.mean_temp_hours = self.__resample_data(self.temp_data,'60 min')
         return self.__temp_station_metadata
     
     def get_dwd_mean_temp_days(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, force_end_time = False
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
         ):
         """
         Resamples temperature data to daily resulution. 
-        If there are no temperature data in temp_data, it retrieves temperature weather data from the DWD database.
+        If there are no temperature data in temp_data, it retrieves temperature weather data from the DWD database and processes is.
 
         Parameters
         ----------
@@ -1096,9 +1137,7 @@ class Environment(object):
             Search radius [m] for stations, by default 30.
         min_quality_per_parameter : int, optional
             Minimum percentage of valid data required for each parameter, by default 80.
-        force_end_time : bool, optional
-            Flag to suppress the adjustment of the class-end-time if the query result is not available for this period, by default False.
-
+       
         Returns
         -------
         station_metadata : pandas.DataFrame
@@ -1114,11 +1153,10 @@ class Environment(object):
                 lon = lon,
                 station_id = station_id,
                 distance = distance, 
-                min_quality_per_parameter = min_quality_per_parameter,
-                force_end_time = force_end_time
+                min_quality_per_parameter = min_quality_per_parameter
                 )
         self.mean_temp_days = self.__resample_data(self.temp_data,'1440 min')
-        return self.__temp_station_metadataN
+        return self.__temp_station_metadata
         
 
 

@@ -1,0 +1,117 @@
+import schedule
+import time
+import datetime
+import pandas as pd
+from vpplib.environment import Environment
+import os
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+"""
+Change your settings here 
+"""
+path_output = dir_path + "/dwd_results/"    
+distance = 100
+surpress_output_globally = True
+force_end_time = True
+min_quality_per_parameter = 50
+run_time_hours = 240
+dict_locations = {
+    'Bedburg':      {'latitude': 51.01, 'longitude': 6.31},
+    'Köln':         {'latitude': 50.97, 'longitude': 6.97},
+    'Essen':        {'latitude': 51.40, 'longitude': 6.97},  
+}
+
+
+if not os.path.exists(path_output):
+    os.mkdir(path_output)
+for key in dict_locations:
+    dir_path_key = path_output +'/'+ str(key)
+    if not os.path.exists(dir_path_key):
+        os.mkdir(dir_path_key)
+         
+first_run = True
+time_start_dwd = Environment().get_time_from_dwd().replace(tzinfo=None)
+
+end_time_dwd = time_start_dwd + datetime.timedelta(hours = run_time_hours + 2)
+shedule_time = datetime.datetime.now() - datetime.timedelta(minutes = -2)
+str_shedule_time = str(shedule_time.hour).zfill(2) + ':00' # + str(shedule_time.minute).zfill(2)
+
+print("Shedule time: " + str_shedule_time)
+print("----------------------------------")
+
+def create_csv(meta_1,data_1,meta_2,data_2,out_path):
+    
+    meta_1_sorted = pd.DataFrame(index = meta_1.to_dict(orient='dict').keys(), data =meta_1.to_dict(orient='dict').values())
+    concat_df_1 = pd.concat([meta_1_sorted, data_1], axis=1)
+    
+    meta_2_sorted = pd.DataFrame(index = meta_2.to_dict(orient='dict').keys(), data =meta_2.to_dict(orient='dict').values())
+    concat_df_2 = pd.concat([meta_2_sorted, data_2], axis=1)
+    
+    out_df = pd.concat([concat_df_1,concat_df_2], axis = 1)
+    
+    out_df.to_csv(out_path, sep = ';')
+
+def run_get_dwd_data(test_run = False):
+    global first_run
+    if test_run:
+        print("Start test run")
+    time_now_dwd = Environment().get_time_from_dwd().replace(tzinfo=None)
+    print(time_now_dwd)
+    
+    for location in dict_locations:
+        print("Query weather data for " + str(location))
+        latitude  = dict_locations[location]['latitude']
+        longitude = dict_locations[location]['longitude']
+        if not first_run and not test_run:
+            """OBS: """
+            environment = Environment(start=str(time_start_dwd), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
+            
+            pv_obs_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
+            wind_obs_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
+            if not test_run:
+                obs_out = path_output +'obs_'+ str(time_now_dwd.year) + str(time_now_dwd.month) + str(time_now_dwd.day) + str(time_now_dwd.hour) +  str(time_now_dwd.minute) + '.csv'
+                create_csv(
+                    pv_obs_meta,
+                    environment.pv_data,
+                    wind_obs_meta,
+                    environment.wind_data,
+                    obs_out)
+        
+        """MOSMIX: """
+        environment = Environment(start=str(time_now_dwd), end=str(end_time_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
+       
+        pv_mos_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter, estimation_methode_lst=['disc','erbs','dirint','boland'])
+        wind_mos_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
+        
+        if not test_run:
+            mos_out = path_output +'mos_'+ str(time_now_dwd.year) + str(time_now_dwd.month) + str(time_now_dwd.day) + str(time_now_dwd.hour) +  str(time_now_dwd.minute) + '.csv'
+            create_csv(
+                pv_mos_meta,
+                environment.pv_data,
+                wind_mos_meta,
+                environment.wind_data,
+                mos_out)
+    
+    if not test_run:
+        first_run = False
+        if time_now_dwd > end_time_dwd - datetime.timedelta(hours = 2):
+            print("End period reached")
+            exit()
+        else:
+            print("Next run: " + str(time_now_dwd.date() + datetime.timedelta(days=1)) + ' ' + str_shedule_time)
+    else:
+        print("Test run successful")
+        print("----------------------------------")
+    
+
+run_get_dwd_data(test_run=True)
+# Schedule the job to run once a day at a specific time
+schedule.every().day.at(str_shedule_time).do(run_get_dwd_data)
+
+#First run
+run_get_dwd_data()
+
+# Keep the script running
+while True:
+    schedule.run_pending()
+    time.sleep(60)

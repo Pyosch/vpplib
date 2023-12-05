@@ -10,7 +10,7 @@ changed.
 """
 
 import matplotlib.pyplot as plt
-
+import datetime
 from vpplib.environment import Environment
 from vpplib.wind_power import WindPower
 
@@ -22,7 +22,6 @@ latitude = 50.8646
 longitude = 7.1575
 #timezone = "Europe/Berlin"
 timestamp_int = 12
-timestamp_str = "2023-11-09 12:00:00"
 
 # create environment and load wind data
 """CSV
@@ -34,15 +33,16 @@ environment.get_wind_data(
 """
 
 """OBSERVATION"""
-timestamp_str = "2015-11-09 12:00:00"
-environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
+timestamp_str = "2015-01-09 12:00:00"
+environment = Environment(start="2015-01-01 00:00:00", end="2015-01-31 23:45:00")
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
 
 
 """MOSMIX:
-#Change timestamp_str and start time to a date in the future
-timestamp_str = "2023-11-17 12:00:00"
-environment = Environment(start="2023-11-16 00:00:00", end="2025-12-31 23:45:00")
+time_now = Environment().get_time_from_dwd().replace(tzinfo=None)
+#timestamp_str = "2023-12-07 12:00:00"
+timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
+environment = Environment(start=str(time_now), end=str(time_now + datetime.timedelta(hours = 240)))
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
 """
 
