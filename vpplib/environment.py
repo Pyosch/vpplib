@@ -41,7 +41,8 @@ class Environment(object):
         wind_data=[],
         temp_data=[],
         surpress_output_globally=False,
-        force_end_time = False
+        force_end_time = False,
+        use_timezone_aware_time_index = False
     ):
 
         """
@@ -90,6 +91,7 @@ class Environment(object):
         self.temp_data = temp_data
         self.__surpress_output_globally = surpress_output_globally
         self.__force_end_time = force_end_time
+        self.__use_timezone_aware_time_index = use_timezone_aware_time_index
         if not start is None and not end is None:
             self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
                 self.start, '%Y-%m-%d %H:%M:%S'
@@ -485,26 +487,25 @@ class Environment(object):
             - Missing data at the end of the dataframe is not replaced -> NaN
             - The resulting DataFrame is truncated to match the target end datetime if necessary.
             - The columns are sorted alphabetically and rounded to two decimal places.
+            - The resulting DataFrame contains timestamps with timezoneinfo in class timezone when __use_timezone_aware_time_index == True
+                Otherwise timezoneinfo is not given but times are in class timezone
         """
         if time_freq is None:
             time_freq =  self.time_freq
-        df.index.rename("time", inplace=True)
         
-        df.reset_index(inplace=True)
-        timezone_aware_date_list = list()
-        for time in df.time:
-            timezone_aware_date_list.append(
-                time.tz_convert(self.timezone)
-                )
-                
-        df['time_tz'] = timezone_aware_date_list
-        df.set_index('time_tz',inplace = True)
- 
-        #Drop time column. Use level = 0 if df has MultiIndex to prevent performance warning
-        df.drop('time', axis = 1, inplace = True, level = 0 if isinstance(df.columns, pd.MultiIndex) else None )
-        df.index.rename("time", inplace = True)
+        #Convert UTC timestamps to class timezone
+        if df.index[0].tzinfo != None:
+            timezone_aware_date_list = list()
+            for time in df.index:
+                timezone_aware_date_list.append(
+                    time.tz_convert(self.timezone)
+                    )     
+            df['time_tz'] = timezone_aware_date_list
+            df.set_index('time_tz',inplace = True)
+            df.index.rename("time", inplace = True)
+        
             
-        #Missing data is marked with -999. Replace by NaN
+        #Missing dwd data is marked with -999. Replace by NaN
         df.where(cond=(df[df.columns] != -999), other=None, inplace=True)
         
         #Fill NaN - if force_end_time == True keep the missing values at the end
@@ -518,9 +519,27 @@ class Environment(object):
             method = 'linear', 
             limit_area = 'inside' if not self.__force_end_time else None)
         
-        if df.index[-1] > self.__end_dt_target_tz:
-            df = df[df.index[0]:self.__end_dt_target_tz]
-        
+        #Remove timestamps which are not needed
+        #For timezone aware timestamps:
+        if df.index[0].tzinfo != None:
+            if df.index[-1] > self.__end_dt_target_tz:
+                df = df[df.index[0]:self.__end_dt_target_tz]
+        #For timezone unaware timestamps:
+        else:
+            if df.index[-1] > self.__end_dt_target_tz.replace(tzinfo=None):
+                df = df[df.index[0]:self.__end_dt_target_tz.replace(tzinfo=None)]
+                
+        #Remove timezone info    
+        if not self.__use_timezone_aware_time_index and df.index[0].tzinfo != None:
+            timezone_unaware_date_list = list()
+            for time in df.index:
+                timezone_unaware_date_list.append(
+                    time.replace(tzinfo = None)
+                    )
+            df['time_wo_tz'] = timezone_unaware_date_list
+            df.set_index('time_wo_tz',inplace = True)
+            df.index.rename("time", inplace = True)
+            
         df = df.reindex(sorted(df.columns), axis=1)
         df = round(df,2)
         return df

@@ -32,11 +32,11 @@ environment.get_wind_data(
 )
 """
 
-"""OBSERVATION"""
+"""OBSERVATION
 timestamp_str = "2015-01-09 12:00:00"
 environment = Environment(start="2015-01-01 00:00:00", end="2015-01-31 23:45:00")
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
-
+"""
 
 """MOSMIX:
 time_now = Environment().get_time_from_dwd().replace(tzinfo=None)

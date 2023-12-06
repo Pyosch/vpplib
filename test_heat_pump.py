@@ -15,7 +15,7 @@ from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
 
 # Values for environment
-start = "2023-12-06 00:00:00"
+start = "2023-12-01 00:00:00"
 end = "2023-12-10 23:45:00"
 year = "2023"
 time_freq = "15 min"
