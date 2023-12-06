@@ -14,7 +14,7 @@ distance = 100
 surpress_output_globally = True
 force_end_time = True
 min_quality_per_parameter = 50
-run_time_hours = 240
+run_time_hours = 240 #should be max 240 hours
 dict_locations = {
     'Bedburg':      {'latitude': 51.01, 'longitude': 6.31},
     'Köln':         {'latitude': 50.97, 'longitude': 6.97},
@@ -30,16 +30,22 @@ for key in dict_locations:
         os.mkdir(dir_path_key)
          
 first_run = True
-time_start_dwd = Environment().get_time_from_dwd().replace(tzinfo=None)
+#Get actual time from dwd server (UTC)
+time_start = Environment().get_time_from_dwd().replace(tzinfo=None)
+#Set forecast end time
+forecast_end_time = time_start + datetime.timedelta(hours = run_time_hours + 2)
 
-end_time_dwd = time_start_dwd + datetime.timedelta(hours = run_time_hours + 2)
-shedule_time = datetime.datetime.now() - datetime.timedelta(minutes = -2)
+#Set shedule time for daily run. First run triggert by run_get_dwd_data() so the first shedule run is now+23h58min
+shedule_time = datetime.datetime.now() + datetime.timedelta(hours=23, minutes = 58)
 str_shedule_time = str(shedule_time.hour).zfill(2) + ':00' # + str(shedule_time.minute).zfill(2)
 
 print("Shedule time: " + str_shedule_time)
 print("----------------------------------")
 
 def create_csv(meta_1,data_1,meta_2,data_2,out_path):
+    """
+    create csv file with meta header and data
+    """
     
     meta_1_sorted = pd.DataFrame(index = meta_1.to_dict(orient='dict').keys(), data =meta_1.to_dict(orient='dict').values())
     concat_df_1 = pd.concat([meta_1_sorted, data_1], axis=1)
@@ -64,7 +70,7 @@ def run_get_dwd_data(test_run = False):
         longitude = dict_locations[location]['longitude']
         if not first_run and not test_run:
             """OBS: """
-            environment = Environment(start=str(time_start_dwd), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
+            environment = Environment(start=str(time_start), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
             
             pv_obs_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
             wind_obs_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
@@ -78,7 +84,7 @@ def run_get_dwd_data(test_run = False):
                     obs_out)
         
         """MOSMIX: """
-        environment = Environment(start=str(time_now_dwd), end=str(end_time_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
+        environment = Environment(start=str(time_now_dwd), end=str(forecast_end_time),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
        
         pv_mos_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter, estimation_methode_lst=['disc','erbs','dirint','boland'])
         wind_mos_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
@@ -94,7 +100,7 @@ def run_get_dwd_data(test_run = False):
     
     if not test_run:
         first_run = False
-        if time_now_dwd > end_time_dwd - datetime.timedelta(hours = 2):
+        if time_now_dwd > forecast_end_time - datetime.timedelta(hours = 2):
             print("End period reached")
             exit()
         else:

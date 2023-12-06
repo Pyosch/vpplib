@@ -41,7 +41,7 @@ class Environment(object):
         wind_data=[],
         temp_data=[],
         surpress_output_globally=False,
-        force_end_time = False,
+        force_end_time = True,
         use_timezone_aware_time_index = False
     ):
 

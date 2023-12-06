@@ -22,10 +22,6 @@ zoneinfo.available_timezones()
 
 latitude = 51.4
 longitude = 6.97
-"""
-latitude = 50.941357
-longitude = 6.958307
-"""
 identifier = "Cologne"
 timestamp_int = 48
 """CSV
