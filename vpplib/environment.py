@@ -14,7 +14,7 @@ import pandas as pd
 import os
 import zoneinfo
 import polars as pl
-import  datetime
+import datetime
 _ = pl.Config.set_tbl_hide_dataframe_shape(True)
 from wetterdienst.provider.dwd.observation import (
     DwdObservationRequest,
@@ -25,7 +25,6 @@ from wetterdienst import Settings
 from pvlib import irradiance
 from pvlib.solarposition import get_solarposition
 import numpy as np
-import collections
 
 class Environment(object):
     def __init__(
@@ -41,7 +40,9 @@ class Environment(object):
         pv_data=[],
         wind_data=[],
         temp_data=[],
-        surpress_output_globally = False
+        surpress_output_globally=False,
+        force_end_time = False,
+        use_timezone_aware_time_index = False
     ):
 
         """
@@ -88,14 +89,28 @@ class Environment(object):
         self.pv_data = pv_data
         self.wind_data = wind_data
         self.temp_data = temp_data
-        self.surpress_output_globally = surpress_output_globally
-        self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(self.start, '%Y-%m-%d %H:%M:%S').replace(tzinfo = self.timezone)
-        self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(self.end  , '%Y-%m-%d %H:%M:%S').replace(tzinfo = self.timezone)
-        self.__internal_start_datetime_utc = (self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
-        self.__internal_end_datetime_utc   = (self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()    ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
-        
-        if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
-            raise Exception("End date must be greater than start date")
+        self.__surpress_output_globally = surpress_output_globally
+        self.__force_end_time = force_end_time
+        self.__use_timezone_aware_time_index = use_timezone_aware_time_index
+        if not start is None and not end is None:
+            self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
+                self.start, '%Y-%m-%d %H:%M:%S'
+                ).replace(tzinfo = self.timezone)
+            self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(
+                self.end  , '%Y-%m-%d %H:%M:%S'
+                ).replace(tzinfo = self.timezone)
+            self.__internal_start_datetime_utc = (
+                self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()
+                ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+            self.__internal_end_datetime_utc   = (
+                self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()
+                ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+            self.__temp_station_metadata = 0 
+            
+            if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
+                raise ValueError("End date must be greater than start date")
+            if self.__internal_start_datetime_utc + datetime.timedelta(hours=1) > self.__internal_end_datetime_utc:
+                raise ValueError("End date must be at least one hour longer than the start date")
 
     @property
     def __start_dt_utc(self):
@@ -104,13 +119,13 @@ class Environment(object):
     @__start_dt_utc.setter
     def __start_dt_utc(self, new___start_dt_utc):
         if new___start_dt_utc.tzinfo != datetime.timezone.utc:
-            raise Exception('@__start_dt_utc.setter: new time not given in utc')
+            raise ValueError('@__start_dt_utc.setter: new time not given in utc')
         new___start_dt_utc = new___start_dt_utc.replace(microsecond = 0)
         self.__internal_start_datetime_utc = new___start_dt_utc
         time_wo_offset = new___start_dt_utc.replace(tzinfo = self.timezone)
         self.__internal_start_datetime_with_class_timezone = time_wo_offset + time_wo_offset.utcoffset()
         self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
-        print("Setted new start time to: ", self.__internal_end_datetime_with_class_timezone) and not self.surpress_output_globally
+        print("Setted new start time to: ", self.__internal_end_datetime_with_class_timezone) and not self.__surpress_output_globally
     
     @property
     def __end_dt_utc(self):
@@ -119,13 +134,13 @@ class Environment(object):
     @__end_dt_utc.setter
     def __end_dt_utc(self, new___end_dt_utc):
         if new___end_dt_utc.tzinfo != datetime.timezone.utc:
-            raise Exception('@__end_dt_utc.setter: new time not given in utc')
+            raise ValueError('@__end_dt_utc.setter: new time not given in utc')
         new___end_dt_utc = new___end_dt_utc.replace(microsecond=0)
         self.__internal_end_datetime_utc = new___end_dt_utc
         time_wo_offset = new___end_dt_utc.replace(tzinfo = self.timezone)
         self.__internal_end_datetime_with_class_timezone = time_wo_offset + time_wo_offset.utcoffset()
         self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
-        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.surpress_output_globally
+        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.__surpress_output_globally
         
     @property
     def __start_dt_target_tz(self):
@@ -134,12 +149,12 @@ class Environment(object):
     @__start_dt_target_tz.setter
     def __start_dt_target_tz(self, new_start_dt):
         if new_start_dt.tzinfo != self.timezone:
-            raise Exception('@__start_dt_target_tz.setter: new time not given in target timezone')
+            raise ValueError('@__start_dt_target_tz.setter: new time not given in target timezone')
         new_start_dt = new_start_dt.replace(microsecond = 0)
         self.__internal_start_datetime_with_class_timezone = new_start_dt  
         self.__internal_start_datetime_utc = (new_start_dt - new_start_dt.utcoffset()).replace(tzinf = datetime.timezone.utc)
         self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
-        print("Setted new start time to: ", self.__internal_start_datetime_with_class_timezone)  and not self.surpress_output_globally
+        print("Setted new start time to: ", self.__internal_start_datetime_with_class_timezone)  and not self.__surpress_output_globally
         
     @property
     def __end_dt_target_tz(self):
@@ -148,12 +163,12 @@ class Environment(object):
     @__end_dt_target_tz.setter
     def __end_dt_target_tz(self, new_end_dt):
         if new_end_dt.tzinfo != self.timezone:
-            raise Exception('@__end_dt_target_tz.setter: new time not given in target timezone')
+            raise ValueError('@__end_dt_target_tz.setter: new time not given in target timezone')
         new_end_dt = new_end_dt.replace(microsecond=0)
         self.__internal_end_datetime_with_class_timezone = new_end_dt
         self.__internal_end_datetime_utc = (new_end_dt - new_end_dt.utcoffset()).replace(tzinfo = datetime.timezone.utc)
         self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
-        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.surpress_output_globally
+        print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.__surpress_output_globally
 
 
 
@@ -248,9 +263,46 @@ class Environment(object):
             parameter  = "wind_speed",
             resolution = DwdObservationResolution.HOURLY,
         )
-        return wd_time_result.now
+        return wd_time_result.now.replace(second=0,microsecond=0)
         
-    def __get_solar_parameter (self, input_df, lat, lon, height, methode = 'disc'):
+    def __get_solar_parameter (self, input_df, lat, lon, height, methode = 'disc', use_methode_name_in_columns = False):
+        """
+            Calculates solar parameters based on the given method by using pvlib estimation modells.
+
+            Parameters
+            ----------
+            input_df : pandas.DataFrame
+                Input DataFrame containing weather data (temperature, drew_point, pressure, ghi).
+            lat : float
+                Latitude of the location.
+            lon : float
+                Longitude of the location.
+            height : float
+                Altitude or height of the location.
+            method : str, optional
+                Method for solar parameter calculation (default is 'disc').
+                Options: 'disc', 'erbs', 'dirint', 'boland'.
+            use_method_name_in_columns : bool, optional
+                If True, method name is included in the column names of the output DataFrame (default is False).
+
+            Returns
+            -------
+            out_df : pandas.DataFrame
+                DataFrame with calculated solar parameters.
+                Columns include 'dni', 'dhi'.
+                The DataFrame has the same index as the input_df.
+
+            Notes
+            -----
+            - The input_df should contain necessary weather data columns. The Units are :
+                index (time)    [datetime utc]
+                'ghi'           [W/m2]
+                'temperature'   [C]
+                'drew_point'    [C]
+                'pressure'      [Pa]
+            - Solar zenith angles and other solar position parameters are calculated using the get_solarposition function.
+            - The method parameter determines the algorithm used for solar parameter calculation.
+        """
         df             = input_df.copy()
         df.temperature = df.temperature - 273.15
         df.drew_point  = df.drew_point - 273.15
@@ -321,12 +373,45 @@ class Environment(object):
                             max_zenith      = 87
                             )
             out_df = out_boland.drop(['kt'], axis = 1)
+        
+        #Add methode to column name of the parameters
+        if use_methode_name_in_columns: out_df.columns = [str(col) + '_' + methode for col in out_df.columns]
+        
+        #Delete values in out_df, when ghi is NaN.
+        out_df.where(cond=(np.isnan(df['ghi']) != True), other=None, inplace=True)
 
         return out_df
 
     def __get_solar_power_from_energy(self, df, query_type):
-        df_power = pd.DataFrame(index=df.index)
+        """
+            Calculates solar power from solar energy data.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                DataFrame containing solar energy data.
+            query_type : str
+                Type of data query ('MOSMIX' or 'OBSERVATION').
+
+            Returns
+            -------
+            df_power : pandas.DataFrame
+                DataFrame with calculated solar power data.
+                Columns include 'ghi' when using mosmix and 'ghi', 'dni', and 'dhi' when using observation query type.
+                The DataFrame has the same index as the input df.
+
+            Notes
+            -----
+            - The input DataFrame (df) has to contain 'ghi' in columns. Additionaly there can be 'dni', and 'dhi' in columns.
+            - The Units for all irradiance parameter are:
+            [kJ/m^2/resulution] for MOSMIX
+            [J/cm^2/resulution] for OBSERVATION
+
+            - The query_type parameter specifies the type of data query, either 'MOSMIX' or 'OBSERVATION'.
+            - The calculated solar power is returned in units of [W/m^2].
+        """
         
+        df_power = pd.DataFrame(index=df.index)
         df_power['ghi'] = 0
         if 'dni' in df.columns:
             df_power['dni'] = 0
@@ -335,60 +420,157 @@ class Environment(object):
         
         resulution = (df.index[1]-df.index[0]).seconds
         if query_type == 'MOSMIX':
-            'Input: [kJ/m^2/resulution]'
             for column in df_power.columns:
                 df_power[column] = df[column] * 1000 / resulution #kJ/m2 -> J/m2 -> W/m2
         elif query_type == 'OBSERVATION':
-            'Input: [J/cm^2/resulution]'
             for column in df_power.columns:
                 df_power[column] = df[column] * 10e3 / resulution #/J/cm2 -> J/m2 -> W/m2
-        
-        'Output: [W/m^2]'
+
         return df_power
-   
+    
+    def __get_station_pressure_from_reduced_pressure(self, height, pressure_reduced, temperature):
+        """
+        Calculates station pressure from reduced pressure using the barometric height formula.
+
+        Parameters
+        ----------
+        height : float
+            Height [m] of the station above sea level.
+        pressure_reduced : float or pandas.Series
+            Reduced pressure [Pa] at the station.
+        temperature : float or pandas.Series
+            Temperature [K] at the station.
+
+        Returns
+        -------
+        float
+            Calculated station pressure.
+
+        Notes
+        -----
+        - The calculation is based on the barometric height formula.
+        - The provided height should be in meters.
+        - The temperature is expected to be in degrees Celsius.
+        - The calculated station pressure is returned as a float.
+        - The formula used is from the Wikipedia link provided.
+        - https://de.wikipedia.org/wiki/Barometrische_Höhenformel
+        """
+        pressure_station = (
+            pressure_reduced * ( 1 - ( -0.0065  * height) / temperature) ** ((9.81 * 0.02897) / (8.314 * -0.0065))
+            )
+        return pressure_station
      
     def __resample_data(self, df, time_freq = None):
-        #df = df.copy()
+        """
+            Resamples and interpolates weather data.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                DataFrame containing weather data.
+            time_freq : str, optional
+                Time frequency for resampling, e.g., '60min' for hourly. If not provided,
+                the time frequency from the class instance is used.
+
+            Returns
+            -------
+            resampled_df : pandas.DataFrame
+                DataFrame with resampled and interpolated weather data.
+                The DataFrame has the same columns as the input df.
+
+            Notes
+            -----
+            - If time_freq is not provided, the time frequency from the class instance is used.
+            - The input DataFrame (df) is expected to have a datetime index.
+            - Missing data between vaild data is filled by using linear interpolation.
+            - The resampling is done using the specified time frequency when given. Otherwhise Class-time-freq is used
+            - Missing data at the end of the dataframe is not replaced -> NaN
+            - The resulting DataFrame is truncated to match the target end datetime if necessary.
+            - The columns are sorted alphabetically and rounded to two decimal places.
+            - The resulting DataFrame contains timestamps with timezoneinfo in class timezone when __use_timezone_aware_time_index == True
+                Otherwise timezoneinfo is not given but times are in class timezone
+        """
         if time_freq is None:
             time_freq =  self.time_freq
-        df.index.rename("time", inplace=True)
         
-        df.reset_index(inplace=True)
-        timezone_aware_date_list = list()
-        for time in df.time:
-            timezone_aware_date_list.append(
-                time.tz_convert(self.timezone)
-                )
-                
-        df['time_tz'] = timezone_aware_date_list
-        df.set_index('time_tz',inplace = True)
-        df.drop('time', axis = 1, inplace = True)
-        df.index.rename("time", inplace = True)
+        #Convert UTC timestamps to class timezone
+        if df.index[0].tzinfo != None:
+            timezone_aware_date_list = list()
+            for time in df.index:
+                timezone_aware_date_list.append(
+                    time.tz_convert(self.timezone)
+                    )     
+            df['time_tz'] = timezone_aware_date_list
+            df.set_index('time_tz',inplace = True)
+            df.index.rename("time", inplace = True)
         
             
-        #Missing data is marked with -999. Replace by NaN
+        #Missing dwd data is marked with -999. Replace by NaN
         df.where(cond=(df[df.columns] != -999), other=None, inplace=True)
-        #Fill NaN
-        df.interpolate(inplace=True)
+        
+        #Fill NaN - if force_end_time == True keep the missing values at the end
+        df.interpolate(
+            inplace=True, 
+            limit_area = 'inside' if not self.__force_end_time else None)
         
         #Resample to given resulotion and interpolate over missing values
-        df = df.resample(time_freq).mean().interpolate(method = 'linear')
+        #if force_end_time == True keep the missing values at the end
+        df = df.resample(time_freq).mean().interpolate(
+            method = 'linear', 
+            limit_area = 'inside' if not self.__force_end_time else None)
         
-        if df.index[-1] > self.__end_dt_target_tz:
-            df = df[df.index[0]:self.__end_dt_target_tz]
-        
+        #Remove timestamps which are not needed
+        #For timezone aware timestamps:
+        if df.index[0].tzinfo != None:
+            if df.index[-1] > self.__end_dt_target_tz:
+                df = df[df.index[0]:self.__end_dt_target_tz]
+        #For timezone unaware timestamps:
+        else:
+            if df.index[-1] > self.__end_dt_target_tz.replace(tzinfo=None):
+                df = df[df.index[0]:self.__end_dt_target_tz.replace(tzinfo=None)]
+                
+        #Remove timezone info    
+        if not self.__use_timezone_aware_time_index and df.index[0].tzinfo != None:
+            timezone_unaware_date_list = list()
+            for time in df.index:
+                timezone_unaware_date_list.append(
+                    time.replace(tzinfo = None)
+                    )
+            df['time_wo_tz'] = timezone_unaware_date_list
+            df.set_index('time_wo_tz',inplace = True)
+            df.index.rename("time", inplace = True)
+            
         df = df.reindex(sorted(df.columns), axis=1)
         df = round(df,2)
-        df.head(10)
         return df
     
     
-    def __prepare_data_for_windpowerlib (self, pd_weather_data_for_station, pd_station_metadata, query_type):
-        pd_weather_data_for_station["roughness_length"] = 0.15
-        
+    def __get_multi_index_for_windpowerlib (self, columns, height):
+        """
+       Creates a MultiIndex DataFrame for wind-related parameters.
+    
+       Parameters
+       ----------
+       columns : list
+           List of column names for the DataFrame.
+       height : float
+           Height of the station [m].
+    
+       Returns
+       -------
+       multi_index : pandas.MultiIndex
+           MultiIndex containing parameter names and corresponding heights.
+    
+       Notes
+       -----
+       - The function initializes a DataFrame with the provided column names.
+       - It then creates a dictionary, `rename_dict`, mapping each parameter to a specific height.
+       - For each column in the DataFrame, the function assigns a tuple with the parameter name
+         and the corresponding height from `rename_dict`.
+       - The final MultiIndex is set for the DataFrame with levels 'Parameter' and 'Height'.
+       """
         """
         TODO: Insert values for station height correctly --> Consult / compare with Windpower lib
-        
         rename_dict = {
             'wind_speed'       : pd_station_metadata['height'].values[0],
             'pressure'         : pd_station_metadata['height'].values[0],
@@ -402,102 +584,193 @@ class Environment(object):
             'temperature'      : 2,
             'roughness_length' : 0,
             }
-        od = collections.OrderedDict(sorted(rename_dict.items()))
-        pd_weather_data_for_station = pd_weather_data_for_station.reindex(sorted(pd_weather_data_for_station.columns), axis=1)
-        height = list()
-        for value in od.values():
-            height.append(value)
-        pd_weather_data_for_station.columns = [pd_weather_data_for_station.columns, np.array(height)]
-        if query_type == 'OBSERVATION':
-            pd_weather_data_for_station.pressure = pd_weather_data_for_station.pressure * 100 # hPa to Pa
-            pd_weather_data_for_station.temperature = pd_weather_data_for_station.temperature + 274.15  # °C to K
-        return pd_weather_data_for_station
+        df = pd.DataFrame(columns = columns)
+        for act_column in df.columns:
+            for key in rename_dict.keys():
+                if key == act_column:
+                    df[act_column] = (act_column, rename_dict[key])
+                    break       
+        df.columns = pd.MultiIndex.from_arrays([df.iloc[0], df.iloc[1]], names=['Parameter', 'Height'])
+        return df.columns
     
     
-    def __process_observation_parameter (self, pd_weather_data_for_station, pd_station_metadata, dataset):
+    def __process_observation_parameter (self, pd_sorted_data_for_station, pd_station_metadata, dataset):
         """
-        Datensatzbeschreibung:
-        SOLAR:
-            OBSERVATION:
-                dni: 10min-Summe der diffusen solaren Strahlung [J/cm^2]
-                ghi: 10min-Summe der  Globalstrahlung           [J/cm^2]
-        TEMPERATUR:
-            OBSERVATION:
-                temperatur: Lufttemperatur in 2 m Höhe        [°C]
-                pressure: Luftdruck in Stationshoehe          [hPa]       
-        WIND:
-            OBSERVATION:
-                
-            MOSMIX:
-                wind_speed : Windgeschwindigkeit [m/s]
-        vpp_lib:
-            K
-            Pa
-            W/m2
-            m/s
+            Processes observation parameters based on the dataset.
+
+            Parameters
+            ----------
+            pd_sorted_data_for_station : pandas.DataFrame
+                DataFrame containing weather data for a station.
+            pd_station_metadata : pandas.DataFrame
+                DataFrame containing station metadata.
+            dataset : str
+                Type of weather dataset, either 'solar', 'air' or 'wind'.
+
+            Returns
+            -------
+            resampled_data : pandas.DataFrame
+                Resampled and processed weather data.
+
+            Notes
+            -----
+            - If the dataset is 'solar', the function calculates Direct Normal Irradiance (DNI)
+            from Global Horizontal Irradiance (GHI) and Diffuse Horizontal Irradiance (DHI).
+            It then updates the DataFrame with solar power calculated from energy.
+            - If the dataset is 'wind', the function prepares data for Windpowerlib using the
+            __get_multi_index_for_windpowerlib method and resamples the data.
+            - Because the air parameter does not need to be processed, the function does not change them.
         """
         if dataset == 'solar': 
-            pd_weather_data_for_station['dni'] = pd_weather_data_for_station.ghi - pd_weather_data_for_station.dhi
+            pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
             #Calculate power from irradiance
-            pd_weather_data_for_station.update(self.__get_solar_power_from_energy(pd_weather_data_for_station,'OBSERVATION'), overwrite=True)
-        elif dataset == 'air':
-            pd_weather_data_for_station.pressure    = pd_weather_data_for_station.pressure * 100
-            pd_weather_data_for_station.temperature = pd_weather_data_for_station.temperature #+ 273.15
+            pd_sorted_data_for_station.update(self.__get_solar_power_from_energy(pd_sorted_data_for_station,'OBSERVATION'), overwrite=True)
         elif dataset == 'wind':
-            pd_weather_data_for_station = self.__prepare_data_for_windpowerlib(pd_weather_data_for_station=pd_weather_data_for_station,query_type='OBSERVATION',pd_station_metadata = pd_station_metadata)
-        return self.__resample_data(pd_weather_data_for_station)
+            pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100 # hPa to Pa
+            pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature + 274.15
+            pd_sorted_data_for_station['roughness_length'] = 0.15
+            pd_sorted_data_for_station.columns = self.__get_multi_index_for_windpowerlib(
+                pd_sorted_data_for_station.columns,
+                pd_station_metadata['height'].values[0])
+            
+        return self.__resample_data(pd_sorted_data_for_station)
         
         
-    def __process_mosmix_parameter (self, pd_weather_data_for_station, dataset, pd_station_metadata, station_id = None, additional_parameter_lst= None):
+    def __process_mosmix_parameter (
+            self, pd_sorted_data_for_station, dataset, pd_station_metadata, additional_parameter_lst = None, estimation_methode_lst = ['disc']
+            ):
         """
-        Datensatzbeschreibung:
-        SOLAR:
-            MOSMIX:
-                ghi: (Stundensumme?)  Globalstrahlung           [kJ/m^2]
-        TEMPERATUR:
-            MOSMIX:
-                temperatur: Temperatur 2m über der Oberfläche [Kelvin]
-                pressure:   Luftdruck, reduziert              [Pa]
-        WIND:
-                wind_speed : Windgeschwindigkeit [m/s]
-        vpp_lib:
-            K
-            Pa
-            W/m2
-            m/s
+            Processes MOSMIX parameters based on the dataset.
+
+            Parameters
+            ----------
+            pd_sorted_data_for_station : pandas.DataFrame
+                DataFrame containing weather data for a station.
+            dataset : str
+                Type of weather dataset, either 'solar', 'air', or 'wind'.
+            pd_station_metadata : pandas.DataFrame
+                DataFrame containing station metadata.
+            additional_parameter_lst : list, optional
+                List of additional parameters, which where retrieved for calculating missing parameters such as dhi dni, to drop from the DataFrame, by default None.
+            estimation_methode_lst : list, optional
+                List of estimation methode names, which where used for calculating missing parameters such as dhi dni, by default ['disc'].
+            Returns
+            -------
+            resampled_data : pandas.DataFrame
+                Resampled and processed weather data.
+
+            Notes
+            -----
+            - If the dataset is 'solar', the function updates the DataFrame with solar power
+            calculated from energy. It then calculates solar parameters using the
+            __get_solar_parameter method and merges them into the DataFrame.
+            - If the dataset is 'air', the function converts temperature from Kelvin to Celsius.
+            - If the dataset is 'wind', the function adjusts pressure using the barometric
+            height formula and prepares data for Windpowerlib.
+            - The observation data describes the value for the last timestep. MOSMIX forecasts
+            the value for the next timestep, so the DataFrame is shifted by -1 to align MOSMIX
+            with observation.
         """
         if dataset == 'solar':
-            pd_weather_data_for_station.update( self.__get_solar_power_from_energy(pd_weather_data_for_station, 'MOSMIX'), overwrite=True)
-            #lst_methodes = ['disc','erbs','dirint','boland']
-            #for methode in lst_methodes:
-            calculated_solar_parameter = self.__get_solar_parameter(
-                    input_df = pd_weather_data_for_station, 
-                    lat      = pd_station_metadata['latitude' ].values[0], 
-                    lon      = pd_station_metadata['longitude'].values[0],
-                    height   = pd_station_metadata['height'   ].values[0])
+            pd_sorted_data_for_station.update( self.__get_solar_power_from_energy(pd_sorted_data_for_station, 'MOSMIX'), overwrite=True)
+            pd_sorted_data_for_station.pressure = self.__get_station_pressure_from_reduced_pressure(
+                height = pd_station_metadata['height'].values[0], 
+                pressure_reduced = pd_sorted_data_for_station.pressure, 
+                temperature = pd_sorted_data_for_station.temperature)
+            """
+            Available methods for solar parameter calculation:
+             ['disc','erbs','dirint','boland']
+            """
+            for methode in estimation_methode_lst:
+                calculated_solar_parameter = self.__get_solar_parameter(
+                        input_df = pd_sorted_data_for_station, 
+                        lat      = pd_station_metadata['latitude' ].values[0], 
+                        lon      = pd_station_metadata['longitude'].values[0],
+                        height   = pd_station_metadata['height'   ].values[0],
+                        methode  = methode,
+                        use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
             
-            pd_weather_data_for_station = pd_weather_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
-            pd_weather_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
+            pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
+            pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
         elif dataset == 'air':
-            height = pd_station_metadata['height'].values[0]
-            """ https://de.wikipedia.org/wiki/Barometrische_Höhenformel """
-            pd_weather_data_for_station['pressure'] = (
-                pd_weather_data_for_station.pressure * ( 1 - ( -0.0065  * height) / pd_weather_data_for_station.temperature) ** ((9.81 * 0.02897) / (8.314 * -0.0065))
-                )
+            pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature - 273.15  # K to °C
         elif dataset == 'wind':
-            pd_weather_data_for_station = self.__prepare_data_for_windpowerlib(pd_weather_data_for_station=pd_weather_data_for_station,query_type='MOSMIX',pd_station_metadata=pd_station_metadata)
-        #Observation data discribes the value for the last timestep. Mosmix forecasts the value for the next timestep
+            pd_sorted_data_for_station.pressure = self.__get_station_pressure_from_reduced_pressure(
+                height = pd_station_metadata['height'].values[0], 
+                pressure_reduced = pd_sorted_data_for_station.pressure, 
+                temperature = pd_sorted_data_for_station.temperature)
+            
+            pd_sorted_data_for_station['roughness_length'] = 0.15
+            pd_sorted_data_for_station.columns = self.__get_multi_index_for_windpowerlib(
+                pd_sorted_data_for_station.columns,
+                pd_station_metadata['height'].values[0])
+            
+        #Observation data discribes the value for the last timestep. MOSMIX forecasts the value for the next timestep
         #Shift by -1 to aling MOSMIX to Observation
-        pd_weather_data_for_station = pd_weather_data_for_station.shift(-1)
-        return self.__resample_data(pd_weather_data_for_station)
+        pd_sorted_data_for_station = pd_sorted_data_for_station.shift(-1)
+        return self.__resample_data(pd_sorted_data_for_station)
     
     
-    def __get_dwd_data(self, dataset, lat, lon, min_quality_per_parameter = 80, distance = 30):
-        activate_output = not self.surpress_output_globally
+    def __get_dwd_data(
+        self, dataset, lat = None, lon = None, user_station_id = None, distance = 30, min_quality_per_parameter = 80
+        ):
+        """
+            Retrieves weather data from the DWD database.
+
+            Parameters
+            ----------
+            dataset : str
+                Type of weather dataset, either 'solar', 'air', or 'wind'.
+            lat : float, optional
+                Latitude, by default None.
+            lon : float, optional
+                Longitude, by default None.
+            user_station_id : str, optional
+                Station ID specified by the user, by default None.
+            distance : int, optional
+                Search radius [m] for stations, by default 30.
+            min_quality_per_parameter : int, optional
+                Minimum percentage of valid data required for each parameter, by default 80.
+        
+            Returns
+            -------
+            processed_data : pandas.DataFrame
+                Resampled and processed weather data.
+            station_metadata : pandas.DataFrame
+                Metadata of the selected weather station.
+
+            Raises
+            ------
+            ValueError
+                If no location or station ID is given.
+            ValueError
+                If the forecast start time is too far in the future
+            ValueError
+                If no station is found within the specified distance.
+            Exception
+                If datatype of query result is not pandas or polars
+            Exception
+                If there is no station with valid datasets
+
+            Notes
+            -----
+            - The function checks whether to use the DWD observation or MOSMIX database based on the current time.
+            - It retrieves weather data for the specified dataset from the DWD database.
+            - The function filters stations based on the user-specified station ID or location.
+            - It checks the validity of the query result for each station based on the percentage of valid data for each parameter.
+            - If a station with valid data is found, the function preturns the raw dwd data
+         """
+        activate_output = not self.__surpress_output_globally
+
+        if  self.start is None or self.end is None:
+            raise ValueError("Class instance does not contain start or end time!")
+        if (lat is None or lon is None) and user_station_id is None:
+            raise ValueError("No location or station-ID given!")
+            
 
         dataset_dict = {
             'solar' : ['ghi', 'dhi'],
-            'air'   : ['pressure' , 'temperature'],
+            'air'   : ['temperature'],
             'wind'  : ['wind_speed', 'pressure', 'temperature']
             }
 
@@ -508,22 +781,24 @@ class Environment(object):
             "temperature" : "temperature_air_mean_200",
             "wind_speed"  : "wind_speed", 
             "drew_point"  : "temperature_dew_point_mean_200"
-                                }
+            }
         
         #Create a dictionsry with the parameters to query
         req_parameter_dict = {param: avalible_parameter_dict[param] for param in dataset_dict[dataset]}
-        
         
         time_now = self.get_time_from_dwd()
         settings = Settings.default()
         settings.ts_si_units = False
         
-        observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0) #- datetime.timedelta(minutes = 10)
+        #observation data is updated every full hour
+        observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
 
         if self.__start_dt_utc <= observation_end_date - datetime.timedelta(hours = 1):
-            #Observation database
-            if self.__end_dt_utc > observation_end_date:
-                activate_output and print("End date is in the future.")
+            if activate_output:
+                print("Using observation database.") 
+            if self.__end_dt_utc > observation_end_date and not self.__force_end_time:
+                if activate_output:
+                    print("End date is in the future.")
                 self.__end_dt_utc = observation_end_date
 
             #Get weather data for your location from dwd observation database
@@ -534,21 +809,28 @@ class Environment(object):
                 end_date   = self.__end_dt_utc,
                 settings   = settings,
             )
-        #MOSMIX database is updated every hour
         else:
-            if self.__start_dt_utc > time_now + datetime.timedelta(hours = 240):
-                raise Exception("No forecast data avaliable for this time")
-            if self.__end_dt_utc > time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240):
-                self.__end_dt_utc = time_now.replace(minute = 0 , second = 0, microsecond = 0) + datetime.timedelta(hours = 240)
-            
+            if self.__start_dt_utc > time_now + datetime.timedelta(hours = 239):
+                raise ValueError("No forecast data avaliable for this time")
+            if (self.__end_dt_utc > time_now.replace(
+                minute = 0 , 
+                second = 0, 
+                microsecond = 0
+                ) + datetime.timedelta(hours = 240)) and not self.__force_end_time:
+                self.__end_dt_utc = time_now.replace(
+                    minute = 0, 
+                    second = 0, 
+                    microsecond = 0
+                    )+ datetime.timedelta(hours = 240)
+            if activate_output:  
+                print("Using momsix database.")
             if dataset == 'solar':
-                #dhi is not available for mosmix
+                #dhi is not available for MOSMIX
                 req_parameter_dict.pop("dhi")
                 #get additional parameter for calculating dhi with pvlib
                 additional_parameter_lst = ["pressure", "temperature", "drew_point"]
-                for additional_parameter in additional_parameter_lst:
-                    req_parameter_dict.update({additional_parameter : avalible_parameter_dict[additional_parameter]}) 
-            #pressure is called pressure_air_site_reduced in mosmix
+                req_parameter_dict.update({param: avalible_parameter_dict[param] for param in additional_parameter_lst})
+            #pressure is called pressure_air_site_reduced in MOSMIX
             if "pressure" in req_parameter_dict:
                 req_parameter_dict.update({"pressure" : "pressure_air_site_reduced"})
             
@@ -561,7 +843,15 @@ class Environment(object):
                 end_date    = self.__end_dt_utc
                 )
 
-        wd_nearby_stations = wd_query_result.filter_by_distance(latlon = (lat, lon), distance = distance)
+        if user_station_id is not None:
+            wd_nearby_stations = wd_query_result.filter_by_station_id(
+                station_id = user_station_id
+                )
+        else:
+            wd_nearby_stations = wd_query_result.filter_by_distance(
+                latlon = (lat, lon), 
+                distance = distance
+                )
 
         if isinstance(wd_nearby_stations.df,pd.core.frame.DataFrame):
             empty = wd_nearby_stations.df.empty
@@ -574,60 +864,55 @@ class Environment(object):
         else:
             empty = True
         if empty:
-            raise Exception("No station found!")
+            raise ValueError("No station found! Increase search radius or change location or station-ID")
 
         valid_station_data = False
         #Check query result for the stations within the defined distance
         for station_id in pd_nearby_stations["station_id"].values:
             station_name  = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]['name'].values[0]
-            activate_output and print('Checking query result for station ' + station_name, station_id + " ...")
+            if activate_output:
+                print('Checking query result for station ' + station_name, station_id + " ...")
             
             #Get query result for the actual station
-            wd_data_for_station = wd_query_result.filter_by_station_id(station_id=station_id).values.all().df
+            wd_unsorted_data_for_station = wd_query_result.filter_by_station_id(station_id=station_id).values.all().df
 
-            if isinstance(wd_data_for_station,pd.core.frame.DataFrame):
-                pd_data_for_all_stations = wd_data_for_station
-            elif isinstance(wd_data_for_station,pl.DataFrame):
-                pd_data_for_all_stations = wd_data_for_station.to_pandas()
+            if isinstance(wd_unsorted_data_for_station,pd.core.frame.DataFrame):
+                pd_unsorted_data_for_station = wd_unsorted_data_for_station
+            elif isinstance(wd_unsorted_data_for_station,pl.DataFrame):
+                pd_unsorted_data_for_station = wd_unsorted_data_for_station.to_pandas()
             else:
                 raise Exception("Data type incorrect")
                 
-                
-            pd_weather_data_for_station        = pd.DataFrame()
-            pd_data_for_all_stations.set_index('date', inplace=True)
+            pd_sorted_data_for_station = pd.DataFrame()
+            pd_unsorted_data_for_station.set_index('date', inplace=True)
 
             #Format data to get a df with one column for each parameter
             for key in req_parameter_dict.keys():
-                pd_weather_data_for_station[key] = pd_data_for_all_stations.loc[pd_data_for_all_stations['parameter'] == req_parameter_dict[key]]['value']
-                
-            """
-            Not yet implemented: The MOSMIX database provided data for UP To 240 hours. 
-            The resulting data set does not consist of index 0-240 but 0-querying
-            TODO: Add variable in function call, depending on which the result is extended to 240 hours. 
-                  The end time must then also be adjusted
-            
-            if pd_weather_data_for_station.index[-1] < self.__end_dt_utc:
+                pd_sorted_data_for_station[key] = pd_unsorted_data_for_station.loc[pd_unsorted_data_for_station['parameter'] == req_parameter_dict[key]]['value']
+
+            #Fill missing values with NaN, if end time is forced    
+            if pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
                 pd_missing_dates = pd.DataFrame(index = pd.date_range(
-                    start = pd_weather_data_for_station.index[-1] + datetime.timedelta(hours = 1),
+                    start = pd_sorted_data_for_station.index[-1] + datetime.timedelta(hours = 1),
                     end   = self.__end_dt_utc,
                     freq  = 'H'
                     ))
-                pd_weather_data_for_station = pd.concat([pd_weather_data_for_station, pd_missing_dates])
-            """
- 
+                pd_sorted_data_for_station = pd.concat([pd_sorted_data_for_station, pd_missing_dates])
+            
             quality                         = pd.DataFrame()
             quality.index                   = [True,False,'quality']
             quality[list(req_parameter_dict.keys())] = ""
         
             #Counting the amound of valid and invalid data per parameter
-            for column in pd_weather_data_for_station.columns:
-                count           = pd_weather_data_for_station.isna()[column].value_counts()
+            for column in pd_sorted_data_for_station.columns:
+                count           = pd_sorted_data_for_station.isna()[column].value_counts()
                 quality[column] = count
                 quality         = quality.fillna(0)
             
             #Calculate the percentage of valid data per parameter    
             quality.loc['quality'] = round((quality.loc[0]/(quality.loc[0]+quality.loc[1]))*100,1)
             
+            #Prevent console to print name of the variable 
             quality.loc['quality'].name = None
             if activate_output:
                 print("Quality of the data set:")
@@ -635,53 +920,262 @@ class Environment(object):
             
             #If quality is good enough
             if quality.loc['quality'].min() >= min_quality_per_parameter:
-                distance            = str(round(pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]['distance'].values[0]))
                 valid_station_data  = True
                 if activate_output:
                     print("Query result valid!")
                     print("Station " + station_id + " " + station_name + " used")
-                    print("Distance to location: " + distance + " km")
+                    if user_station_id is None:
+                        distance            = str(round(pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]['distance'].values[0]))
+                        print("Distance to location: " + distance + " km")
                 break
         if not valid_station_data:
-            raise Exception("No station found")
-        activate_output and print("Query successful!")
+            raise Exception("No station with vaild data found!")
+        if activate_output:
+            print("Query successful!")
+            
+        station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
+        station_metadata ['station_type'] = 'OBSERVATION' if isinstance(wd_query_result,DwdObservationRequest) else 'MOSMIX',
+            
+        return (
+            pd_sorted_data_for_station,
+            station_metadata,
+            additional_parameter_lst if 'additional_parameter_lst' in locals() else None )
+       
+    def get_dwd_pv_data(
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, estimation_methode_lst = ['disc']
+        ):
+        """
+        Retrieves solar weather data from the DWD database and processes it.
+
+        Parameters
+        ----------
+        lat : float, optional
+            Latitude, by default None.
+        lon : float, optional
+            Longitude, by default None.
+        station_id : str, optional
+            Station ID specified by the user, by default None.
+        distance : int, optional
+            Search radius [m] for stations, by default 30.
+        min_quality_per_parameter : int, optional
+            Minimum percentage of valid data required for each parameter, by default 80.
         
+        Returns
+        -------
+        station_metadata : pandas.DataFrame
+            Metadata of the selected weather station.
+        Notes
+            -----
+            - The query result is saved in class variable pv_data  
+            - Station metadate is not saved in class      
+    """
+        dataset = 'solar'
+        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+            dataset = dataset, 
+            lat = lat, 
+            lon = lon, 
+            user_station_id = station_id,
+            distance = distance, 
+            min_quality_per_parameter = min_quality_per_parameter
+            )    
+        if station_metadata.station_type.iloc[0] == 'OBSERVATION':
+            self.pv_data = self.__process_observation_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
+        elif station_metadata.station_type.iloc[0] == 'MOSMIX':
+            self.pv_data = self.__process_mosmix_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset,
+                 additional_parameter_lst = additional_parameter_lst,
+                 estimation_methode_lst = estimation_methode_lst
+                 )
+            
+        return station_metadata
 
-        if isinstance(wd_query_result,DwdObservationRequest):
-           return self.__process_observation_parameter(
-                pd_weather_data_for_station, 
-                pd_station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id],
-                dataset = dataset
-                )
-        if isinstance(wd_query_result,DwdMosmixRequest):
-           return self.__process_mosmix_parameter(
-                pd_weather_data_for_station = pd_weather_data_for_station, 
-                dataset = dataset, 
-                pd_station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id],
-                additional_parameter_lst = additional_parameter_lst if 'additional_parameter_lst' in locals() else None
-                )
+    def get_dwd_wind_data(
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
+        ):
+        """
+        Retrieves wind weather data from the DWD database and processes it.
+
+        Parameters
+        ----------
+        lat : float, optional
+            Latitude, by default None.
+        lon : float, optional
+            Longitude, by default None.
+        station_id : str, optional
+            Station ID specified by the user, by default None.
+        distance : int, optional
+            Search radius [m] for stations, by default 30.
+        min_quality_per_parameter : int, optional
+            Minimum percentage of valid data required for each parameter, by default 80.
+       
+        Returns
+        -------
+        station_metadata : pandas.DataFrame
+            Metadata of the selected weather station.
+        Notes
+            -----
+            - The query result is saved in class variable wind_data  
+            - Station meta data is not saved in class      
+        """
+        dataset = 'wind'
+        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+            dataset = dataset, 
+            lat = lat, 
+            lon = lon, 
+            user_station_id = station_id,
+            distance = distance, 
+            min_quality_per_parameter = min_quality_per_parameter
+            )    
+        if station_metadata.station_type.iloc[0] == 'OBSERVATION': 
+            self.wind_data = self.__process_observation_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
+        elif station_metadata.station_type.iloc[0] == 'MOSMIX': 
+            self.wind_data = self.__process_mosmix_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
+        return station_metadata
+
+    def get_dwd_temp_data(
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
+        ):
+        """
+        Retrieves temperature weather data from the DWD database and processes it.
+
+        Parameters
+        ----------
+        lat : float, optional
+            Latitude, by default None.
+        lon : float, optional
+            Longitude, by default None.
+        station_id : str, optional
+            Station ID specified by the user, by default None.
+        distance : int, optional
+            Search radius [m] for stations, by default 30.
+        min_quality_per_parameter : int, optional
+            Minimum percentage of valid data required for each parameter, by default 80.
+        
+        Returns
+        -------
+        station_metadata : pandas.DataFrame
+            Metadata of the selected weather station.
+        Notes
+            -----
+            - The query result is saved in class variable temp_data  
+            - Station meta data is saved in class variable __temp_station_metadata for usage in get_dwd_mean_temp_hours / get_dwd_mean_temp_days
+        """
+        dataset = 'air'
+        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+            dataset = dataset, 
+            lat = lat, 
+            lon = lon, 
+            user_station_id = station_id,
+            distance = distance, 
+            min_quality_per_parameter = min_quality_per_parameter
+            )    
+        if station_metadata.station_type.iloc[0] == 'OBSERVATION':
+            self.temp_data = self.__process_observation_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
+        elif station_metadata.station_type.iloc[0] == 'MOSMIX': 
+            self.temp_data = self.__process_mosmix_parameter(
+                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_station_metadata = station_metadata,
+                 dataset = dataset
+                 )
+        return self.__temp_station_metadata
     
-    def get_dwd_pv_data(self, lat, lon, distance = 30):
-        self.pv_data = self.__get_dwd_data(dataset = 'solar', lat = lat,lon = lon, distance = distance)
-        return self.pv_data
+    def get_dwd_mean_temp_hours(
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
+        ):
+        """
+        Resamples temperature data to horly resulution. 
+        If there are no temperature data in temp_data, it retrieves temperature weather data from the DWD database and processes it.
 
-    def get_dwd_wind_data(self,lat,lon,distance = 30):
-        self.wind_data = self.__get_dwd_data(dataset = 'wind', lat = lat,lon = lon, distance = distance)
-        return self.wind_data 
-
-    def get_dwd_temp_data(self,lat,lon,distance = 30):
-        self.temp_data = self.__get_dwd_data(dataset = 'air', lat = lat,lon = lon, distance = distance)
-        return self.temp_data
-    
-    def get_dwd_mean_temp_hours(self,lat,lon,distance = 30):
-        if type(self.temp_data) == list:
-            self.get_dwd_temp_data(lat,lon,distance,)
+        Parameters
+        ----------
+        lat : float, optional
+            Latitude, by default None.
+        lon : float, optional
+            Longitude, by default None.
+        station_id : str, optional
+            Station ID specified by the user, by default None.
+        distance : int, optional
+            Search radius [m] for stations, by default 30.
+        min_quality_per_parameter : int, optional
+            Minimum percentage of valid data required for each parameter, by default 80.
+       
+        Returns
+        -------
+        station_metadata : pandas.DataFrame
+            Metadata of the selected weather station.
+        Notes
+            -----
+            - The query result is saved in class variable mean_temp_hours  
+            - Station meta data is not saved in class      
+        """
+        if len(self.temp_data) == 0:
+            self.get_dwd_temp_data(
+                lat = lat,
+                lon = lon,
+                station_id = station_id,
+                distance = distance, 
+                min_quality_per_parameter = min_quality_per_parameter
+                )
         self.mean_temp_hours = self.__resample_data(self.temp_data,'60 min')
+        return self.__temp_station_metadata
     
-    def get_dwd_mean_temp_days(self,lat,lon,distance = 30):
-        if type(self.temp_data) == list:
-            self.get_dwd_temp_data(lat,lon,distance)
+    def get_dwd_mean_temp_days(
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
+        ):
+        """
+        Resamples temperature data to daily resulution. 
+        If there are no temperature data in temp_data, it retrieves temperature weather data from the DWD database and processes is.
+
+        Parameters
+        ----------
+        lat : float, optional
+            Latitude, by default None.
+        lon : float, optional
+            Longitude, by default None.
+        station_id : str, optional
+            Station ID specified by the user, by default None.
+        distance : int, optional
+            Search radius [m] for stations, by default 30.
+        min_quality_per_parameter : int, optional
+            Minimum percentage of valid data required for each parameter, by default 80.
+       
+        Returns
+        -------
+        station_metadata : pandas.DataFrame
+            Metadata of the selected weather station.
+        Notes
+            -----
+            - The query result is saved in class variable mean_temp_hours  
+            - Station meta data is not saved in class      
+        """
+        if len(self.temp_data) == 0:
+            self.get_dwd_temp_data(
+                lat = lat,
+                lon = lon,
+                station_id = station_id,
+                distance = distance, 
+                min_quality_per_parameter = min_quality_per_parameter
+                )
         self.mean_temp_days = self.__resample_data(self.temp_data,'1440 min')
+        return self.__temp_station_metadata
         
 
 

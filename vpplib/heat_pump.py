@@ -145,7 +145,7 @@ class HeatPump(Component):
                     + 0.00063 * (self.heat_sys_temp - tmp) ** 2
                 )
                 cop_lst.append(cop)
-
+                
         elif self.heat_pump_type == "Ground":
             for i, tmp in self.environment.mean_temp_hours.iterrows():
                 cop = (
@@ -160,9 +160,7 @@ class HeatPump(Component):
 
         self.cop = pd.DataFrame(
             data=cop_lst,
-            index=pd.date_range(
-                self.environment.year, periods=len(cop_lst), freq=self.environment.time_freq, name="time"
-            ),
+            index=self.environment.mean_temp_hours.index,
         )
         self.cop.columns = ["cop"]
 

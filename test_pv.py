@@ -15,17 +15,24 @@ from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
 import datetime
+import zoneinfo
+
+zoneinfo.available_timezones()
 
 
+latitude = 51.4
+longitude = 6.97
+"""
 latitude = 50.941357
 longitude = 6.958307
+"""
 identifier = "Cologne"
 timestamp_int = 48
-"""CSV"""
+"""CSV
 timestamp_str = "2015-11-09 12:00:00"
 environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
 environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
-
+"""
 
 """OBSERVATION:
 timestamp_str = "2015-11-09 12:00:00"
@@ -33,12 +40,13 @@ environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00"
 environment.get_dwd_pv_data(lat=latitude, lon=longitude)
 """
 
-"""MOSMIX:
-Change timestamp_str and start time to a date in the future
-timestamp_str = "2023-11-17 12:00:00"
-environment = Environment(start="2023-11-16 00:00:00", end="2025-12-31 23:45:00")
+"""MOSMIX:"""
+time_now = Environment().get_time_from_dwd().replace(tzinfo=None)
+#timestamp_str = "2023-12-07 12:00:00"
+timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
+environment = Environment(start=str(time_now), end=str(time_now + datetime.timedelta(hours = 240)))
 environment.get_dwd_pv_data(lat=latitude, lon=longitude)
-"""
+
 
 user_profile = UserProfile(
     identifier=identifier, latitude=latitude, longitude=longitude
