@@ -9,7 +9,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 """
 Change your settings here 
 """
-path_output = dir_path + "/dwd_results/"    
+path_output_main = dir_path + "/dwd_results/"    
 distance = 100
 surpress_output_globally = True
 force_end_time = True
@@ -22,10 +22,10 @@ dict_locations = {
 }
 
 
-if not os.path.exists(path_output):
-    os.mkdir(path_output)
+if not os.path.exists(path_output_main):
+    os.mkdir(path_output_main)
 for key in dict_locations:
-    dir_path_key = path_output +'/'+ str(key)
+    dir_path_key = path_output_main +'/'+ str(key)
     if not os.path.exists(dir_path_key):
         os.mkdir(dir_path_key)
          
@@ -75,7 +75,7 @@ def run_get_dwd_data(test_run = False):
             pv_obs_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
             wind_obs_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
             if not test_run:
-                obs_out = path_output +'obs_'+ str(time_now_dwd.year) + str(time_now_dwd.month) + str(time_now_dwd.day) + str(time_now_dwd.hour) +  str(time_now_dwd.minute) + '.csv'
+                obs_out = path_output_main + location + '/obs_'+ str(time_now_dwd.year) + str(time_now_dwd.month) + str(time_now_dwd.day) + str(time_now_dwd.hour) +  str(time_now_dwd.minute) + '.csv'
                 create_csv(
                     pv_obs_meta,
                     environment.pv_data,
@@ -90,7 +90,7 @@ def run_get_dwd_data(test_run = False):
         wind_mos_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
         
         if not test_run:
-            mos_out = path_output +'mos_'+ str(time_now_dwd.year) + str(time_now_dwd.month) + str(time_now_dwd.day) + str(time_now_dwd.hour) +  str(time_now_dwd.minute) + '.csv'
+            mos_out = path_output_main + location  +'/mos_'+ str(time_now_dwd.year) + str(time_now_dwd.month) + str(time_now_dwd.day) + str(time_now_dwd.hour) +  str(time_now_dwd.minute) + '.csv'
             create_csv(
                 pv_mos_meta,
                 environment.pv_data,

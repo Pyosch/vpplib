@@ -110,7 +110,7 @@ class Environment(object):
             if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
                 raise ValueError("End date must be greater than start date")
             if self.__internal_start_datetime_utc + datetime.timedelta(hours=1) > self.__internal_end_datetime_utc:
-                raise ValueError("End date must be at least one hour longer than the start date")
+                raise ValueError("End date must be at least one hour bigger than the start date")
 
     @property
     def __start_dt_utc(self):
@@ -300,12 +300,14 @@ class Environment(object):
                 'temperature'   [C]
                 'drew_point'    [C]
                 'pressure'      [Pa]
+            - Argument:
+                'height'        [m]
             - Solar zenith angles and other solar position parameters are calculated using the get_solarposition function.
             - The method parameter determines the algorithm used for solar parameter calculation.
         """
         df             = input_df.copy()
         df.temperature = df.temperature - 273.15
-        df.drew_point  = df.drew_point - 273.15
+        df.drew_point  = df.drew_point  - 273.15
         
         solpos = get_solarposition(
                     df.index.shift(freq="-30T"), 
@@ -406,7 +408,6 @@ class Environment(object):
             - The Units for all irradiance parameter are:
             [kJ/m^2/resulution] for MOSMIX
             [J/cm^2/resulution] for OBSERVATION
-
             - The query_type parameter specifies the type of data query, either 'MOSMIX' or 'OBSERVATION'.
             - The calculated solar power is returned in units of [W/m^2].
         """
@@ -734,10 +735,12 @@ class Environment(object):
         
             Returns
             -------
-            processed_data : pandas.DataFrame
-                Resampled and processed weather data.
+            pd_sorted_data_for_station : pandas.DataFrame
+                raw dwd data for the selected station
             station_metadata : pandas.DataFrame
                 Metadata of the selected weather station.
+            additional_parameter_lst : list
+                additional parameter, which where retrieved for calculating missing parameters such as dhi dni.
 
             Raises
             ------
