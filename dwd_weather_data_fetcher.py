@@ -68,9 +68,12 @@ def run_get_dwd_data(test_run = False):
         print("Query weather data for " + str(location))
         latitude  = dict_locations[location]['latitude']
         longitude = dict_locations[location]['longitude']
-        if not first_run and not test_run:
+        if not first_run or test_run:
             """OBS: """
-            environment = Environment(start=str(time_start), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
+            if test_run:
+                environment = Environment(start=str(time_start - datetime.timedelta(hours=2)), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
+            else:
+                environment = Environment(start=str(time_start), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
             
             pv_obs_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
             wind_obs_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
