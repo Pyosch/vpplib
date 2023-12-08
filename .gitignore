@@ -145,7 +145,7 @@ dmypy.json
 Results/
 vpplib/__pycache__/
 input/input_vise/
-
+dwd_results/
 # Icon must end with two \r
 Icon
 
