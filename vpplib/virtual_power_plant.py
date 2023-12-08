@@ -470,9 +470,13 @@ class VirtualPowerPlant(object):
         print("Export component timeseries:")
         for component in self.components:
 
-            if isinstance(self.components[component], (Photovoltaic, WindPower)):
+            if isinstance(self.components[component], (Photovoltaic)):
 
                 ts_dict[component] = self.components[component].timeseries.loc[:, component]
+                
+            elif isinstance(self.components[component], (WindPower)):
+
+                ts_dict[component] = self.components[component].timeseries
 
 
             elif isinstance(self.components[component], BatteryElectricVehicle):

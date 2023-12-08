@@ -284,6 +284,6 @@ for wind in range(num_wind):
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
-df_timeseries=vpp.export_component_timeseries()
+df_timeseries, no_timeseries_lst =vpp.export_component_timeseries()
 print(df_timeseries)
 # df_timeseries.to_csv(f"{parentdir}/input/df_timeseries.csv")
