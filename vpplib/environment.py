@@ -690,8 +690,7 @@ class Environment(object):
                         height   = pd_station_metadata['height'   ].values[0],
                         methode  = methode,
                         use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
-            
-            pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
+                pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
         elif dataset == 'air':
             pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature - 273.15  # K to °C
@@ -949,6 +948,10 @@ class Environment(object):
         ):
         """
         Retrieves solar weather data from the DWD database and processes it.
+        Solar weather data are:
+        - Global Horizontal Irradiance (GHI)  [W/m^2]
+        - Direct Normal Irradiance (DNI)      [W/m^2]
+        - Diffuse Horizontal Irradiance (DHI) [W/m^2]
 
         Parameters
         ----------
@@ -1003,6 +1006,11 @@ class Environment(object):
         ):
         """
         Retrieves wind weather data from the DWD database and processes it.
+        Wind weather data are:
+        - Wind speed [m/s]
+        - Pressure [Pa]
+        - Temperature [°C]
+        The resulting DataFrame contains a MultiIndex with the parameter names and heights.
 
         Parameters
         ----------
@@ -1054,6 +1062,8 @@ class Environment(object):
         ):
         """
         Retrieves temperature weather data from the DWD database and processes it.
+        Temperature weather data are:
+        - Temperature [°C]
 
         Parameters
         ----------

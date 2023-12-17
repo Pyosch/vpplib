@@ -69,7 +69,7 @@ def run_get_dwd_data(test_run = False):
         latitude  = dict_locations[location]['latitude']
         longitude = dict_locations[location]['longitude']
         if not first_run or test_run:
-            """OBS: """
+            """Observation: """
             if test_run:
                 environment = Environment(start=str(time_start - datetime.timedelta(hours=2)), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
             else:
@@ -86,7 +86,7 @@ def run_get_dwd_data(test_run = False):
                     environment.wind_data,
                     obs_out)
         
-        """MOSMIX: """
+        """Mosmix: """
         environment = Environment(start=str(time_now_dwd), end=str(forecast_end_time),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
        
         pv_mos_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter, estimation_methode_lst=['disc','erbs','dirint','boland'])
