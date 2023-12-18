@@ -10,10 +10,12 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 Change your settings here 
 """
 path_output_main = dir_path + "/dwd_results/"    
+"hourly or daily"
+frequency = 'daily'
 distance = 100
 surpress_output_globally = True
 force_end_time = True
-min_quality_per_parameter = 50
+min_quality_per_parameter = 10
 run_time_hours = 240 #should be max 240 hours
 dict_locations = {
     'Bedburg':      {'latitude': 51.01, 'longitude': 6.31},
@@ -32,12 +34,18 @@ for key in dict_locations:
 first_run = True
 #Get actual time from dwd server (UTC)
 time_start = Environment().get_time_from_dwd().replace(tzinfo=None)
-#Set forecast end time
 forecast_end_time = time_start + datetime.timedelta(hours = run_time_hours + 2)
 
-#Set shedule time for daily run. First run triggert by run_get_dwd_data() so the first shedule run is now+23h58min
-shedule_time = datetime.datetime.now() + datetime.timedelta(hours=23, minutes = 58)
-str_shedule_time = str(shedule_time.hour).zfill(2) + ':00' # + str(shedule_time.minute).zfill(2)
+if frequency == 'daily':
+    #Set shedule time for daily run. First run triggered by run_get_dwd_data() so the first shedule run is time_now+23h58min
+    shedule_time = datetime.datetime.now() + datetime.timedelta(hours=23, minutes = 58)
+    str_shedule_time = str(shedule_time.hour).zfill(2) + ':00'
+elif frequency == 'hourly':
+    shedule_time = datetime.datetime.now() + datetime.timedelta(minutes = 2)
+    str_shedule_time =':' + str(shedule_time.minute).zfill(2)
+else:
+    raise Exception("unknown frequency")
+
 
 print("Shedule time: " + str_shedule_time)
 print("----------------------------------")
@@ -47,10 +55,10 @@ def create_csv(meta_1,data_1,meta_2,data_2,out_path):
     create csv file with meta header and data
     """
     
-    meta_1_sorted = pd.DataFrame(index = meta_1.to_dict(orient='dict').keys(), data =meta_1.to_dict(orient='dict').values())
+    meta_1_sorted = pd.DataFrame(index = meta_1.to_dict(orient='dict').keys(), data = meta_1.to_dict(orient='dict').values())
     concat_df_1 = pd.concat([meta_1_sorted, data_1], axis=1)
     
-    meta_2_sorted = pd.DataFrame(index = meta_2.to_dict(orient='dict').keys(), data =meta_2.to_dict(orient='dict').values())
+    meta_2_sorted = pd.DataFrame(index = meta_2.to_dict(orient='dict').keys(), data = meta_2.to_dict(orient='dict').values())
     concat_df_2 = pd.concat([meta_2_sorted, data_2], axis=1)
     
     out_df = pd.concat([concat_df_1,concat_df_2], axis = 1)
@@ -69,7 +77,7 @@ def run_get_dwd_data(test_run = False):
         latitude  = dict_locations[location]['latitude']
         longitude = dict_locations[location]['longitude']
         if not first_run or test_run:
-            """Observation: """
+            """OBSERVATION: """
             if test_run:
                 environment = Environment(start=str(time_start - datetime.timedelta(hours=2)), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
             else:
@@ -78,7 +86,7 @@ def run_get_dwd_data(test_run = False):
             pv_obs_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
             wind_obs_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
             if not test_run:
-                obs_out = path_output_main + location + '/obs_'+ str(time_now_dwd.year) + str(time_now_dwd.month) + str(time_now_dwd.day) + str(time_now_dwd.hour) +  str(time_now_dwd.minute) + '.csv'
+                obs_out = path_output_main + location + '/obs_'+ str(time_now_dwd.year) + str(time_now_dwd.month).zfill(2) + str(time_now_dwd.day).zfill(2) + str(time_now_dwd.hour).zfill(2) +  str(time_now_dwd.minute).zfill(2) + '.csv'
                 create_csv(
                     pv_obs_meta,
                     environment.pv_data,
@@ -86,14 +94,14 @@ def run_get_dwd_data(test_run = False):
                     environment.wind_data,
                     obs_out)
         
-        """Mosmix: """
+        """MOSMIX: """
         environment = Environment(start=str(time_now_dwd), end=str(forecast_end_time),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
        
         pv_mos_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter, estimation_methode_lst=['disc','erbs','dirint','boland'])
         wind_mos_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
         
         if not test_run:
-            mos_out = path_output_main + location  +'/mos_'+ str(time_now_dwd.year) + str(time_now_dwd.month) + str(time_now_dwd.day) + str(time_now_dwd.hour) +  str(time_now_dwd.minute) + '.csv'
+            mos_out = path_output_main + location  +'/mos_'+ str(time_now_dwd.year) + str(time_now_dwd.month).zfill(2) + str(time_now_dwd.day).zfill(2) + str(time_now_dwd.hour).zfill(2) +  str(time_now_dwd.minute).zfill(2) + '.csv'
             create_csv(
                 pv_mos_meta,
                 environment.pv_data,
@@ -107,18 +115,25 @@ def run_get_dwd_data(test_run = False):
             print("End period reached")
             exit()
         else:
-            print("Next run: " + str(time_now_dwd.date() + datetime.timedelta(days=1)) + ' ' + str_shedule_time)
+            if frequency == 'daily':
+                print("Next run: " + str(time_now_dwd.date() + datetime.timedelta(days=1)) + ' ' + str_shedule_time)
+            else:
+                print("Next run in 1 hour")
     else:
         print("Test run successful")
         print("----------------------------------")
     
 
 run_get_dwd_data(test_run=True)
-# Schedule the job to run once a day at a specific time
-schedule.every().day.at(str_shedule_time).do(run_get_dwd_data)
 
-#First run
-run_get_dwd_data()
+if frequency == 'daily':
+    # Schedule the job to run once a day at a specific time
+    schedule.every().day.at(str_shedule_time).do(run_get_dwd_data)
+    #First run
+    run_get_dwd_data()
+elif frequency == 'hourly':
+    print("First run in 2 minutes")
+    schedule.every().hour.at(str_shedule_time).do(run_get_dwd_data)
 
 # Keep the script running
 while True:

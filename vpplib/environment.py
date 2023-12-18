@@ -265,20 +265,28 @@ class Environment(object):
         )
         return wd_time_result.now.replace(second=0,microsecond=0)
         
-    def __get_solar_parameter (self, input_df, lat, lon, height, methode = 'disc', use_methode_name_in_columns = False):
+    def __get_solar_parameter (self, date, ghi, temperature, pressure, drew_point, lat, lon, height, methode = 'disc', use_methode_name_in_columns = False):
         """
             Calculates solar parameters based on the given method by using pvlib estimation modells.
 
             Parameters
             ----------
-            input_df : pandas.DataFrame
-                Input DataFrame containing weather data (temperature, drew_point, pressure, ghi).
+            date : pandas.DatetimeIndex
+                date assumet in UTC if no tz given
+            ghi : list or series
+                Global Irradiance       [W/m2]
+            temperature : list or series
+                temperature at height   [C]
+            drew_pint : list or series
+                 drew point             [C]
+            pressure : list or series
+                pressure at height      [Pa]
             lat : float
                 Latitude of the location.
             lon : float
                 Longitude of the location.
             height : float
-                Altitude or height of the location.
+                Altitude or height of the location. [m]
             method : str, optional
                 Method for solar parameter calculation (default is 'disc').
                 Options: 'disc', 'erbs', 'dirint', 'boland'.
@@ -294,21 +302,25 @@ class Environment(object):
 
             Notes
             -----
-            - The input_df should contain necessary weather data columns. The Units are :
-                index (time)    [datetime utc]
-                'ghi'           [W/m2]
-                'temperature'   [C]
-                'drew_point'    [C]
-                'pressure'      [Pa]
-            - Argument:
-                'height'        [m]
             - Solar zenith angles and other solar position parameters are calculated using the get_solarposition function.
             - The method parameter determines the algorithm used for solar parameter calculation.
+            - Examples:
+                https://pvlib-python.readthedocs.io/en/stable/gallery/irradiance-decomposition/plot_diffuse_fraction.html#sphx-glr-gallery-irradiance-decomposition-plot-diffuse-fraction-py
         """
-        df             = input_df.copy()
-        df.temperature = df.temperature - 273.15
-        df.drew_point  = df.drew_point  - 273.15
         
+        df = pd.DataFrame(
+            index = list(date)
+            )
+        df['ghi']         = list(ghi)
+        df['temperature'] = list(temperature)
+        df['pressure']    = list(pressure)
+        df['drew_point']  = list(drew_point)
+        df.index
+        
+        """
+        https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.solarposition.get_solarposition.html#pvlib.solarposition.get_solarposition
+        """
+          
         solpos = get_solarposition(
                     df.index.shift(freq="-30T"), 
                     latitude    = lat,
@@ -362,7 +374,7 @@ class Environment(object):
             out_dirint = pd.DataFrame(
                             {'dni': dni_dirint, 'dhi': df_dirint.dhi}, index=df.index
                             )
-            out_df = out_dirint
+            out_df = out_dirint.fillna(0)
             
         elif methode == 'boland':
             out_boland = irradiance.boland(
@@ -674,6 +686,7 @@ class Environment(object):
         """
         if dataset == 'solar':
             pd_sorted_data_for_station.update( self.__get_solar_power_from_energy(pd_sorted_data_for_station, 'MOSMIX'), overwrite=True)
+            
             pd_sorted_data_for_station.pressure = self.__get_station_pressure_from_reduced_pressure(
                 height = pd_station_metadata['height'].values[0], 
                 pressure_reduced = pd_sorted_data_for_station.pressure, 
@@ -684,11 +697,15 @@ class Environment(object):
             """
             for methode in estimation_methode_lst:
                 calculated_solar_parameter = self.__get_solar_parameter(
-                        input_df = pd_sorted_data_for_station, 
-                        lat      = pd_station_metadata['latitude' ].values[0], 
-                        lon      = pd_station_metadata['longitude'].values[0],
-                        height   = pd_station_metadata['height'   ].values[0],
-                        methode  = methode,
+                        date        = pd_sorted_data_for_station.index, 
+                        ghi         = pd_sorted_data_for_station.ghi, 
+                        temperature = pd_sorted_data_for_station.temperature - 273.15, 
+                        pressure    = pd_sorted_data_for_station.pressure, 
+                        drew_point  = pd_sorted_data_for_station.drew_point - 273.15,
+                        lat         = pd_station_metadata['latitude' ].values[0], 
+                        lon         = pd_station_metadata['longitude'].values[0],
+                        height      = pd_station_metadata['height'   ].values[0],
+                        methode     = methode,
                         use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
                 pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
