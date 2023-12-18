@@ -558,7 +558,7 @@ class Environment(object):
         return df
     
     
-    def __get_multi_index_for_windpowerlib (self, columns, height):
+    def __get_multi_index_for_windpowerlib (self, columns):
         """
        Creates a MultiIndex DataFrame for wind-related parameters.
     
@@ -566,8 +566,6 @@ class Environment(object):
        ----------
        columns : list
            List of column names for the DataFrame.
-       height : float
-           Height of the station [m].
     
        Returns
        -------
@@ -582,15 +580,6 @@ class Environment(object):
          and the corresponding height from `rename_dict`.
        - The final MultiIndex is set for the DataFrame with levels 'Parameter' and 'Height'.
        """
-        """
-        TODO: Insert values for station height correctly --> Consult / compare with Windpower lib
-        rename_dict = {
-            'wind_speed'       : pd_station_metadata['height'].values[0],
-            'pressure'         : pd_station_metadata['height'].values[0],
-            'temperature'      : pd_station_metadata['height'].values[0] + 2,
-            'roughness_length' : pd_station_metadata['height'].values[0],
-            }
-        """
         rename_dict = {
             'wind_speed'       : 10,
             'pressure'         : 0,
@@ -643,8 +632,7 @@ class Environment(object):
             pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature + 274.15
             pd_sorted_data_for_station['roughness_length'] = 0.15
             pd_sorted_data_for_station.columns = self.__get_multi_index_for_windpowerlib(
-                pd_sorted_data_for_station.columns,
-                pd_station_metadata['height'].values[0])
+                pd_sorted_data_for_station.columns)
             
         return self.__resample_data(pd_sorted_data_for_station)
         
@@ -719,8 +707,7 @@ class Environment(object):
             
             pd_sorted_data_for_station['roughness_length'] = 0.15
             pd_sorted_data_for_station.columns = self.__get_multi_index_for_windpowerlib(
-                pd_sorted_data_for_station.columns,
-                pd_station_metadata['height'].values[0])
+                pd_sorted_data_for_station.columns)
             
         #Observation data discribes the value for the last timestep. MOSMIX forecasts the value for the next timestep
         #Shift by -1 to aling MOSMIX to Observation
@@ -1025,8 +1012,8 @@ class Environment(object):
         Retrieves wind weather data from the DWD database and processes it.
         Wind weather data are:
         - Wind speed [m/s]
-        - Pressure [Pa]
-        - Temperature [°C]
+        - Pressure at station height[Pa]
+        - Temperature at 2 m height[°C]
         The resulting DataFrame contains a MultiIndex with the parameter names and heights.
 
         Parameters
@@ -1080,7 +1067,7 @@ class Environment(object):
         """
         Retrieves temperature weather data from the DWD database and processes it.
         Temperature weather data are:
-        - Temperature [°C]
+        - Temperature at 2 m height [°C]
 
         Parameters
         ----------
