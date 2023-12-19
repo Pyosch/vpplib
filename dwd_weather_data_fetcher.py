@@ -13,7 +13,7 @@ path_output_main = dir_path + "/dwd_results/"
 "hourly or daily"
 frequency = 'daily'
 distance = 100
-surpress_output_globally = True
+surpress_output_globally = False
 force_end_time = True
 min_quality_per_parameter = 10
 run_time_hours = 240 #should be max 240 hours
@@ -71,9 +71,8 @@ def run_get_dwd_data(test_run = False):
         print("Start test run")
     time_now_dwd = Environment().get_time_from_dwd().replace(tzinfo=None)
     print(time_now_dwd)
-    
     for location in dict_locations:
-        print("Query weather data for " + str(location))
+        #print("Query weather data for " + str(location))
         latitude  = dict_locations[location]['latitude']
         longitude = dict_locations[location]['longitude']
         if not first_run or test_run:
@@ -82,7 +81,8 @@ def run_get_dwd_data(test_run = False):
                 environment = Environment(start=str(time_start - datetime.timedelta(hours=2)), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
             else:
                 environment = Environment(start=str(time_start), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
-            
+            print("Query Observation data for " + str(location) + " lat: " + str(latitude) + " lon: " + str(longitude))
+            print("Start: " + str(environment.start) +  " End: " + str(environment.end))
             pv_obs_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
             wind_obs_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
             if not test_run:
@@ -96,7 +96,8 @@ def run_get_dwd_data(test_run = False):
         
         """MOSMIX: """
         environment = Environment(start=str(time_now_dwd), end=str(forecast_end_time),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
-       
+        print("Query Mosmix data for " + str(location)+ " lat: " + str(latitude) + " lon: " + str(longitude))
+        print("Start: " + str(environment.start) +  " End: " + str(environment.end))
         pv_mos_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter, estimation_methode_lst=['disc','erbs','dirint','boland'])
         wind_mos_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
         
