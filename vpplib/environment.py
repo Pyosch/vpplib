@@ -524,13 +524,13 @@ class Environment(object):
         #Fill NaN - if force_end_time == True keep the missing values at the end
         df.interpolate(
             inplace=True, 
-            limit_area = 'inside' if not self.__force_end_time else None)
+            limit_area = 'inside' if self.__force_end_time else None)
         
         #Resample to given resulotion and interpolate over missing values
         #if force_end_time == True keep the missing values at the end
         df = df.resample(time_freq).mean().interpolate(
             method = 'linear', 
-            limit_area = 'inside' if not self.__force_end_time else None)
+            limit_area = 'inside' if self.__force_end_time else None)
         
         #Remove timestamps which are not needed
         #For timezone aware timestamps:
@@ -712,6 +712,8 @@ class Environment(object):
         #Observation data discribes the value for the last timestep. MOSMIX forecasts the value for the next timestep
         #Shift by -1 to aling MOSMIX to Observation
         pd_sorted_data_for_station = pd_sorted_data_for_station.shift(-1)
+        if not self.__force_end_time:
+            pd_sorted_data_for_station.drop(pd_sorted_data_for_station.tail(1).index, inplace = True) 
         return self.__resample_data(pd_sorted_data_for_station)
     
     
@@ -799,7 +801,7 @@ class Environment(object):
         #observation data is updated every full hour
         observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
 
-        if self.__start_dt_utc <= observation_end_date - datetime.timedelta(hours = 1):
+        if self.__start_dt_utc < observation_end_date - datetime.timedelta(hours = 1) or self.__start_dt_utc == observation_end_date - datetime.timedelta(hours = 1) and self.__end_dt_utc <= observation_end_date:
             if activate_output:
                 print("Using observation database.") 
             if self.__end_dt_utc > observation_end_date and not self.__force_end_time:
@@ -1193,8 +1195,3 @@ class Environment(object):
                 )
         self.mean_temp_days = self.__resample_data(self.temp_data,'1440 min')
         return self.__temp_station_metadata
-        
-
-
-
-
