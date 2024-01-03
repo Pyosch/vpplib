@@ -118,7 +118,7 @@ class Environment(object):
 
     @__start_dt_utc.setter
     def __start_dt_utc(self, new___start_dt_utc):
-        if new___start_dt_utc.tzinfo != datetime.timezone.utc:
+        if new___start_dt_utc.tzinfo != zoneinfo.ZoneInfo(key='UTC'):
             raise ValueError('@__start_dt_utc.setter: new time not given in utc')
         new___start_dt_utc = new___start_dt_utc.replace(microsecond = 0)
         self.__internal_start_datetime_utc = new___start_dt_utc
@@ -133,7 +133,7 @@ class Environment(object):
 
     @__end_dt_utc.setter
     def __end_dt_utc(self, new___end_dt_utc):
-        if new___end_dt_utc.tzinfo != datetime.timezone.utc:
+        if new___end_dt_utc.tzinfo != zoneinfo.ZoneInfo(key='UTC'):
             raise ValueError('@__end_dt_utc.setter: new time not given in utc')
         new___end_dt_utc = new___end_dt_utc.replace(microsecond=0)
         self.__internal_end_datetime_utc = new___end_dt_utc
@@ -152,7 +152,7 @@ class Environment(object):
             raise ValueError('@__start_dt_target_tz.setter: new time not given in target timezone')
         new_start_dt = new_start_dt.replace(microsecond = 0)
         self.__internal_start_datetime_with_class_timezone = new_start_dt  
-        self.__internal_start_datetime_utc = (new_start_dt - new_start_dt.utcoffset()).replace(tzinf = datetime.timezone.utc)
+        self.__internal_start_datetime_utc = (new_start_dt - new_start_dt.utcoffset()).replace(tzinf = zoneinfo.ZoneInfo(key='UTC'))
         self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
         print("Setted new start time to: ", self.__internal_start_datetime_with_class_timezone)  and not self.__surpress_output_globally
         
@@ -166,7 +166,7 @@ class Environment(object):
             raise ValueError('@__end_dt_target_tz.setter: new time not given in target timezone')
         new_end_dt = new_end_dt.replace(microsecond=0)
         self.__internal_end_datetime_with_class_timezone = new_end_dt
-        self.__internal_end_datetime_utc = (new_end_dt - new_end_dt.utcoffset()).replace(tzinfo = datetime.timezone.utc)
+        self.__internal_end_datetime_utc = (new_end_dt - new_end_dt.utcoffset()).replace(tzinfo = zoneinfo.ZoneInfo(key='UTC'))
         self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
         print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.__surpress_output_globally
 
@@ -524,13 +524,13 @@ class Environment(object):
         #Fill NaN - if force_end_time == True keep the missing values at the end
         df.interpolate(
             inplace=True, 
-            limit_area = 'inside' if not self.__force_end_time else None)
+            limit_area = 'inside' if self.__force_end_time else None)
         
         #Resample to given resulotion and interpolate over missing values
         #if force_end_time == True keep the missing values at the end
         df = df.resample(time_freq).mean().interpolate(
             method = 'linear', 
-            limit_area = 'inside' if not self.__force_end_time else None)
+            limit_area = 'inside' if self.__force_end_time else None)
         
         #Remove timestamps which are not needed
         #For timezone aware timestamps:
@@ -712,6 +712,7 @@ class Environment(object):
         #Observation data discribes the value for the last timestep. MOSMIX forecasts the value for the next timestep
         #Shift by -1 to aling MOSMIX to Observation
         pd_sorted_data_for_station = pd_sorted_data_for_station.shift(-1)
+        pd_sorted_data_for_station.drop(pd_sorted_data_for_station.tail(1).index, inplace = True) 
         return self.__resample_data(pd_sorted_data_for_station)
     
     
@@ -801,7 +802,7 @@ class Environment(object):
         #observation data is updated every full hour
         observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
 
-        if self.__start_dt_utc <= observation_end_date - datetime.timedelta(hours = 1):
+        if self.__start_dt_utc < observation_end_date - datetime.timedelta(hours = 1) or self.__start_dt_utc == observation_end_date - datetime.timedelta(hours = 1) and self.__end_dt_utc <= observation_end_date:
             if activate_output:
                 print("Using observation database.") 
             if self.__end_dt_utc > observation_end_date and not self.__force_end_time:
@@ -848,7 +849,7 @@ class Environment(object):
                 mosmix_type = DwdMosmixType.LARGE,
                 settings    =  settings,
                 start_date  = self.__start_dt_utc,
-                end_date    = self.__end_dt_utc
+                end_date    = self.__end_dt_utc + datetime.timedelta(hours = 2)
                 )
 
         if user_station_id is not None:
@@ -899,10 +900,10 @@ class Environment(object):
                 pd_sorted_data_for_station[key] = pd_unsorted_data_for_station.loc[pd_unsorted_data_for_station['parameter'] == req_parameter_dict[key]]['value']
 
             #Fill missing values with NaN, if end time is forced    
-            if pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
+            if pd_sorted_data_for_station.index[-2] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
                 pd_missing_dates = pd.DataFrame(index = pd.date_range(
                     start = pd_sorted_data_for_station.index[-1] + datetime.timedelta(hours = 1),
-                    end   = self.__end_dt_utc,
+                    end   = self.__end_dt_utc + datetime.timedelta(hours = 1),
                     freq  = 'H'
                     ))
                 pd_sorted_data_for_station = pd.concat([pd_sorted_data_for_station, pd_missing_dates])
@@ -1195,8 +1196,3 @@ class Environment(object):
                 )
         self.mean_temp_days = self.__resample_data(self.temp_data,'1440 min')
         return self.__temp_station_metadata
-        
-
-
-
-

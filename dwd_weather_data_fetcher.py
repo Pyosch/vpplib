@@ -12,17 +12,17 @@ Change your settings here
 path_output_main = dir_path + "/dwd_results/"    
 "hourly or daily"
 frequency = 'daily'
+resolution = '60 min'
 distance = 100
-surpress_output_globally = True
+surpress_output_globally = False
 force_end_time = True
 min_quality_per_parameter = 10
-run_time_hours = 240 #should be max 240 hours
+run_time_hours = 0 #should be max 238 hours. If run_time_hours = 0 the script will run in infinite loop
 dict_locations = {
     'Bedburg':      {'latitude': 51.01, 'longitude': 6.31},
     'Köln':         {'latitude': 50.97, 'longitude': 6.97},
     'Essen':        {'latitude': 51.40, 'longitude': 6.97},  
 }
-
 
 if not os.path.exists(path_output_main):
     os.mkdir(path_output_main)
@@ -31,10 +31,10 @@ for key in dict_locations:
     if not os.path.exists(dir_path_key):
         os.mkdir(dir_path_key)
          
-first_run = True
 #Get actual time from dwd server (UTC)
 time_start = Environment().get_time_from_dwd().replace(tzinfo=None)
 forecast_end_time = time_start + datetime.timedelta(hours = run_time_hours + 2)
+plot_next_run_flag = False
 
 if frequency == 'daily':
     #Set shedule time for daily run. First run triggered by run_get_dwd_data() so the first shedule run is time_now+23h58min
@@ -66,64 +66,64 @@ def create_csv(meta_1,data_1,meta_2,data_2,out_path):
     out_df.to_csv(out_path, sep = ';')
 
 def run_get_dwd_data(test_run = False):
-    global first_run
+    global forecast_end_time
+    global plot_next_run_flag
     if test_run:
         print("Start test run")
     time_now_dwd = Environment().get_time_from_dwd().replace(tzinfo=None)
     print(time_now_dwd)
-    
+    if run_time_hours == 0:
+        forecast_end_time = time_now_dwd.replace(minute=0,second=0) + datetime.timedelta(hours = 240)
     for location in dict_locations:
-        print("Query weather data for " + str(location))
+        #print("Query weather data for " + str(location))
         latitude  = dict_locations[location]['latitude']
         longitude = dict_locations[location]['longitude']
-        if not first_run or test_run:
-            """OBSERVATION: """
-            if test_run:
-                environment = Environment(start=str(time_start - datetime.timedelta(hours=2)), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
-            else:
-                environment = Environment(start=str(time_start), end=str(time_now_dwd),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
-            
-            pv_obs_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
-            wind_obs_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
-            if not test_run:
-                obs_out = path_output_main + location + '/obs_'+ str(time_now_dwd.year) + str(time_now_dwd.month).zfill(2) + str(time_now_dwd.day).zfill(2) + str(time_now_dwd.hour).zfill(2) +  str(time_now_dwd.minute).zfill(2) + '.csv'
-                create_csv(
-                    pv_obs_meta,
-                    environment.pv_data,
-                    wind_obs_meta,
-                    environment.wind_data,
-                    obs_out)
-        
-        """MOSMIX: """
-        environment = Environment(start=str(time_now_dwd), end=str(forecast_end_time),time_freq='60 min',surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
-       
-        pv_mos_meta     = environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter, estimation_methode_lst=['disc','erbs','dirint','boland'])
-        wind_mos_meta   = environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
-        
-        if not test_run:
-            mos_out = path_output_main + location  +'/mos_'+ str(time_now_dwd.year) + str(time_now_dwd.month).zfill(2) + str(time_now_dwd.day).zfill(2) + str(time_now_dwd.hour).zfill(2) +  str(time_now_dwd.minute).zfill(2) + '.csv'
-            create_csv(
-                pv_mos_meta,
-                environment.pv_data,
-                wind_mos_meta,
-                environment.wind_data,
-                mos_out)
-    
-    if not test_run:
-        first_run = False
-        if time_now_dwd > forecast_end_time - datetime.timedelta(hours = 2):
-            print("End period reached")
-            exit()
+
+        """OBSERVATION: """
+        if test_run or time_start + datetime.timedelta(hours=1) <= time_now_dwd:
+                obs_environment = Environment(
+                    start=str(time_start - datetime.timedelta(hours=2)) if test_run else str(time_start), 
+                    end=str(time_now_dwd),
+                    time_freq=resolution,
+                    surpress_output_globally=surpress_output_globally, 
+                    force_end_time= force_end_time)
+                print("Query Observation data for " + str(location) + " lat: " + str(latitude) + " lon: " + str(longitude))
+                print("Start: " + str(obs_environment.start) +  " End: " + str(obs_environment.end))
+                pv_obs_meta     = obs_environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
+                wind_obs_meta   = obs_environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
+                if not test_run:
+                    obs_out = path_output_main + location + '/obs_'+ str(time_now_dwd.year) + str(time_now_dwd.month).zfill(2) + str(time_now_dwd.day).zfill(2) + str(time_now_dwd.hour).zfill(2) +  str(time_now_dwd.minute).zfill(2) + '.csv'
+                    create_csv(
+                        pv_obs_meta,
+                        obs_environment.pv_data,
+                        wind_obs_meta,
+                        obs_environment.wind_data,
+                        obs_out)
         else:
-            if frequency == 'daily':
-                print("Next run: " + str(time_now_dwd.date() + datetime.timedelta(days=1)) + ' ' + str_shedule_time)
-            else:
-                print("Next run in 1 hour")
-    else:
+            print("Skipping observation query. Difftime: " + str(time_now_dwd - time_start) + " < 1 hour")
+                
+        if time_now_dwd + datetime.timedelta(hours=1) < forecast_end_time:
+            """MOSMIX: """
+            mos_environment = Environment(start=str(time_now_dwd), end=str(forecast_end_time),time_freq=resolution,surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
+            print("Query Mosmix data for " + str(location)+ " lat: " + str(latitude) + " lon: " + str(longitude))
+            print("Start: " + str(mos_environment.start) +  " End: " + str(mos_environment.end))
+            pv_mos_meta     = mos_environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter, estimation_methode_lst=['disc','erbs','dirint','boland'])
+            wind_mos_meta   = mos_environment.get_dwd_wind_data(lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
+            if not test_run:
+                mos_out = path_output_main + location  +'/mos_'+ str(time_now_dwd.year) + str(time_now_dwd.month).zfill(2) + str(time_now_dwd.day).zfill(2) + str(time_now_dwd.hour).zfill(2) +  str(time_now_dwd.minute).zfill(2) + '.csv'
+                create_csv(
+                    pv_mos_meta,
+                    mos_environment.pv_data,
+                    wind_mos_meta,
+                    mos_environment.wind_data,
+                    mos_out)
+    
+    if test_run:
         print("Test run successful")
         print("----------------------------------")
-    
-
+    else:
+       plot_next_run_flag = True  
+       
 run_get_dwd_data(test_run=True)
 
 if frequency == 'daily':
@@ -137,5 +137,14 @@ elif frequency == 'hourly':
 
 # Keep the script running
 while True:
+    if plot_next_run_flag:
+        print("Next run:" ,schedule.next_run())
+        plot_next_run_flag = False
+    
+    n = schedule.idle_seconds()
+    if n is None or run_time_hours != 0 and schedule.next_run() >= time_start + datetime.timedelta(hours = run_time_hours):
+        print("End period reached")
+        raise SystemExit(0)
+    elif n > 0:
+        time.sleep(int(n/2))
     schedule.run_pending()
-    time.sleep(60)
