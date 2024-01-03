@@ -8,7 +8,9 @@ import pandas as pd
 import pandapower as pp
 import pandapower.networks as pn
 import os
+import sys
 
+sys.path.append(os.path.abspath(os.path.join('')))
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
@@ -20,9 +22,8 @@ from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
 
 
-# def simulation(store_basic_settings, store_environment, store_user_profile, store_bev,
-#                store_pv, store_wind, store_heatpump, store_storage):
 
+# def simulation():
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # environment
@@ -141,10 +142,15 @@ environment = Environment(
     time_freq=time_freq,
 )
 
-environment.get_wind_data(file=wind_file, utc=False)
-environment.get_pv_data(file=pv_file)
-environment.get_mean_temp_days(file=temp_days_file)
-environment.get_mean_temp_hours(file=temp_hours_file)
+# environment.get_wind_data(file=wind_file, utc=False)
+# environment.get_pv_data(file=pv_file)
+# environment.get_mean_temp_days(file=temp_days_file)
+# environment.get_mean_temp_hours(file=temp_hours_file)
+
+environment.get_dwd_wind_data(lat=latitude,lon=longitude)
+environment.get_dwd_pv_data(lat=latitude,lon=longitude)
+environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
+environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)  
 
 # user profile
 
@@ -284,6 +290,7 @@ for wind in range(num_wind):
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
-df_timeseries, no_timeseries_lst =vpp.export_component_timeseries()
+df_timeseries=vpp.export_component_timeseries()
+df_timeseries=pd.DataFrame(df_timeseries)
 print(df_timeseries)
-# df_timeseries.to_csv(f"{parentdir}/input/df_timeseries.csv")
+    # df_timeseries.to_csv(f"{parentdir}/input/df_timeseries.csv")

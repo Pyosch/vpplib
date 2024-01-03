@@ -8,7 +8,9 @@ import pandas as pd
 import pandapower as pp
 import pandapower.networks as pn
 import os
+import sys
 
+sys.path.append(os.path.abspath(os.path.join('')))
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
@@ -41,8 +43,10 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     latitude = store_user_profile['Latitude']
     longitude = store_user_profile['Longitude']
     yearly_thermal_energy_demand = store_user_profile['Thermal Energy Demand']
-    comfort_factor = store_user_profile['Comfort Factor']
-    daily_vehicle_usage = store_user_profile['Daily Vehicle Usage']
+    comfort_factor = None
+    # comfort_factor = store_user_profile['Comfort Factor']
+    # daily_vehicle_usage = store_user_profile['Daily Vehicle Usage']
+    daily_vehicle_usage = None
     building_type = store_user_profile['Building Type']
     t_0 = store_user_profile['T0']
     week_trip_start = []
@@ -72,7 +76,8 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     density_model = store_wind['Density Model']
     temperature_model = store_wind['Temperature Model']
     power_output_model = store_wind['Power Output Model']
-    density_correction = False
+    #TODO: Implement toggle for density_correction
+    density_correction = True
     obstacle_height = store_wind['Obstacle Height']
     hellman_exp = None
 
@@ -134,11 +139,17 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
         year=year,
         time_freq=time_freq,
     )
-
+    '''
     environment.get_wind_data(file=wind_file, utc=False)
     environment.get_pv_data(file=pv_file)
     environment.get_mean_temp_days(file=temp_days_file)
     environment.get_mean_temp_hours(file=temp_hours_file)
+    '''
+
+    environment.get_dwd_wind_data(lat=latitude,lon=longitude)
+    environment.get_dwd_pv_data(lat=latitude,lon=longitude)
+    environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
+    environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)  
 
     # user profile
 
@@ -278,6 +289,9 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
         vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
-    df_timeseries=vpp.export_component_timeseries()
-    print(df_timeseries)
-    # df_timeseries.to_csv(f"{parentdir}/input/df_timeseries.csv")
+        df_timeseries=vpp.export_component_timeseries()
+        print(df_timeseries, type(df_timeseries))
+        print(type(df_timeseries[0]))
+        DF=df_timeseries[0]
+        DF.to_csv('GUI/pages/df_timeseries.csv')
+
