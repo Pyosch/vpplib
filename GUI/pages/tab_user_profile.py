@@ -28,7 +28,7 @@ dbc.Row([
                                 id='input_latitude',
                                 type='number',
                                 placeholder='e.g. 50.7498321',
-                                value=50.7498321)
+                                value=50.941357)
                         ], width=2)
                     ]),
                 dbc.Row([
@@ -40,7 +40,7 @@ dbc.Row([
                                 id='input_longitude',
                                 type='number',
                                 placeholder='e.g. 6.473982',
-                                value=6.473982)
+                                value=6.958307)
                             ], width=2)
                     ]),
                 dbc.Row([

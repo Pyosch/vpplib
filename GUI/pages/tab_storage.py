@@ -88,9 +88,9 @@ def update_storage(n_clicks, storage_charge_effciency, storage_discharge_efficie
     
     if 'submit_storage_settings' ==ctx.triggered_id and n_clicks is not None:
 
-        data_storage_settings={'Charging Efficiency': storage_charge_effciency,
+        data_storage_settings={'Charging Efficiency': storage_charge_effciency/100,
                  'Discharging Efficiency': storage_discharge_efficiency/100,
-                 'Max. Power': storage_max_power/100,
+                 'Max. Power': storage_max_power,
                  'Max. Capacity': storage_max_capacity}
         
         return data_storage_settings

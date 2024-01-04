@@ -795,6 +795,8 @@ class Environment(object):
         
         time_now = self.get_time_from_dwd()
         settings = Settings.default()
+        Settings.cache_disable = True
+        #settings = Settings
         settings.ts_si_units = False
         
         #observation data is updated every full hour

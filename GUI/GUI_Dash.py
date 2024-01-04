@@ -9,18 +9,22 @@ from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc  
+import sys
+import os
+from pages import tab_run_simulation
 
-# from vpplib.environment import Environment
-# from vpplib.user_profile import UserProfile
-# from vpplib.photovoltaic import Photovoltaic
-# from vpplib.battery_electric_vehicle import BatteryElectricVehicle
-# from vpplib.heat_pump import HeatPump
-# from vpplib.electrical_energy_storage import ElectricalEnergyStorage
-# from vpplib.wind_power import WindPower
-# from vpplib.virtual_power_plant import VirtualPowerPlant
-# from vpplib.operator import Operator
+sys.path.append(os.path.abspath(os.path.join('')))
+from vpplib.environment import Environment
+from vpplib.user_profile import UserProfile
+from vpplib.photovoltaic import Photovoltaic
+from vpplib.battery_electric_vehicle import BatteryElectricVehicle
+from vpplib.heat_pump import HeatPump
+from vpplib.electrical_energy_storage import ElectricalEnergyStorage
+from vpplib.wind_power import WindPower
+from vpplib.virtual_power_plant import VirtualPowerPlant
+from vpplib.operator import Operator
 
-from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_results, tab_test
+from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_results
 
 
 
@@ -62,10 +66,10 @@ dbc.Row([
         dbc.Tab(label='Storage', 
                 tab_id='tab_storage',
                 active_label_style={'color': 'grey'}),
-        dbc.Tab(label='Results', 
+        dbc.Tab(label='Summary Parameters', 
                 tab_id='tab_results',
                 active_label_style={'color': 'grey'}),
-        dbc.Tab(label='tab_test',
+        dbc.Tab(label='Simulation and Results',
                 tab_id='tab_test',
                 active_label_style={'color': 'grey'})
         
@@ -107,7 +111,7 @@ def render_content(active_tab):
     elif active_tab == 'tab_results':
         return tab_results.layout
     elif active_tab == 'tab_test':
-        return tab_test.layout
+        return tab_run_simulation.layout
 
 if __name__ == '__main__':
     app.run_server(debug=True)

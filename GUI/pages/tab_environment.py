@@ -26,7 +26,7 @@ dbc.Row([
                                         id='input_date_end',
                                         type='date',
                                         style={'width': 'auto'},
-                                        value='2015-03-01'
+                                        value='2015-03-02'
                                         )
                                     ], width='auto')
                                 ],align='center'),
@@ -35,6 +35,7 @@ dbc.Row([
                                         html.P('Time Zone')
                                     ],width=3),
                                 dbc.Col([
+                                    #TODO: Adjust timezones (see Europe/Berlin)
                                     dcc.Dropdown(
                                         [   'Pacific/Kwajalein UTC-12',
                                             'Pacific/Samo UTC-11',
@@ -50,7 +51,7 @@ dbc.Row([
                                             'Atlantic/Azores UTC-2',
                                             'Atlantic/Cape_Verde UTC-1',
                                             'Europe/London UTC+0',
-                                            'Europe/Berlin UTC+1',
+                                            'Europe/Berlin',
                                             'Europe/Helsinki UTC+2 ',
                                             'Europe/Moscow UTC+3',
                                             'Asia/Dubai UTC+4',
@@ -72,7 +73,7 @@ dbc.Row([
                                                 'width': '2'
                                                 },
                                         placeholder='Choose a Timezone',
-                                        value='Europe/Berlin UTC+1',
+                                        value='Europe/Berlin',
                                         clearable=False
                                         )
                                     ], width='3')
@@ -121,8 +122,8 @@ dbc.Row([
 def update_environment(n_clicks, start_date, end_date, 
                           timezone, timestep):
     if 'submit_environment_settings' == ctx.triggered_id and n_clicks is not None:
-        data_environment={'Start Date': start_date,
-                            'End Date': end_date,
+        data_environment={'Start Date': start_date + ' 00:00:00',
+                            'End Date': end_date + ' 00:00:00',
                             'Time Zone': timezone,
                             'Time Step': timestep
                             }
