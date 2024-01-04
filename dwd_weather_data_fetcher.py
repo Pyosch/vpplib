@@ -74,15 +74,20 @@ def run_get_dwd_data(test_run = False):
     print(time_now_dwd)
     if run_time_hours == 0:
         forecast_end_time = time_now_dwd.replace(minute=0,second=0) + datetime.timedelta(hours = 240)
+    if time_now_dwd > time_start + datetime.timedelta(hours = 240) and run_time_hours == 0:
+        obs_start_time = time_now_dwd - datetime.timedelta(hours = 240)
+    else:
+        obs_start_time = time_start
+        
     for location in dict_locations:
         #print("Query weather data for " + str(location))
         latitude  = dict_locations[location]['latitude']
         longitude = dict_locations[location]['longitude']
 
         """OBSERVATION: """
-        if test_run or time_start + datetime.timedelta(hours=1) <= time_now_dwd:
+        if test_run or obs_start_time + datetime.timedelta(hours=1) <= time_now_dwd:
                 obs_environment = Environment(
-                    start=str(time_start - datetime.timedelta(hours=2)) if test_run else str(time_start), 
+                    start=str(obs_start_time - datetime.timedelta(hours=2)) if test_run else str(obs_start_time), 
                     end=str(time_now_dwd),
                     time_freq=resolution,
                     surpress_output_globally=surpress_output_globally, 
@@ -100,7 +105,7 @@ def run_get_dwd_data(test_run = False):
                         obs_environment.wind_data,
                         obs_out)
         else:
-            print("Skipping observation query. Difftime: " + str(time_now_dwd - time_start) + " < 1 hour")
+            print("Skipping observation query. Difftime: " + str(time_now_dwd - obs_start_time) + " < 1 hour")
                 
         if time_now_dwd + datetime.timedelta(hours=1) < forecast_end_time:
             """MOSMIX: """
