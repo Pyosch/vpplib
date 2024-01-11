@@ -233,7 +233,7 @@ layout=dbc.Container([
      State('input_wind_obstacle_height', 'value'),
      State('input_hellmann_exponent', 'value')]
 )
-def update_basic_settings_store(n_clicks, turbine_type, hub_height, rotor_diameter,
+def update_wind_settings(n_clicks, turbine_type, hub_height, rotor_diameter,
                                 comfort_factor, data_source, speed_model, density_model,
                                 temperature_model, power_output_model, density_correction,
                                 obstacle_height, hellmann_exponent):

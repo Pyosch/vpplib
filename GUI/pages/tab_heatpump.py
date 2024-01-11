@@ -70,7 +70,7 @@ dbc.Row([
      State('input_heatpump_system_temperature', 'value'),
      State('input_heatpump_electrical_power', 'value')]
 )
-def update_basic_settings_store(n_clicks, type_hp, temp_hp, power_hp):
+def update_heatpump_settings(n_clicks, type_hp, temp_hp, power_hp):
     if 'submit_hp_settings' ==ctx.triggered_id and n_clicks is not None:
         data_heatpump={'Type Heatpump': type_hp,
                  'Heat System Temperature': temp_hp,

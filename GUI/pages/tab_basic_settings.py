@@ -83,7 +83,7 @@ layout=dbc.Container([
      State('input_hp_number', 'value'),
      State('input_wind_number', 'value')]
 )
-def update_basic_settings_store(n_clicks, pv_plants, storage_units, 
+def update_basic_settings(n_clicks, pv_plants, storage_units, 
                           bev_number, hp_number, wind_number):
     if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
         data_basic_settings={'pv_plants': pv_plants,

@@ -100,7 +100,7 @@ dbc.Row([
      State('input_bev_charging_efficiency', 'value')],
 
 )
-def update_bev_settings_store(n_clicks, max_battery_capacity, 
+def update_bev_settings(n_clicks, max_battery_capacity, 
                               min_battery_capacity, battery_usage, 
                               charging_power, charging_efficiency):
     if 'submit_bev_settings' ==ctx.triggered_id and n_clicks is not None:
