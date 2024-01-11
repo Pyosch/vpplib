@@ -6,15 +6,13 @@ from dash.exceptions import PreventUpdate
 import plotly.express as px
 
 
-df =pd.read_csv('GUI/df_timeseries.csv', index_col=0)
-df.index.name = 'time'
+# df =pd.read_csv('GUI/df_timeseries.csv', index_col=0)
+# df.index.name = 'time'
 
 layout=dbc.Container([
-
-
             dbc.Row([
                     dcc.Dropdown(id='dropdown_plot',multi=True,
-                                options=[{'label': y, 'value': y} for y in df.columns],
+                                options=[{'label': y, 'value': y} for y in pd.read_csv('GUI/df_timeseries.csv', index_col=0).columns],
                                 style={'width': '100%',
                                        'color':'black'},
                                        value=None)
@@ -27,7 +25,6 @@ layout=dbc.Container([
                                     'showTips': True,
                                     'displayModeBar': True,
                                     'watermark': True,
-                                    'modeBarButtonsToRemove': ['pan2d', 'lasso2d'],
                                     'displaylogo': False,
                                     'toImageButtonOptions': {'format': 'png', 'filename': 'custom_image', 'height': 1080, 'width': 1920, 'scale': 1}})
                 ])
@@ -36,12 +33,11 @@ layout=dbc.Container([
 
 @callback(
     Output('graph_timeseries', 'figure'),
-    [Input('dropdown_plot', 'value'),]
+    [Input('dropdown_plot', 'value')]
     )
 
 def build_graph(dropdown_plot):
-    dff = df
-    fig = px.line(dff, y=dropdown_plot)
+    fig = px.line(pd.read_csv('GUI/df_timeseries.csv', index_col=0), y=dropdown_plot)
     fig.update_layout(xaxis={'title': 'Time'}, yaxis={'title': 'Power [kW]'},
                       title={'text': 'Time Series'},
                       legend={'title': 'Component'})

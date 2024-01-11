@@ -207,7 +207,7 @@ def parse_contents(contents, filename, date):
     ])
 
 @callback(Output('output-data-upload', 'children'),
-          Output('store_base_load', 'data'),
+        #   Output('store_base_load', 'data'),
               Input('upload_base_load', 'contents'),
               State('upload_base_load', 'filename'),
               State('upload_base_load', 'last_modified'))
