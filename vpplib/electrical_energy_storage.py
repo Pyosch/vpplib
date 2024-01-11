@@ -12,7 +12,10 @@ import datetime as dt
 import time
 from configparser import ConfigParser
 from simses.main import SimSES
-import pysam.BatteryStateful as battery
+try:
+    import pysam.BatteryStateful as battery
+except:
+    import PySAM.BatteryStateful as battery
 # from simses.config.simulation.storage_system_config import StorageSystemConfig
 
 
