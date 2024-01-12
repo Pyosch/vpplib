@@ -2,6 +2,7 @@ from dash import dash, dcc, html, callback, Input, Output, State, callback_conte
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash.exceptions import PreventUpdate
+import dash_daq as daq
 
 layout=dbc.Container([
 dbc.Row([
@@ -30,6 +31,18 @@ dbc.Row([
                                         )
                                     ], width='auto')
                                 ],align='center'),
+                            dbc.Row([
+                                        dbc.Col([
+                                            html.P('Force End Time', style={'margin-top': '10%'})
+                                        ], width=4),
+                                        dbc.Col([
+                                            daq.BooleanSwitch(
+                                                id='force_end_time',
+                                                style={'width': 'auto', 'margin-top': '5%'},
+                                                on=True
+                                            )
+                                        ])
+                                    ]),
                             dbc.Row([
                                 dbc.Col([
                                         html.P('Time Zone')
@@ -107,25 +120,38 @@ dbc.Row([
                                                id='submit_environment_settings',
                                                color='primary')
                                 ])
-                            ])
+                            ]),
+                            html.Div(id='force_end_time_output')
 
 ])                       
 
+@callback(
+        Output('force_end_time_output', 'children'),
+        [Input('force_end_time', 'on')]
+        )
+
+def switch_force_end_time(on):
+    return on
+
+    
 @callback(
     Output('store_environment', 'data'),
     [Input('submit_environment_settings', 'n_clicks')],
     [State('input_date_start', 'value'),
      State('input_date_end', 'value'),
      State('dropdown_timezone', 'value'),
-     State('dropdown_time_step', 'value')]
+     State('dropdown_time_step', 'value'),
+     State('force_end_time', 'on')]
 )
 def update_environment_settings(n_clicks, start_date, end_date, 
-                          timezone, timestep):
+                          timezone, timestep, on):
     if 'submit_environment_settings' == ctx.triggered_id and n_clicks is not None:
         data_environment={'Start Date': start_date + ' 00:00:00',
                             'End Date': end_date + ' 00:00:00',
                             'Time Zone': timezone,
-                            'Time Step': timestep
+                            'Time Step': timestep,
+                            'Force End Time': on
+
                             }
         return data_environment
     elif n_clicks is None:

@@ -17,7 +17,7 @@ dbc.Row([
                                 id='input_electrolyzer_power',
                                 type='number',
                                 placeholder='e.g. 100 kW',
-                                value=50),
+                                value=500),
                             dbc.InputGroupText('kW')
                     ])
                     ], width=2),
@@ -32,7 +32,7 @@ dbc.Row([
                                 id='input_electrolyzer_pressure',
                                 type='number',
                                 placeholder='e.g. 150 bar',
-                                value=10
+                                value=30
                             ),
                             dbc.InputGroupText('bar')
                     ])
@@ -47,7 +47,7 @@ dbc.Row([
                             id='input_electrolyzer_quantity',
                             type='number',
                             placeholder='e.g. 100 kg',
-                            value=5
+                            value=10
                         )
                     ], width=2),
                 ]),
@@ -60,7 +60,7 @@ dbc.Row([
                             id='input_electrolyzer_number_of_time_steps',
                             type='number',
                             placeholder='e.g. 100',
-                            value=5
+                            value=10
                         )
                     ], width=2, style={'margin-bottom': '20px'}),
                 ]),

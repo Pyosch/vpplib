@@ -35,6 +35,7 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     year = int(end[:4])
     time_freq = store_environment['Time Step']
     timebase = int(time_freq[:2])
+    force_end_time = store_environment['Force End Time']
     # index = pd.date_range(start=start, end=end, freq=time_freq)
     # temp_days_file = f"{parentdir}/input/thermal/dwd_temp_days_2015.csv"
     # temp_hours_file = f"{parentdir}/input/thermal/dwd_temp_15min_2015.csv"
@@ -139,6 +140,7 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
         end=end,
         year=year,
         time_freq=time_freq,
+        force_end_time=force_end_time,
     )
     '''
     environment.get_wind_data(file=wind_file, utc=False)
