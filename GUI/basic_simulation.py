@@ -9,6 +9,7 @@ import pandapower as pp
 import pandapower.networks as pn
 import os
 import sys
+from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
 
 sys.path.append(os.path.abspath(os.path.join('')))
 from vpplib.environment import Environment
@@ -34,18 +35,19 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     year = int(end[:4])
     time_freq = store_environment['Time Step']
     timebase = int(time_freq[:2])
-    index = pd.date_range(start=start, end=end, freq=time_freq)
-    temp_days_file = f"{parentdir}/input/thermal/dwd_temp_days_2015.csv"
-    temp_hours_file = f"{parentdir}/input/thermal/dwd_temp_15min_2015.csv"
+    # index = pd.date_range(start=start, end=end, freq=time_freq)
+    # temp_days_file = f"{parentdir}/input/thermal/dwd_temp_days_2015.csv"
+    # temp_hours_file = f"{parentdir}/input/thermal/dwd_temp_15min_2015.csv"
 
     # user_profile
     identifier = store_user_profile['Identifier']
     latitude = store_user_profile['Latitude']
     longitude = store_user_profile['Longitude']
+    radius_weather_station=store_user_profile['Radius Weather Stations']
     yearly_thermal_energy_demand = store_user_profile['Thermal Energy Demand']
     comfort_factor = None
-    # comfort_factor = store_user_profile['Comfort Factor']
-    # daily_vehicle_usage = store_user_profile['Daily Vehicle Usage']
+    comfort_factor = store_user_profile['Comfort Factor']
+    daily_vehicle_usage = store_user_profile['Daily Vehicle Usage']
     daily_vehicle_usage = None
     building_type = store_user_profile['Building Type']
     t_0 = store_user_profile['T0']
@@ -53,7 +55,6 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     week_trip_end = []
     weekend_trip_start = []
     weekend_trip_end = []
-
 
     baseload = pd.read_csv(f"{parentdir}/input/baseload/df_S_15min.csv")
     baseload.drop(columns=["Time"], inplace=True)
@@ -71,7 +72,7 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     data_source = "oedb"
 
     # WindPower ModelChain data
-    wind_file = f"{parentdir}/input/wind/dwd_wind_data_2015.csv"
+    # wind_file = f"{parentdir}/input/wind/dwd_wind_data_2015.csv"
     wind_speed_model = store_wind['Speed Model']
     density_model = store_wind['Density Model']
     temperature_model = store_wind['Temperature Model']
@@ -82,7 +83,7 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     hellman_exp = None
 
     # PV data
-    pv_file = f"{parentdir}/input/pv/dwd_pv_data_2015.csv"
+    # pv_file = f"{parentdir}/input/pv/dwd_pv_data_2015.csv"
     module_lib = store_pv['PV Module Library']
     module = store_pv['PV Module']
     inverter_lib = store_pv['PV Inverter Library']
@@ -146,17 +147,17 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     environment.get_mean_temp_hours(file=temp_hours_file)
     '''
 
-    environment.get_dwd_wind_data(lat=latitude,lon=longitude)
-    environment.get_dwd_pv_data(lat=latitude,lon=longitude)
-    environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
-    environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)  
+    environment.get_dwd_wind_data(lat=latitude,lon=longitude, distance=radius_weather_station)
+    environment.get_dwd_pv_data(lat=latitude,lon=longitude, distance=radius_weather_station)
+    environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude, distance=radius_weather_station)
+    environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude, distance=radius_weather_station)  
 
     # user profile
 
     user_profile = UserProfile(
         identifier=identifier,
         latitude=latitude,
-        longitude=longitude,
+        longitude=longitude, 
         thermal_energy_demand_yearly=yearly_thermal_energy_demand,
         building_type=building_type,
         comfort_factor=comfort_factor,
@@ -290,8 +291,9 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
 
 
         df_timeseries=vpp.export_component_timeseries()
-        print(df_timeseries, type(df_timeseries))
-        print(type(df_timeseries[0]))
+        # print(df_timeseries, type(df_timeseries))
+        # print(type(df_timeseries[0]))
         DF=df_timeseries[0]
-        DF.to_csv('GUI/pages/df_timeseries.csv')
+        DF.to_csv('GUI/df_timeseries.csv')
+        print(DF)
 

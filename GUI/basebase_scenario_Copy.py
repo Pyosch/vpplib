@@ -287,10 +287,14 @@ for wind in range(num_wind):
         )
     )
 
+
+
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
-df_timeseries=vpp.export_component_timeseries()
-df_timeseries=pd.DataFrame(df_timeseries)
-print(df_timeseries)
-    # df_timeseries.to_csv(f"{parentdir}/input/df_timeseries.csv")
+    df_timeseries=vpp.export_component_timeseries()
+    # print(df_timeseries, type(df_timeseries))
+    # print(type(df_timeseries[0]))
+    DF=df_timeseries[0]
+    # DF.to_csv('GUI/df_timeseries.csv')
+    print(DF)

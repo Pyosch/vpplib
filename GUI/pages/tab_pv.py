@@ -155,7 +155,7 @@ dbc.Row([
      State('input_pv_modules_per_string', 'value'),
      State('input_pv_strings_per_inverter', 'value')]
 )
-def update_pv_settings_store(n_clicks, pv_mod_lib, pv_mod, pv_inv_lib, 
+def update_pv_settings(n_clicks, pv_mod_lib, pv_mod, pv_inv_lib, 
                                 pv_inv, pv_tilt, pv_azimuth, pv_mod_per_string, 
                                 pv_string_per_inv):
     if 'submit_pv_settings' ==ctx.triggered_id and n_clicks is not None:

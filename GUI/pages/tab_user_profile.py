@@ -45,6 +45,21 @@ dbc.Row([
                     ]),
                 dbc.Row([
                     dbc.Col([
+                            html.P('Max. radius to weather stations')
+                            ], width=3),
+                    dbc.Col([
+                            dbc.InputGroup([
+                                dbc.Input(
+                                    id='input_radius_weather_stations',
+                                    type='number',
+                                    placeholder='e.g. 30',
+                                    value=30),
+                            dbc.InputGroupText('km')
+                            ])
+                        ], width=2)
+                    ]),
+                dbc.Row([
+                    dbc.Col([
                             html.P('Thermal Energy Demand')
                             ], width=3),
                     dbc.Col([
@@ -99,7 +114,7 @@ dbc.Row([
                                         },
                                 placeholder='Choose a Building Type',
                                 value='DE_HEF33')
-                            ], width=3)
+                            ], width=2)
                     ]),
                 dbc.Row([
                     dbc.Col([
@@ -132,7 +147,7 @@ dbc.Row([
                                 'borderStyle': 'dashed',
                                 'textAlign': 'center',
                                 'margin': '10px',
-                            })
+                            }, multiple=False)
                             
                         ], width=3)
                     ], align='center'),
@@ -142,9 +157,10 @@ dbc.Row([
                                                id='submit_user_profile',
                                                color='primary')
                                 ])
-                            ])
-                
+                            ]),
+        html.Div(id='output-data-upload'),                
 ])
+
 
 def parse_contents(contents, filename, date):
     content_type, content_string = contents.split(',')
@@ -155,7 +171,7 @@ def parse_contents(contents, filename, date):
             # Assume that the user uploaded a CSV file
             df = pd.read_csv(
                 io.StringIO(decoded.decode('utf-8')))
-            print(df)
+            # print(df)
         elif 'xls' in filename:
             # Assume that the user uploaded an excel file
             df = pd.read_excel(io.BytesIO(decoded))
@@ -171,7 +187,15 @@ def parse_contents(contents, filename, date):
 
         dash_table.DataTable(
             df.to_dict('records'),
-            [{'name': i, 'id': i} for i in df.columns]
+            [{'name': i, 'id': i} for i in df.columns],
+                                    page_action='native',  page_current=0,
+                        page_size=20, sort_action='native',
+                        style_header={'backgroundColor': 'rgb(30, 30, 30)',
+                                    'color': 'white', 'textAlign':'center'},
+                        style_data={'backgroundColor': 'rgb(50, 50, 50)',
+                                    'color': 'white', 'width':'auto'},
+                        style_cell={'font-family':'sans-serif'},
+                        style_table={'margin-bottom': '20px'}
         ),
 
         html.Hr(),  # horizontal line
@@ -183,16 +207,17 @@ def parse_contents(contents, filename, date):
     ])
 
 @callback(Output('output-data-upload', 'children'),
-              Input('upload-data', 'contents'),
-              State('upload-data', 'filename'),
-              State('upload-data', 'last_modified'))
+        #   Output('store_base_load', 'data'),
+              Input('upload_base_load', 'contents'),
+              State('upload_base_load', 'filename'),
+              State('upload_base_load', 'last_modified'))
 
 def update_output(list_of_contents, list_of_names, list_of_dates):
-    if list_of_contents is not None:
-        children = [
-            parse_contents(c, n, d) for c, n, d in
-            zip(list_of_contents, list_of_names, list_of_dates)]
-        return children
+   if list_of_contents is not None:
+        children = [parse_contents(list_of_contents, list_of_names, list_of_dates)]
+        return children, children
+   else:
+        raise PreventUpdate
 
 @callback(
     Output('store_user_profile', 'data'),
@@ -200,19 +225,21 @@ def update_output(list_of_contents, list_of_names, list_of_dates):
     [State('input_identifier', 'value'),
      State('input_latitude', 'value'),
      State('input_longitude', 'value'),
+     State('input_radius_weather_stations', 'value'),
      State('input_thermal_energy_demand', 'value'),
      State('input_comfort_factor', 'value'),
      State('input_daily_vehicle_usage', 'value'),
      State('dropwdown_building_type', 'value'),
      State('input_t0', 'value')]
 )
-def update_user_profile(n_clicks, identifier, latitude, longitude, 
+def update_user_profile(n_clicks, identifier, latitude, longitude, radius_weather_stations,
                                 thermal_energy_demand, comfort_factor,
                                 daily_vehicle_usage, building_type, t0):
     if 'submit_user_profile' ==ctx.triggered_id and n_clicks is not None:
         data_user_profile={'Identifier': identifier,
                                           'Latitude': latitude,
                                           'Longitude': longitude,
+                                          'Radius Weather Stations': radius_weather_stations,
                                           'Thermal Energy Demand': thermal_energy_demand,
                                           'Comfort Factor': comfort_factor,
                                           'Daily Vehicle Usage': daily_vehicle_usage,

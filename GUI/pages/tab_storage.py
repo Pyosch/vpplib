@@ -83,7 +83,7 @@ layout=dbc.Container([
      State('input_storage_max_power', 'value'),
      State('input_storage_max_capacity', 'value')]
 )
-def update_storage(n_clicks, storage_charge_effciency, storage_discharge_efficiency, 
+def update_storage_settings(n_clicks, storage_charge_effciency, storage_discharge_efficiency, 
                                 storage_max_power, storage_max_capacity):
     
     if 'submit_storage_settings' ==ctx.triggered_id and n_clicks is not None:

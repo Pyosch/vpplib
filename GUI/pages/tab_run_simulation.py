@@ -7,6 +7,7 @@ import os
 import time
 
 
+
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 layout=dbc.Container([
@@ -14,9 +15,12 @@ layout=dbc.Container([
              dbc.Button('Simulate',
                         id='simulate_button',
                         color='primary',
-                        size='sm',),
+                        size='sm'),
             html.Div(id='output_simulate_button', children=[])
     ], style={'margin-top': '20px'}),
+    dbc.Row([
+         dbc.Input(id='project_file_name', placeholder='Project File Name', type='text', value='project_file_name'),
+     ],style={'margin-top': '20px'}),
     dbc.Row([
              dbc.Button('Download Results',
                         id='download_button',
@@ -24,10 +28,7 @@ layout=dbc.Container([
                         size='sm',),
             
     ], style={'margin-top': '20px'}),
-    dbc.Row([
-        dcc.Loading(id='is-loading', children=[html.Div(id='is-loading-output')], type='circle')
-        
-    ]),
+    dcc.Loading(id='is-loading', children=[html.Div(id='is-loading-output')], type='circle'),
     dcc.Download(id="download-time-series"),
 ])
 
@@ -60,10 +61,15 @@ def simulate(n_clicks, store_basic_settings, store_environment, store_user_profi
 @callback(
     Output("download-time-series", "data"),
     Input("download_button", "n_clicks"),
+    Input('project_file_name', 'value')
 )
-def download(n_clicks):
+def download(n_clicks, value):
     if 'download_button' == ctx.triggered_id and n_clicks is not None:
         print('downloading')
-        return dcc.send_file("df_timeseries.csv")
+        new_project_name = value
+        new_project_df = pd.read_csv('GUI/df_timeseries.csv')
+        return dcc.send_data_frame(new_project_df.to_csv, new_project_name+'_timeseries.csv')
+    
     else:
         raise PreventUpdate
+    
