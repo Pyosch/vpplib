@@ -40,7 +40,7 @@ class Environment(object):
         pv_data=[],
         wind_data=[],
         temp_data=[],
-        surpress_output_globally=False,
+        surpress_output_globally=True,
         force_end_time = True,
         use_timezone_aware_time_index = False
     ):
@@ -101,10 +101,10 @@ class Environment(object):
                 ).replace(tzinfo = self.timezone)
             self.__internal_start_datetime_utc = (
                 self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()
-                ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+                ).replace(tzinfo = zoneinfo.ZoneInfo(key='UTC'), microsecond = 0)
             self.__internal_end_datetime_utc   = (
                 self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()
-                ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+                ).replace(tzinfo = zoneinfo.ZoneInfo(key='UTC'), microsecond = 0)
             self.__temp_station_metadata = 0 
             
             if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
@@ -713,6 +713,7 @@ class Environment(object):
         #Shift by -1 to aling MOSMIX to Observation
         pd_sorted_data_for_station = pd_sorted_data_for_station.shift(-1)
         pd_sorted_data_for_station.drop(pd_sorted_data_for_station.tail(1).index, inplace = True) 
+        
         return self.__resample_data(pd_sorted_data_for_station)
     
     
@@ -796,13 +797,13 @@ class Environment(object):
         time_now = self.get_time_from_dwd()
         settings = Settings.default()
         Settings.cache_disable = True
-        #settings = Settings
         settings.ts_si_units = False
         
         #observation data is updated every full hour
         observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
 
-        if self.__start_dt_utc < observation_end_date - datetime.timedelta(hours = 1) or self.__start_dt_utc == observation_end_date - datetime.timedelta(hours = 1) and self.__end_dt_utc <= observation_end_date:
+        if self.__start_dt_utc < observation_end_date - datetime.timedelta(hours = 1) or (
+            self.__start_dt_utc == observation_end_date - datetime.timedelta(hours = 1) and self.__end_dt_utc <= observation_end_date):
             if activate_output:
                 print("Using observation database.") 
             if self.__end_dt_utc > observation_end_date and not self.__force_end_time:
@@ -849,7 +850,7 @@ class Environment(object):
                 mosmix_type = DwdMosmixType.LARGE,
                 settings    =  settings,
                 start_date  = self.__start_dt_utc,
-                end_date    = self.__end_dt_utc + datetime.timedelta(hours = 2)
+                end_date    = self.__end_dt_utc + datetime.timedelta(hours = 1)
                 )
 
         if user_station_id is not None:
@@ -900,10 +901,10 @@ class Environment(object):
                 pd_sorted_data_for_station[key] = pd_unsorted_data_for_station.loc[pd_unsorted_data_for_station['parameter'] == req_parameter_dict[key]]['value']
 
             #Fill missing values with NaN, if end time is forced    
-            if pd_sorted_data_for_station.index[-2] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
+            if pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
                 pd_missing_dates = pd.DataFrame(index = pd.date_range(
                     start = pd_sorted_data_for_station.index[-1] + datetime.timedelta(hours = 1),
-                    end   = self.__end_dt_utc + datetime.timedelta(hours = 1),
+                    end   = self.__end_dt_utc.replace(minute = 0)+ datetime.timedelta(hours = 2),
                     freq  = 'H'
                     ))
                 pd_sorted_data_for_station = pd.concat([pd_sorted_data_for_station, pd_missing_dates])
@@ -943,8 +944,8 @@ class Environment(object):
             print("Query successful!")
             
         station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
-        station_metadata ['station_type'] = 'OBSERVATION' if isinstance(wd_query_result,DwdObservationRequest) else 'MOSMIX',
-            
+        station_metadata ['station_type'] = 'OBSERVATION' if isinstance(wd_query_result,DwdObservationRequest) else 'MOSMIX',  
+        
         return (
             pd_sorted_data_for_station,
             station_metadata,
