@@ -315,7 +315,6 @@ class Environment(object):
         df['temperature'] = list(temperature)
         df['pressure']    = list(pressure)
         df['drew_point']  = list(drew_point)
-        df.index
         
         """
         https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.solarposition.get_solarposition.html#pvlib.solarposition.get_solarposition
@@ -457,7 +456,7 @@ class Environment(object):
         Returns
         -------
         float
-            Calculated station pressure.
+            Calculated station pressure [Pa].
 
         Notes
         -----
@@ -629,7 +628,7 @@ class Environment(object):
             pd_sorted_data_for_station.update(self.__get_solar_power_from_energy(pd_sorted_data_for_station,'OBSERVATION'), overwrite=True)
         elif dataset == 'wind':
             pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100 # hPa to Pa
-            pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature + 274.15
+            pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature + 273.15 #°C to K
             pd_sorted_data_for_station['roughness_length'] = 0.15
             pd_sorted_data_for_station.columns = self.__get_multi_index_for_windpowerlib(
                 pd_sorted_data_for_station.columns)
