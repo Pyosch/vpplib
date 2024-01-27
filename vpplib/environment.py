@@ -531,7 +531,7 @@ class Environment(object):
             method = 'linear', 
             limit_area = 'inside' if self.__force_end_time else None)
         
-        #Remove timestamps which are not needed
+        #Remove timestamps which are not needed:
         #For timezone aware timestamps:
         if df.index[0].tzinfo != None:
             if df.index[-1] > self.__end_dt_target_tz:
@@ -808,14 +808,14 @@ class Environment(object):
             if self.__end_dt_utc > observation_end_date and not self.__force_end_time:
                 if activate_output:
                     print("End date is in the future.")
-                self.__end_dt_utc = observation_end_date
-
+                self.__end_dt_utc = observation_end_date  
+            
             #Get weather data for your location from dwd observation database
             wd_query_result = DwdObservationRequest(
                 parameter  = list(req_parameter_dict.values()),
                 resolution = DwdObservationResolution.MINUTE_10,
                 start_date = self.__start_dt_utc,
-                end_date   = self.__end_dt_utc,
+                end_date   = self.__end_dt_utc if self.__end_dt_utc.minute % 10 == 0 else self.__end_dt_utc + datetime.timedelta(minutes = 5),
                 settings   = settings,
             )
         else:
