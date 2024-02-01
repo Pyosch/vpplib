@@ -626,7 +626,7 @@ class Environment(object):
                         longitude   = pd_station_metadata['longitude'].values[0], 
                         altitude    = pd_station_metadata['height'   ].values[0],
                         temperature = 0
-                        ).zenith.shift(freq = '-5T')
+                        ).zenith.shift(freq = '5T')
             
             pd_sorted_data_for_station['dni'] = irradiance.dni(
                 ghi = pd_sorted_data_for_station.ghi,
@@ -635,7 +635,7 @@ class Environment(object):
                 )
             pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station['dni'].replace(-0.0, 0.0)
             
-            #pd_sorted_data_for_station['zenith'].to_csv("zenith_out.csv")
+            #pd_sorted_data_for_station['zenith'].to_csv("zenith_out.csv", sep =';')
             pd_sorted_data_for_station.drop(['zenith'], axis = 1, inplace = True)
         
         elif dataset == 'wind':
