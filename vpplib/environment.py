@@ -312,14 +312,18 @@ class Environment(object):
         https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.solarposition.get_solarposition.html#pvlib.solarposition.get_solarposition
         """
         
+        #Calculate solar position parameters
+        #Shift by -30 min to get the solar position for the middle of the time intervall
+        #The index has to be converted to a list, to aviod index alignment of the series pressure and temperature with the shifted date index
         solpos = get_solarposition(
-                    list(date.shift(freq = -(date[1]-date[0]))), 
+                    list(date.shift(freq = '-30T')), 
                     latitude    = lat,
                     longitude   = lon, 
                     altitude    = height,
                     pressure    = pressure,
                     temperature = temperature
                     )
+        #Shift back after calculation
         solpos.index = date
             
         if methode == 'disc':
@@ -594,21 +598,32 @@ class Environment(object):
             Parameters
             ----------
             pd_sorted_data_for_station : pandas.DataFrame
-                DataFrame containing weather data for a station.
+                DataFrame containing weather data for a station in 10min resolution.
+                Input units:
+                solar: ghi, dhi [J/cm^2]
+                air:   temperature [C]
+                wind:  wind_speed [m/s], pressure [hPa], temperature [C]
             pd_station_metadata : pandas.DataFrame
                 DataFrame containing station metadata.
+                lat, lon
+                height [m]
             dataset : str
                 Type of weather dataset, either 'solar', 'air' or 'wind'.
 
             Returns
             -------
             resampled_data : pandas.DataFrame
-                Resampled and processed weather data.
+                Resampled and processed weather data in class time resolution.
+                Output units:
+                solar: ghi, dhi, dni [W/m^2]
+                air:   temperature [°C]
+                wind:  wind_speed [m/s], pressure [Pa], temperature [K]
+
 
             Notes
             -----
             - If the dataset is 'solar', the function updates the DataFrame with solar power calculated from energy.
-            It then calculates solar parameters using the __get_solar_parameter method and merges them into the DataFrame.
+            It then calculates solar zenith angle from time, lat, lon, and height to calculate direct normal irradiance (DNI) afterwards.
             - If the dataset is 'wind', the function prepares data for Windpowerlib using the
             __get_multi_index_for_windpowerlib method and resamples the data.
             - Because the air parameter does not need to be processed, the function does not change them.
@@ -620,6 +635,10 @@ class Environment(object):
             #Calculate power from irradiance
             pd_sorted_data_for_station.update(self.__get_solar_power_from_energy(pd_sorted_data_for_station,'OBSERVATION'), overwrite=True)
 
+            #Calculate solar zenith angle from time, lat, lon, and height
+            #Temperature is not needed for zenit. Nessessary for apperent_zenith
+            #Zenith angle is calculatet for the middle of the time intervall
+            #Shift back after calculation to align with observation data
             pd_sorted_data_for_station['zenith'] = get_solarposition(
                         list(pd_sorted_data_for_station.index.shift(freq = '-5T')), 
                         latitude    = pd_station_metadata['latitude' ].values[0],
@@ -628,18 +647,20 @@ class Environment(object):
                         temperature = 0
                         ).zenith.shift(freq = '5T')
             
+            #Calculate Direct Normal Irradiance (DNI) from GHI and DHI
             pd_sorted_data_for_station['dni'] = irradiance.dni(
                 ghi = pd_sorted_data_for_station.ghi,
                 dhi = pd_sorted_data_for_station.dhi,
                 zenith = pd_sorted_data_for_station.zenith
                 )
+            #Remove sign error for -0.0 values
             pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station['dni'].replace(-0.0, 0.0)
             
             #pd_sorted_data_for_station['zenith'].to_csv("zenith_out.csv", sep =';')
             pd_sorted_data_for_station.drop(['zenith'], axis = 1, inplace = True)
         
         elif dataset == 'wind':
-            pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100 # hPa to Pa
+            pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100       # hPa to Pa
             pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature + 273.15 #°C to K
             pd_sorted_data_for_station['roughness_length'] = 0.15
             pd_sorted_data_for_station.columns = self.__get_multi_index_for_windpowerlib(
@@ -657,19 +678,29 @@ class Environment(object):
             Parameters
             ----------
             pd_sorted_data_for_station : pandas.DataFrame
-                DataFrame containing weather data for a station.
+                DataFrame containing weather data for a station in hourly resolution.
+                Input units:
+                solar: ghi, dhi [kJ/m^2], temperature [K], drew_point [K], pressure at sea level [hPa]
+                air:   temperature [K]
+                wind:  wind_speed [m/s], pressure at sea level [hPa], temperature [K]
             dataset : str
                 Type of weather dataset, either 'solar', 'air', or 'wind'.
             pd_station_metadata : pandas.DataFrame
                 DataFrame containing station metadata.
+                lat, lon
+                height [m]
             additional_parameter_lst : list, optional
-                List of additional parameters, which where retrieved for calculating missing parameters such as dhi dni, to drop from the DataFrame, by default None.
+                List of additional parameters, which where retrieved for calculating missing solar parameters dhi and dni.
             estimation_methode_lst : list, optional
                 List of estimation methode names, which where used for calculating missing parameters such as dhi dni, by default ['disc'].
             Returns
             -------
             resampled_data : pandas.DataFrame
-                Resampled and processed weather data.
+                Resampled and processed weather data in class time resolution.
+                Output units:
+                solar: ghi, dhi, dni [W/m^2]
+                air:   temperature [°C]
+                wind:  wind_speed [m/s], pressure [Pa], temperature at station height [K]
 
             Notes
             -----
