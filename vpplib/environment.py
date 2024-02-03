@@ -331,7 +331,7 @@ class Environment(object):
                         ghi             = ghi, 
                         solar_zenith    = solpos.zenith, 
                         datetime_or_doy = date, 
-                        pressure        = pressure
+                        pressure        = pressure,
                         )
         
             df_disc = irradiance.complete_irradiance(
@@ -342,6 +342,7 @@ class Environment(object):
                         )
             out_disc['dhi'] = df_disc.dhi
             out_df = out_disc.drop(['kt', 'airmass'],axis = 1)
+            
             
         elif methode == 'erbs':
             out_erbs = irradiance.erbs(
@@ -382,6 +383,12 @@ class Environment(object):
                             max_zenith      = 87
                             )
             out_df = out_boland.drop(['kt'], axis = 1)
+
+        
+        out_df['Direktstrahlung'] = ghi - out_df['dhi']
+        out_df['zenith'] = solpos.zenith
+        out_df['apparent_zenith'] = solpos.apparent_zenith
+        
         
         #Add methode to column name of the parameters
         if use_methode_name_in_columns: out_df.columns = [str(col) + '_' + methode for col in out_df.columns]
@@ -630,7 +637,7 @@ class Environment(object):
         """
         if dataset == 'solar': 
             #Calculate DIF from GHI and DHI
-            pd_sorted_data_for_station['dif'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
+            pd_sorted_data_for_station['Direktstrahlung'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
             
             #Calculate power from irradiance
             pd_sorted_data_for_station.update(self.__get_solar_power_from_energy(pd_sorted_data_for_station,'OBSERVATION'), overwrite=True)
@@ -657,7 +664,7 @@ class Environment(object):
             pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station['dni'].replace(-0.0, 0.0)
             
             #pd_sorted_data_for_station['zenith'].to_csv("zenith_out.csv", sep =';')
-            pd_sorted_data_for_station.drop(['zenith'], axis = 1, inplace = True)
+            #pd_sorted_data_for_station.drop(['zenith'], axis = 1, inplace = True)
         
         elif dataset == 'wind':
             pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100       # hPa to Pa
