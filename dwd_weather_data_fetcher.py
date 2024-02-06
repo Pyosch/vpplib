@@ -91,7 +91,8 @@ def run_get_dwd_data(test_run = False):
                     end=str(time_now_dwd),
                     time_freq=resolution,
                     surpress_output_globally=surpress_output_globally, 
-                    force_end_time=force_end_time)
+                    force_end_time=force_end_time,
+                    extended_solar_data=True)
                 print("Query Observation data for " + str(location) + " lat: " + str(latitude) + " lon: " + str(longitude))
                 print("Start: " + str(obs_environment.start) +  " End: " + str(obs_environment.end))
                 pv_obs_meta     = obs_environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter)
@@ -109,7 +110,13 @@ def run_get_dwd_data(test_run = False):
                 
         if time_now_dwd + datetime.timedelta(hours=1) < forecast_end_time:
             """MOSMIX: """
-            mos_environment = Environment(start=str(time_now_dwd), end=str(forecast_end_time),time_freq=resolution,surpress_output_globally=surpress_output_globally, force_end_time= force_end_time)
+            mos_environment = Environment(
+                start=str(time_now_dwd), 
+                end=str(forecast_end_time),
+                time_freq=resolution,
+                surpress_output_globally=surpress_output_globally, 
+                force_end_time=force_end_time,
+                extended_solar_data=True)
             print("Query Mosmix data for " + str(location)+ " lat: " + str(latitude) + " lon: " + str(longitude))
             print("Start: " + str(mos_environment.start) +  " End: " + str(mos_environment.end))
             pv_mos_meta     = mos_environment.get_dwd_pv_data  (lat=latitude, lon=longitude, distance=distance, min_quality_per_parameter=min_quality_per_parameter, estimation_methode_lst=['disc','erbs','dirint','boland'])

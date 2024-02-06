@@ -42,7 +42,8 @@ class Environment(object):
         temp_data=[],
         surpress_output_globally = True,
         force_end_time = True,
-        use_timezone_aware_time_index = False
+        use_timezone_aware_time_index = False,
+        extended_solar_data = False,
     ):
 
         """
@@ -92,6 +93,7 @@ class Environment(object):
         self.__surpress_output_globally = surpress_output_globally
         self.__force_end_time = force_end_time
         self.__use_timezone_aware_time_index = use_timezone_aware_time_index
+        self.__extended_solar_data = extended_solar_data
         if not start is None and not end is None:
             self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
                 self.start, '%Y-%m-%d %H:%M:%S'
@@ -297,7 +299,7 @@ class Environment(object):
             -------
             out_df : pandas.DataFrame
                 DataFrame with calculated solar parameters.
-                Columns include 'dni', 'dhi'.
+                Columns include 'dni', 'dhi'. Includes 'dif', 'zenith', 'apparent_zenith' when extended_solar_data is True.
                 The DataFrame has the same index as the input_df.
 
             Notes
@@ -384,10 +386,10 @@ class Environment(object):
                             )
             out_df = out_boland.drop(['kt'], axis = 1)
 
-        
-        out_df['Direktstrahlung'] = ghi - out_df['dhi']
-        out_df['zenith'] = solpos.zenith
-        out_df['apparent_zenith'] = solpos.apparent_zenith
+        if self.__extended_solar_data:
+            out_df['dif'] = ghi - out_df['dhi']
+            out_df['zenith'] = solpos.zenith
+            out_df['apparent_zenith'] = solpos.apparent_zenith
         
         
         #Add methode to column name of the parameters
@@ -413,12 +415,12 @@ class Environment(object):
             -------
             df_power : pandas.DataFrame
                 DataFrame with calculated solar power data.
-                Columns include 'ghi' when using mosmix and 'ghi', 'dni', and 'dhi' when using observation query type.
+                Columns include 'ghi' when using mosmix; 'ghi' and 'dif' when using observation query type.
                 The DataFrame has the same index as the input df.
 
             Notes
             -----
-            - The input DataFrame (df) has to contain 'ghi' in columns. Additionaly there can be 'dni', and 'dhi' in columns.
+            - The input DataFrame (df) has to contain 'ghi' in columns. Additionaly there can be 'dif' in columns.
             - The Units for all irradiance parameter are:
             [kJ/m^2/resulution] for MOSMIX
             [J/cm^2/resulution] for OBSERVATION
@@ -428,10 +430,8 @@ class Environment(object):
         
         df_power = pd.DataFrame(index=df.index)
         df_power['ghi'] = 0
-        if 'dni' in df.columns:
-            df_power['dni'] = 0
-        if 'dhi' in df.columns:
-            df_power['dhi'] = 0
+        if 'dif' in df.columns:
+            df_power['dif'] = 0
         
         resulution = (df.index[1]-df.index[0]).seconds
         if query_type == 'MOSMIX':
@@ -607,7 +607,7 @@ class Environment(object):
             pd_sorted_data_for_station : pandas.DataFrame
                 DataFrame containing weather data for a station in 10min resolution.
                 Input units:
-                solar: ghi, dhi [J/cm^2]
+                solar: ghi, dif [J/cm^2]
                 air:   temperature [C]
                 wind:  wind_speed [m/s], pressure [hPa], temperature [C]
             pd_station_metadata : pandas.DataFrame
@@ -622,7 +622,7 @@ class Environment(object):
             resampled_data : pandas.DataFrame
                 Resampled and processed weather data in class time resolution.
                 Output units:
-                solar: ghi, dhi, dni [W/m^2]
+                solar: ghi, dhi, dni [W/m^2]. Includes dif [W/m^2] and zenith when extended_solar_data is True.
                 air:   temperature [°C]
                 wind:  wind_speed [m/s], pressure [Pa], temperature [K]
 
@@ -636,12 +636,10 @@ class Environment(object):
             - Because the air parameter does not need to be processed, the function does not change them.
         """
         if dataset == 'solar': 
-            #Calculate DIF from GHI and DHI
-            pd_sorted_data_for_station['Direktstrahlung'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
             
             #Calculate power from irradiance
             pd_sorted_data_for_station.update(self.__get_solar_power_from_energy(pd_sorted_data_for_station,'OBSERVATION'), overwrite=True)
-
+            pd_sorted_data_for_station['dhi'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dif
             #Calculate solar zenith angle from time, lat, lon, and height
             #Temperature is not needed for zenit. Nessessary for apperent_zenith
             #Zenith angle is calculatet for the middle of the time intervall
@@ -663,8 +661,9 @@ class Environment(object):
             #Remove sign error for -0.0 values
             pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station['dni'].replace(-0.0, 0.0)
             
-            #pd_sorted_data_for_station['zenith'].to_csv("zenith_out.csv", sep =';')
-            #pd_sorted_data_for_station.drop(['zenith'], axis = 1, inplace = True)
+            
+            if not self.__extended_solar_data:
+                pd_sorted_data_for_station.drop(['zenith', 'dif'], axis = 1, inplace = True)
         
         elif dataset == 'wind':
             pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100       # hPa to Pa
@@ -687,7 +686,7 @@ class Environment(object):
             pd_sorted_data_for_station : pandas.DataFrame
                 DataFrame containing weather data for a station in hourly resolution.
                 Input units:
-                solar: ghi, dhi [kJ/m^2], temperature [K], drew_point [K], pressure at sea level [hPa]
+                solar: ghi [kJ/m^2], temperature [K], drew_point [K], pressure at sea level [hPa]
                 air:   temperature [K]
                 wind:  wind_speed [m/s], pressure at sea level [hPa], temperature [K]
             dataset : str
@@ -705,7 +704,7 @@ class Environment(object):
             resampled_data : pandas.DataFrame
                 Resampled and processed weather data in class time resolution.
                 Output units:
-                solar: ghi, dhi, dni [W/m^2]
+                solar: ghi, dhi, dni [W/m^2]. Includes dif [W/m^2], zenith, apparent_zenith when extended_solar_data is True.
                 air:   temperature [°C]
                 wind:  wind_speed [m/s], pressure [Pa], temperature at station height [K]
 
@@ -723,6 +722,7 @@ class Environment(object):
         """
         if dataset == 'solar':
             pd_sorted_data_for_station.update( self.__get_solar_power_from_energy(pd_sorted_data_for_station, 'MOSMIX'), overwrite=True)
+            
             
             pd_sorted_data_for_station.pressure = self.__get_station_pressure_from_reduced_pressure(
                 height = pd_station_metadata['height'].values[0], 
@@ -745,7 +745,8 @@ class Environment(object):
                         methode     = methode,
                         use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
                 pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
-            pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
+            if not self.__extended_solar_data:
+                pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
         elif dataset == 'air':
             pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature - 273.15  # K to °C
         elif dataset == 'wind':
@@ -826,14 +827,14 @@ class Environment(object):
             
 
         dataset_dict = {
-            'solar' : ['ghi', 'dhi'],
+            'solar' : ['ghi', 'dif'],
             'air'   : ['temperature'],
             'wind'  : ['wind_speed', 'pressure', 'temperature']
             }
 
         avalible_parameter_dict = {
             "ghi"         : "radiation_global", 
-            "dhi"         : "radiation_sky_short_wave_diffuse",
+            "dif"         : "radiation_sky_short_wave_diffuse",
             "pressure"    : "pressure_air_site", 
             "temperature" : "temperature_air_mean_200",
             "wind_speed"  : "wind_speed", 
@@ -884,8 +885,8 @@ class Environment(object):
             if activate_output:  
                 print("Using momsix database.")
             if dataset == 'solar':
-                #dhi is not available for MOSMIX
-                req_parameter_dict.pop("dhi")
+                #dif is not available for MOSMIX
+                req_parameter_dict.pop("dif")
                 #get additional parameter for calculating dhi with pvlib
                 additional_parameter_lst = ["pressure", "temperature", "drew_point"]
                 req_parameter_dict.update({param: avalible_parameter_dict[param] for param in additional_parameter_lst})
@@ -1008,7 +1009,7 @@ class Environment(object):
         Solar weather data are:
         - Global Horizontal Irradiance (GHI)  [W/m^2]
         - Direct Normal Irradiance (DNI)      [W/m^2]
-        - Diffuse Horizontal Irradiance (DHI) [W/m^2]
+        - Diffuse Irradiance (DIF) [W/m^2]
 
         Parameters
         ----------
