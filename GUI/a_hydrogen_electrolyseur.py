@@ -103,7 +103,7 @@ class ElectrolysisMoritz:
             self.dt=self.dt_1*60
             self.dt_2="Stunde/n"
             
-        elif self.unit_dt.lower() =="d": # days
+        elif self.unit_dt.lower() =="day": # days
             self.dt=self.dt_1*60*24
             self.dt_2="Tag/e"
             

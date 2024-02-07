@@ -1,5 +1,6 @@
 import pandas as pd
 from a_hydrogen_electrolyseur import ElectrolysisMoritz 
+import datetime
 #-------------------------------------------------------------------------------------------------
 #test mit input
 def simulate_electrolyzer(store_hydrogen, store_environment):
@@ -14,9 +15,14 @@ def simulate_electrolyzer(store_hydrogen, store_environment):
     d = ''.join([c for c in cc if c.isalpha()])
 
     # ---------------------------------------------------------------------------
-    ccc = store_hydrogen['Number of Time Steps']
+    x = int((pd.to_datetime(store_environment['End Date'])-pd.to_datetime(store_environment['Start Date'])).days)
+    # print(x)
+    # print(type(x))
     try:
-        Zeitschritte = int(ccc)
+        if store_environment['Time Step'] == '1 day':
+            Zeitschritte = int(x)
+        else:
+            Zeitschritte = int(x*24*60/int(c))
     except ValueError:
         print("Ungültige Eingabe. Bitte geben Sie eine ganze Zahl ein.")
     #-------------------------------------------------------------------------------

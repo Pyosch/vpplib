@@ -296,6 +296,8 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
         # print(df_timeseries, type(df_timeseries))
         # print(type(df_timeseries[0]))
         DF=df_timeseries[0]
+        # Df2=environment.pv_data['dhi']
+        # print(Df2)
         DF.to_csv('GUI/df_timeseries.csv')
         print(DF)
 
