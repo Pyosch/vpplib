@@ -38,32 +38,19 @@ dbc.Row([
                     ])
                     ], width=2),
                 ]),
-                dbc.Row([
-                    dbc.Col([
-                        html.P('Quantity') 
-                    ], width=3),
-                    dbc.Col([
-                        dbc.Input(
-                            id='input_electrolyzer_quantity',
-                            type='number',
-                            placeholder='e.g. 100 kg',
-                            value=10
-                        )
-                    ], width=2),
-                ]),
-                dbc.Row([
-                    dbc.Col([
-                        html.P('Number of Time Steps') 
-                    ], width=3),
-                    dbc.Col([
-                        dbc.Input(
-                            id='input_electrolyzer_number_of_time_steps',
-                            type='number',
-                            placeholder='e.g. 100',
-                            value=10
-                        )
-                    ], width=2, style={'margin-bottom': '20px'}),
-                ]),
+                # dbc.Row([
+                #     dbc.Col([
+                #         html.P('Quantity') 
+                #     ], width=3),
+                #     dbc.Col([
+                #         dbc.Input(
+                #             id='input_electrolyzer_quantity',
+                #             type='number',
+                #             placeholder='e.g. 100 kg',
+                #             value=10
+                #         )
+                #     ], width=2),
+                # ]),
                 dbc.Row([
                                 dbc.Col([
                                     dbc.Button('Submit Settings',
@@ -200,17 +187,16 @@ dbc.Row([
     [Input('submit_hydrogen_settings', 'n_clicks')],
     [State('input_electrolyzer_power', 'value'),
      State('input_electrolyzer_pressure', 'value'),
-     State('input_electrolyzer_quantity', 'value'),
-     State('input_electrolyzer_number_of_time_steps', 'value')],
+    #  State('input_electrolyzer_quantity', 'value')
+    ],
 
 )
 def update_hydrogen_settings(n_clicks, power, 
-                              pressure, quantity, times_steps):
+                              pressure):
     if 'submit_hydrogen_settings' ==ctx.triggered_id and n_clicks is not None:
         data_hydrogen_settings={'Power_Electrolyzer': power,
-                            'Pressure_Hydrogen': pressure,
-                            'Quantity_Hydrogen': quantity,
-                            'Number of Time Steps': times_steps,}
+                            'Pressure_Hydrogen': pressure,}
+                            # 'Quantity_Hydrogen': quantity}
         return data_hydrogen_settings
     
     elif n_clicks is None:
@@ -225,14 +211,15 @@ def update_hydrogen_settings(n_clicks, power,
     Output('is-loading-hydrogen', 'children'),
     [Input('simulate_button_hydrogen', 'n_clicks'),
      Input('store_hydrogen', 'data'),
-     Input('store_environment', 'data'),],
+     Input('store_environment', 'data'),
+     Input('store_basic_settings', 'data')],
     
 
 )
-def simulate_button_hydrogen(n_clicks, store_hydrogen, store_environment):
+def simulate_button_hydrogen(n_clicks, store_hydrogen, store_environment, store_basic_settings):
     if 'simulate_button_hydrogen' ==ctx.triggered_id and n_clicks is not None:
         print('simulating')
-        simulate_electrolyzer(store_hydrogen, store_environment)
+        simulate_electrolyzer(store_hydrogen, store_environment, store_basic_settings)
         print('done')
         time.sleep(1)
     
