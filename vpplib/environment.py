@@ -40,9 +40,10 @@ class Environment(object):
         pv_data=[],
         wind_data=[],
         temp_data=[],
-        surpress_output_globally=False,
+        surpress_output_globally = True,
         force_end_time = True,
-        use_timezone_aware_time_index = False
+        use_timezone_aware_time_index = False,
+        extended_solar_data = False,
     ):
 
         """
@@ -92,6 +93,7 @@ class Environment(object):
         self.__surpress_output_globally = surpress_output_globally
         self.__force_end_time = force_end_time
         self.__use_timezone_aware_time_index = use_timezone_aware_time_index
+        self.__extended_solar_data = extended_solar_data
         if not start is None and not end is None:
             self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
                 self.start, '%Y-%m-%d %H:%M:%S'
@@ -101,10 +103,10 @@ class Environment(object):
                 ).replace(tzinfo = self.timezone)
             self.__internal_start_datetime_utc = (
                 self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()
-                ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+                ).replace(tzinfo = zoneinfo.ZoneInfo(key='UTC'), microsecond = 0)
             self.__internal_end_datetime_utc   = (
                 self.__internal_end_datetime_with_class_timezone - self.__internal_end_datetime_with_class_timezone.utcoffset()
-                ).replace(tzinfo = datetime.timezone.utc, microsecond = 0)
+                ).replace(tzinfo = zoneinfo.ZoneInfo(key='UTC'), microsecond = 0)
             self.__temp_station_metadata = 0 
             
             if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
@@ -297,7 +299,7 @@ class Environment(object):
             -------
             out_df : pandas.DataFrame
                 DataFrame with calculated solar parameters.
-                Columns include 'dni', 'dhi'.
+                Columns include 'dni', 'dhi'. Includes 'Bh', 'zenith', 'apparent_zenith' when extended_solar_data is True.
                 The DataFrame has the same index as the input_df.
 
             Notes
@@ -308,91 +310,93 @@ class Environment(object):
                 https://pvlib-python.readthedocs.io/en/stable/gallery/irradiance-decomposition/plot_diffuse_fraction.html#sphx-glr-gallery-irradiance-decomposition-plot-diffuse-fraction-py
         """
         
-        df = pd.DataFrame(
-            index = list(date)
-            )
-        df['ghi']         = list(ghi)
-        df['temperature'] = list(temperature)
-        df['pressure']    = list(pressure)
-        df['drew_point']  = list(drew_point)
-        df.index
-        
         """
         https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.solarposition.get_solarposition.html#pvlib.solarposition.get_solarposition
         """
-          
+        
+        #Calculate solar position parameters
+        #Shift by -30 min to get the solar position for the middle of the time intervall
+        #The index has to be converted to a list, to aviod index alignment of the series pressure and temperature with the shifted date index
         solpos = get_solarposition(
-                    df.index.shift(freq="-30T"), 
+                    list(date.shift(freq = '-30T')), 
                     latitude    = lat,
                     longitude   = lon, 
                     altitude    = height,
-                    pressure    = df.pressure,
-                    temperature = df.temperature
+                    pressure    = pressure,
+                    temperature = temperature
                     )
-        solpos.index = df.index
-        
+        #Shift back after calculation
+        solpos.index = date
+            
         if methode == 'disc':
             out_disc = irradiance.disc(
-                        ghi             = df.ghi, 
+                        ghi             = ghi, 
                         solar_zenith    = solpos.zenith, 
-                        datetime_or_doy = df.index, 
-                        pressure        = df.pressure
+                        datetime_or_doy = date, 
+                        pressure        = pressure,
                         )
         
             df_disc = irradiance.complete_irradiance(
                         solar_zenith = solpos.apparent_zenith, 
-                        ghi          = df.ghi, 
+                        ghi          = ghi, 
                         dni          = out_disc.dni,
                         dhi          = None
                         )
             out_disc['dhi'] = df_disc.dhi
             out_df = out_disc.drop(['kt', 'airmass'],axis = 1)
             
+            
         elif methode == 'erbs':
             out_erbs = irradiance.erbs(
-                        ghi             = df.ghi,
+                        ghi             = ghi,
                         zenith          = solpos.zenith, 
-                        datetime_or_doy = df.index
+                        datetime_or_doy = date
                         )
             out_df = out_erbs.drop(['kt'],axis = 1)
             
         elif methode == 'dirint':
             dni_dirint = irradiance.dirint(
-                            ghi          = df.ghi, 
+                            ghi          = ghi, 
                             solar_zenith = solpos.zenith, 
-                            times        = df.index, 
-                            pressure     = df.pressure,
-                            temp_dew     = df.drew_point
+                            times        = date, 
+                            pressure     = pressure,
+                            temp_dew     = drew_point
                             )
         
             df_dirint = irradiance.complete_irradiance(
                             solar_zenith = solpos.apparent_zenith,
-                            ghi          = df.ghi, 
+                            ghi          = ghi, 
                             dni          = dni_dirint,
                             dhi          = None
                             )
             out_dirint = pd.DataFrame(
-                            {'dni': dni_dirint, 'dhi': df_dirint.dhi}, index=df.index
+                            {'dni': dni_dirint, 'dhi': df_dirint.dhi}, index = date
                             )
             out_df = out_dirint.fillna(0)
             
         elif methode == 'boland':
             out_boland = irradiance.boland(
-                            ghi             = df.ghi,
+                            ghi             = ghi,
                             solar_zenith    = solpos.zenith,
-                            datetime_or_doy = df.index, 
+                            datetime_or_doy = date, 
                             a_coeff         = 8.645, 
                             b_coeff         = 0.613, 
                             min_cos_zenith  = 0.065, 
                             max_zenith      = 87
                             )
             out_df = out_boland.drop(['kt'], axis = 1)
+
+        if self.__extended_solar_data:
+            out_df['Bh'] = ghi - out_df['dhi']
+            out_df['zenith'] = solpos.zenith
+            out_df['apparent_zenith'] = solpos.apparent_zenith
+        
         
         #Add methode to column name of the parameters
         if use_methode_name_in_columns: out_df.columns = [str(col) + '_' + methode for col in out_df.columns]
         
         #Delete values in out_df, when ghi is NaN.
-        out_df.where(cond=(np.isnan(df['ghi']) != True), other=None, inplace=True)
+        out_df.where(cond=(np.isnan(ghi) != True), other=None, inplace=True)
 
         return out_df
 
@@ -411,12 +415,12 @@ class Environment(object):
             -------
             df_power : pandas.DataFrame
                 DataFrame with calculated solar power data.
-                Columns include 'ghi' when using mosmix and 'ghi', 'dni', and 'dhi' when using observation query type.
+                Columns include 'ghi' when using mosmix; 'ghi' and 'Bh' when using observation query type.
                 The DataFrame has the same index as the input df.
 
             Notes
             -----
-            - The input DataFrame (df) has to contain 'ghi' in columns. Additionaly there can be 'dni', and 'dhi' in columns.
+            - The input DataFrame (df) has to contain 'ghi' in columns. Additionaly there can be 'dhi' in columns.
             - The Units for all irradiance parameter are:
             [kJ/m^2/resulution] for MOSMIX
             [J/cm^2/resulution] for OBSERVATION
@@ -426,8 +430,6 @@ class Environment(object):
         
         df_power = pd.DataFrame(index=df.index)
         df_power['ghi'] = 0
-        if 'dni' in df.columns:
-            df_power['dni'] = 0
         if 'dhi' in df.columns:
             df_power['dhi'] = 0
         
@@ -457,7 +459,7 @@ class Environment(object):
         Returns
         -------
         float
-            Calculated station pressure.
+            Calculated station pressure [Pa].
 
         Notes
         -----
@@ -603,33 +605,69 @@ class Environment(object):
             Parameters
             ----------
             pd_sorted_data_for_station : pandas.DataFrame
-                DataFrame containing weather data for a station.
+                DataFrame containing weather data for a station in 10min resolution.
+                Input units:
+                solar: ghi, dhi [J/cm^2]
+                air:   temperature [C]
+                wind:  wind_speed [m/s], pressure [hPa], temperature [C]
             pd_station_metadata : pandas.DataFrame
                 DataFrame containing station metadata.
+                lat, lon
+                height [m]
             dataset : str
                 Type of weather dataset, either 'solar', 'air' or 'wind'.
 
             Returns
             -------
             resampled_data : pandas.DataFrame
-                Resampled and processed weather data.
+                Resampled and processed weather data in class time resolution.
+                Output units:
+                solar: ghi, dhi, dni [W/m^2]. Includes Bh [W/m^2] and zenith when extended_solar_data is True.
+                air:   temperature [°C]
+                wind:  wind_speed [m/s], pressure [Pa], temperature [K]
+
 
             Notes
             -----
-            - If the dataset is 'solar', the function calculates Direct Normal Irradiance (DNI)
-            from Global Horizontal Irradiance (GHI) and Diffuse Horizontal Irradiance (DHI).
-            It then updates the DataFrame with solar power calculated from energy.
+            - If the dataset is 'solar', the function updates the DataFrame with solar power calculated from energy.
+            It then calculates solar zenith angle from time, lat, lon, and height to calculate direct normal irradiance (DNI) afterwards.
             - If the dataset is 'wind', the function prepares data for Windpowerlib using the
             __get_multi_index_for_windpowerlib method and resamples the data.
             - Because the air parameter does not need to be processed, the function does not change them.
         """
         if dataset == 'solar': 
-            pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
+            
             #Calculate power from irradiance
             pd_sorted_data_for_station.update(self.__get_solar_power_from_energy(pd_sorted_data_for_station,'OBSERVATION'), overwrite=True)
+            pd_sorted_data_for_station['Bh'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
+            #Calculate solar zenith angle from time, lat, lon, and height
+            #Temperature is not needed for zenit. Nessessary for apperent_zenith
+            #Zenith angle is calculatet for the middle of the time intervall
+            #Shift back after calculation to align with observation data
+            pd_sorted_data_for_station['zenith'] = get_solarposition(
+                        list(pd_sorted_data_for_station.index.shift(freq = '-5T')), 
+                        latitude    = pd_station_metadata['latitude' ].values[0],
+                        longitude   = pd_station_metadata['longitude'].values[0], 
+                        altitude    = pd_station_metadata['height'   ].values[0],
+                        temperature = 0
+                        ).zenith.shift(freq = '5T')
+            
+            #Calculate Direct Normal Irradiance (DNI) from GHI and DHI
+            pd_sorted_data_for_station['dni'] = irradiance.dni(
+                ghi = pd_sorted_data_for_station.ghi,
+                dhi = pd_sorted_data_for_station.dhi,
+                zenith = pd_sorted_data_for_station.zenith
+                )
+            #Remove sign error for -0.0 values
+            pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station['dni'].replace(-0.0, 0.0)
+            
+            
+            if not self.__extended_solar_data:
+                pd_sorted_data_for_station.drop(['zenith', 'Bh'], axis = 1, inplace = True)
+        
         elif dataset == 'wind':
-            pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100 # hPa to Pa
-            pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature + 274.15
+            pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100       # hPa to Pa
+            pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature + 273.15 #°C to K
             pd_sorted_data_for_station['roughness_length'] = 0.15
             pd_sorted_data_for_station.columns = self.__get_multi_index_for_windpowerlib(
                 pd_sorted_data_for_station.columns)
@@ -646,19 +684,29 @@ class Environment(object):
             Parameters
             ----------
             pd_sorted_data_for_station : pandas.DataFrame
-                DataFrame containing weather data for a station.
+                DataFrame containing weather data for a station in hourly resolution.
+                Input units:
+                solar: ghi [kJ/m^2], temperature [K], drew_point [K], pressure at sea level [hPa]
+                air:   temperature [K]
+                wind:  wind_speed [m/s], pressure at sea level [hPa], temperature [K]
             dataset : str
                 Type of weather dataset, either 'solar', 'air', or 'wind'.
             pd_station_metadata : pandas.DataFrame
                 DataFrame containing station metadata.
+                lat, lon
+                height [m]
             additional_parameter_lst : list, optional
-                List of additional parameters, which where retrieved for calculating missing parameters such as dhi dni, to drop from the DataFrame, by default None.
+                List of additional parameters, which where retrieved for calculating missing solar parameters dhi and dni.
             estimation_methode_lst : list, optional
                 List of estimation methode names, which where used for calculating missing parameters such as dhi dni, by default ['disc'].
             Returns
             -------
             resampled_data : pandas.DataFrame
-                Resampled and processed weather data.
+                Resampled and processed weather data in class time resolution.
+                Output units:
+                solar: ghi, dhi, dni [W/m^2]. Includes Bh [W/m^2], zenith, apparent_zenith when extended_solar_data is True.
+                air:   temperature [°C]
+                wind:  wind_speed [m/s], pressure [Pa], temperature at station height [K]
 
             Notes
             -----
@@ -674,6 +722,7 @@ class Environment(object):
         """
         if dataset == 'solar':
             pd_sorted_data_for_station.update( self.__get_solar_power_from_energy(pd_sorted_data_for_station, 'MOSMIX'), overwrite=True)
+            
             
             pd_sorted_data_for_station.pressure = self.__get_station_pressure_from_reduced_pressure(
                 height = pd_station_metadata['height'].values[0], 
@@ -696,7 +745,8 @@ class Environment(object):
                         methode     = methode,
                         use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
                 pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
-            pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
+            if not self.__extended_solar_data:
+                pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
         elif dataset == 'air':
             pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature - 273.15  # K to °C
         elif dataset == 'wind':
@@ -713,6 +763,7 @@ class Environment(object):
         #Shift by -1 to aling MOSMIX to Observation
         pd_sorted_data_for_station = pd_sorted_data_for_station.shift(-1)
         pd_sorted_data_for_station.drop(pd_sorted_data_for_station.tail(1).index, inplace = True) 
+        
         return self.__resample_data(pd_sorted_data_for_station)
     
     
@@ -787,7 +838,7 @@ class Environment(object):
             "pressure"    : "pressure_air_site", 
             "temperature" : "temperature_air_mean_200",
             "wind_speed"  : "wind_speed", 
-            "drew_point"  : "temperature_dew_point_mean_200"
+            "drew_point"  : "temperature_dew_point_mean_200",
             }
         
         #Create a dictionsry with the parameters to query
@@ -796,13 +847,13 @@ class Environment(object):
         time_now = self.get_time_from_dwd()
         settings = Settings.default()
         Settings.cache_disable = True
-        #settings = Settings
         settings.ts_si_units = False
         
         #observation data is updated every full hour
         observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
 
-        if self.__start_dt_utc < observation_end_date - datetime.timedelta(hours = 1) or self.__start_dt_utc == observation_end_date - datetime.timedelta(hours = 1) and self.__end_dt_utc <= observation_end_date:
+        if self.__start_dt_utc < observation_end_date - datetime.timedelta(hours = 1) or (
+            self.__start_dt_utc == observation_end_date - datetime.timedelta(hours = 1) and self.__end_dt_utc <= observation_end_date):
             if activate_output:
                 print("Using observation database.") 
             if self.__end_dt_utc > observation_end_date and not self.__force_end_time:
@@ -849,7 +900,7 @@ class Environment(object):
                 mosmix_type = DwdMosmixType.LARGE,
                 settings    =  settings,
                 start_date  = self.__start_dt_utc,
-                end_date    = self.__end_dt_utc + datetime.timedelta(hours = 2)
+                end_date    = self.__end_dt_utc + datetime.timedelta(hours = 1)
                 )
 
         if user_station_id is not None:
@@ -900,10 +951,10 @@ class Environment(object):
                 pd_sorted_data_for_station[key] = pd_unsorted_data_for_station.loc[pd_unsorted_data_for_station['parameter'] == req_parameter_dict[key]]['value']
 
             #Fill missing values with NaN, if end time is forced    
-            if pd_sorted_data_for_station.index[-2] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
+            if pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result,DwdMosmixRequest):
                 pd_missing_dates = pd.DataFrame(index = pd.date_range(
                     start = pd_sorted_data_for_station.index[-1] + datetime.timedelta(hours = 1),
-                    end   = self.__end_dt_utc + datetime.timedelta(hours = 1),
+                    end   = self.__end_dt_utc.replace(minute = 0)+ datetime.timedelta(hours = 2),
                     freq  = 'H'
                     ))
                 pd_sorted_data_for_station = pd.concat([pd_sorted_data_for_station, pd_missing_dates])
@@ -943,8 +994,8 @@ class Environment(object):
             print("Query successful!")
             
         station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
-        station_metadata ['station_type'] = 'OBSERVATION' if isinstance(wd_query_result,DwdObservationRequest) else 'MOSMIX',
-            
+        station_metadata ['station_type'] = 'OBSERVATION' if isinstance(wd_query_result,DwdObservationRequest) else 'MOSMIX',  
+        
         return (
             pd_sorted_data_for_station,
             station_metadata,
