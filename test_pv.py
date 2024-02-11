@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
-import datetime
+import datetime # for Mosmix test
 
 latitude = 51.4
 longitude = 6.97
