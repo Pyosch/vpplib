@@ -31,7 +31,7 @@ dbc.Row([
                             id='input_heatpump_system_temperature',
                             type='number',
                             placeholder='e.g. 20.5 °C',
-                            value=60
+                            value=0
                         ),
                         dbc.InputGroupText('°C')
                     ])
@@ -47,7 +47,7 @@ dbc.Row([
                             id='input_heatpump_electrical_power',
                             type='number',
                             placeholder='e.g. 5 kW',
-                            value= 5
+                            value= 0
                         ),
                         dbc.InputGroupText('kW')
                     ])

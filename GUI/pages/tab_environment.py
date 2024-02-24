@@ -14,7 +14,6 @@ dbc.Row([
                                         id='input_date_start',
                                         type='date',
                                         style={'width': 'auto'},
-                                        value='2015-03-01'
                                         ),
                                 ], width= 3)
                             ],style={'margin-top': '20px'}),
@@ -27,7 +26,6 @@ dbc.Row([
                                         id='input_date_end',
                                         type='date',
                                         style={'width': 'auto'},
-                                        value='2015-03-02'
                                         )
                                     ], width='auto')
                                 ]),

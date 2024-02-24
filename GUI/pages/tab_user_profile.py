@@ -27,8 +27,8 @@ dbc.Row([
                         dbc.Input(
                                 id='input_latitude',
                                 type='number',
-                                placeholder='e.g. 50.7498321',
-                                value=50.941357)
+                                placeholder='e.g. 51.090674',
+                                value=51.090674)
                         ], width=2)
                     ]),
                 dbc.Row([
@@ -39,8 +39,8 @@ dbc.Row([
                                 dbc.Input(
                                 id='input_longitude',
                                 type='number',
-                                placeholder='e.g. 6.473982',
-                                value=6.958307)
+                                placeholder='e.g. 6.496420',
+                                value=6.496420)
                             ], width=2)
                     ]),
                 dbc.Row([
@@ -67,7 +67,7 @@ dbc.Row([
                                 dbc.Input(id='input_thermal_energy_demand',
                                     type='number',
                                     placeholder='e.g. 10000 kWh',
-                                    value=12500),
+                                    value=0),
                                 dbc.InputGroupText('kWh')
                             ])      
                             ], width=2)

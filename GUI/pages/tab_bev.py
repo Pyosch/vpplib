@@ -14,7 +14,7 @@ dbc.Row([
                                 id='input_bev_max_battery_capacity',
                                 type='number',
                                 placeholder='e.g. 100 kWh',
-                                value=50),
+                                value=0),
                             dbc.InputGroupText('kWh')
                     ])
                     ], width=2),
@@ -29,7 +29,7 @@ dbc.Row([
                                 id='input_bev_min_battery_capacity',
                                 type='number',
                                 placeholder='e.g. 15 kWh',
-                                value=10
+                                value=0
                             ),
                             dbc.InputGroupText('kWh')
                     ])
@@ -44,7 +44,7 @@ dbc.Row([
                             id='input_bev_battery_usage',
                             type='number',
                             placeholder='e.g. ???',
-                            value=1
+                            value=0
                         )
                     ], width=2),
                 ]),
@@ -58,7 +58,7 @@ dbc.Row([
                                 id='input_bev_charging_power',
                                 type='number',
                                 placeholder='e.g. 11 kW',
-                                value=11
+                                value=0
                             ),
                             dbc.InputGroupText('kW')
                            ])
@@ -74,7 +74,7 @@ dbc.Row([
                                 id='input_bev_charging_efficiency',
                                 type='number',
                                 placeholder='e.g. 90%',
-                                value=90
+                                value=0
                             ),
                             dbc.InputGroupText('%')
                         ])

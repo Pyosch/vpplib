@@ -23,5 +23,6 @@ from vpplib.electrical_energy_storage import ElectricalEnergyStorage
 from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
+from windpowerlib import WindTurbine, data
 
-print(WindPower.get_turbine_types())
+data.store_turbine_data_from_oedb(schema='supply', table='wind_turbine_library')

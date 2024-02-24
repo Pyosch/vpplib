@@ -14,7 +14,7 @@ layout=dbc.Container([
                                 id='input_storage_charge_efficiency',
                                 type='number',
                                 placeholder='e.g. 90%',
-                                value=90),
+                                value=0),
                                 
                             dbc.InputGroupText('%')
                         ])
@@ -30,7 +30,7 @@ layout=dbc.Container([
                                 id='input_storage_discharge_efficiency',
                                 type='number',
                                 placeholder='e.g. 90%',
-                                value=90),
+                                value=0),
                             dbc.InputGroupText('%')
                             ])
                         ], width=2)
@@ -45,7 +45,7 @@ layout=dbc.Container([
                                     id='input_storage_max_power',
                                     type='number',
                                     placeholder='e.g. 10 kW',
-                                    value=10),
+                                    value=0),
                                 dbc.InputGroupText('kW')
                             ])
                         ], width=2)
@@ -60,7 +60,7 @@ layout=dbc.Container([
                                     id='input_storage_max_capacity',
                                     type='number',
                                     placeholder='e.g. 10 kWh',
-                                    value=10),
+                                    value=0),
                                 dbc.InputGroupText('kWh')
                             ])
                         ], width=2)

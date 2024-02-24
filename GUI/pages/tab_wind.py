@@ -19,7 +19,7 @@ layout=dbc.Container([
                                                 id='input_wind_turbine_type',
                                                 type='text',
                                                 placeholder='e.g. E-126/4200',
-                                                value='E-126/4200'
+                                                value='SWT130/3600'
                                             )
                                         ], width=4),
                                     ]),
@@ -33,7 +33,7 @@ layout=dbc.Container([
                                                     id='input_wind_hub_height',
                                                     type='number',
                                                     placeholder='e.g. 135 m',
-                                                    value=135
+                                                    value=85
                                                 ),
                                                 dbc.InputGroupText('m')
                                             ])
@@ -49,7 +49,7 @@ layout=dbc.Container([
                                                     id='input_wind_rotor_diameter',
                                                     type='number',
                                                     placeholder='e.g. 127 m',
-                                                    value=127
+                                                    value=130
                                                 ),
                                                 dbc.InputGroupText('m')
                                             ])

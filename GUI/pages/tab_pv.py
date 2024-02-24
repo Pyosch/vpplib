@@ -85,7 +85,7 @@ dbc.Row([
                                 id='input_pv_surface_tilt',
                                 type='number',
                                 placeholder='e.g. 20°',
-                                value=20
+                                value=0
                             ),
                             dbc.InputGroupText('°')
                         ])
@@ -101,7 +101,7 @@ dbc.Row([
                                 id='input_pv_surface_azimuth',
                                 type='number',
                                 placeholder='e.g. 200°',
-                                value=200
+                                value=0
                             ),
                             dbc.InputGroupText('°')
                         ])
@@ -116,7 +116,7 @@ dbc.Row([
                             id='input_pv_modules_per_string',
                             type='number',
                             placeholder='e.g. 6',
-                            value=6
+                            value=0
                         )
                     ], width=2)
                 ]),
@@ -129,7 +129,7 @@ dbc.Row([
                             id='input_pv_strings_per_inverter',
                             type='number',
                             placeholder='e.g. 2',
-                            value=2
+                            value=0
                         )
                     ], width=2)
                 ]),

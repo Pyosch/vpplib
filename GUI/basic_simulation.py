@@ -66,7 +66,7 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     unit = "kW"
 
     # WindTurbine data
-    turbine_type = 'E-126/4200'
+    turbine_type = store_wind['Turbine Type']
     hub_height = store_wind['Hub Height']
     rotor_diameter = store_wind['Rotor Diameter']
     fetch_curve = "power_curve"
@@ -299,5 +299,5 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
         # Df2=environment.pv_data['dhi']
         # print(Df2)
         DF.to_csv('GUI/df_timeseries.csv')
-        print(DF)
+        # print(DF)
 
