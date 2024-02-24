@@ -299,7 +299,7 @@ class Environment(object):
             -------
             out_df : pandas.DataFrame
                 DataFrame with calculated solar parameters.
-                Columns include 'dni', 'dhi'. Includes 'Bh', 'zenith', 'apparent_zenith' when extended_solar_data is True.
+                Columns include 'dni', 'dhi'. Includes 'bh', 'zenith', 'apparent_zenith' when extended_solar_data is True.
                 The DataFrame has the same index as the input_df.
 
             Notes
@@ -387,7 +387,7 @@ class Environment(object):
             out_df = out_boland.drop(['kt'], axis = 1)
 
         if self.__extended_solar_data:
-            out_df['Bh'] = ghi - out_df['dhi']
+            out_df['bh'] = ghi - out_df['dhi']
             out_df['zenith'] = solpos.zenith
             out_df['apparent_zenith'] = solpos.apparent_zenith
         
@@ -415,7 +415,7 @@ class Environment(object):
             -------
             df_power : pandas.DataFrame
                 DataFrame with calculated solar power data.
-                Columns include 'ghi' when using mosmix; 'ghi' and 'Bh' when using observation query type.
+                Columns include 'ghi' when using mosmix; 'ghi' and 'bh' when using observation query type.
                 The DataFrame has the same index as the input df.
 
             Notes
@@ -622,7 +622,7 @@ class Environment(object):
             resampled_data : pandas.DataFrame
                 Resampled and processed weather data in class time resolution.
                 Output units:
-                solar: ghi, dhi, dni [W/m^2]. Includes Bh [W/m^2] and zenith when extended_solar_data is True.
+                solar: ghi, dhi, dni [W/m^2]. Includes bh [W/m^2] and zenith when extended_solar_data is True.
                 air:   temperature [°C]
                 wind:  wind_speed [m/s], pressure [Pa], temperature [K]
 
@@ -639,7 +639,7 @@ class Environment(object):
             
             #Calculate power from irradiance
             pd_sorted_data_for_station.update(self.__get_solar_power_from_energy(pd_sorted_data_for_station,'OBSERVATION'), overwrite=True)
-            pd_sorted_data_for_station['Bh'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
+            pd_sorted_data_for_station['bh'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
             #Calculate solar zenith angle from time, lat, lon, and height
             #Temperature is not needed for zenit. Nessessary for apperent_zenith
             #Zenith angle is calculatet for the middle of the time intervall
@@ -663,7 +663,7 @@ class Environment(object):
             
             
             if not self.__extended_solar_data:
-                pd_sorted_data_for_station.drop(['zenith', 'Bh'], axis = 1, inplace = True)
+                pd_sorted_data_for_station.drop(['zenith', 'bh'], axis = 1, inplace = True)
         
         elif dataset == 'wind':
             pd_sorted_data_for_station.pressure    = pd_sorted_data_for_station.pressure * 100       # hPa to Pa
@@ -704,7 +704,7 @@ class Environment(object):
             resampled_data : pandas.DataFrame
                 Resampled and processed weather data in class time resolution.
                 Output units:
-                solar: ghi, dhi, dni [W/m^2]. Includes Bh [W/m^2], zenith, apparent_zenith when extended_solar_data is True.
+                solar: ghi, dhi, dni [W/m^2]. Includes bh [W/m^2], zenith, apparent_zenith when extended_solar_data is True.
                 air:   temperature [°C]
                 wind:  wind_speed [m/s], pressure [Pa], temperature at station height [K]
 
@@ -722,7 +722,6 @@ class Environment(object):
         """
         if dataset == 'solar':
             pd_sorted_data_for_station.update( self.__get_solar_power_from_energy(pd_sorted_data_for_station, 'MOSMIX'), overwrite=True)
-            
             
             pd_sorted_data_for_station.pressure = self.__get_station_pressure_from_reduced_pressure(
                 height = pd_station_metadata['height'].values[0], 
