@@ -1,6 +1,5 @@
-from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
+from dash import html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
-import pandas as pd
 from dash.exceptions import PreventUpdate
 
 layout=dbc.Container([
@@ -62,7 +61,7 @@ layout=dbc.Container([
                                     id='input_wind_number',
                                     type='number',
                                     placeholder='3',
-                                    value=5),
+                                    value=6),
                                 ], width=1)    
                         ],align='center'),
                         dbc.Row([

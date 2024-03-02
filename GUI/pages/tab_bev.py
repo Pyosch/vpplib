@@ -1,6 +1,5 @@
-from dash import dash, html, dcc, Input, Output, State, callback, callback_context as ctx
+from dash import html, Input, Output, State, callback, callback_context as ctx
 import dash_bootstrap_components as dbc
-import pandas as pd
 from dash.exceptions import PreventUpdate
 
 layout=dbc.Container([

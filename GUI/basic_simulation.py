@@ -5,11 +5,8 @@ Created on Tue Jul  2 10:38:17 2019
 """
 
 import pandas as pd
-import pandapower as pp
-import pandapower.networks as pn
 import os
 import sys
-from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
 
 sys.path.append(os.path.abspath(os.path.join('')))
 from vpplib.environment import Environment
@@ -20,7 +17,6 @@ from vpplib.heat_pump import HeatPump
 from vpplib.electrical_energy_storage import ElectricalEnergyStorage
 from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
-from vpplib.operator import Operator
 
 
 def simulation(store_basic_settings, store_environment, store_user_profile, store_bev,
@@ -36,9 +32,6 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     time_freq = store_environment['Time Step']
     timebase = int(time_freq[:2])
     force_end_time = store_environment['Force End Time']
-    # index = pd.date_range(start=start, end=end, freq=time_freq)
-    # temp_days_file = f"{parentdir}/input/thermal/dwd_temp_days_2015.csv"
-    # temp_hours_file = f"{parentdir}/input/thermal/dwd_temp_15min_2015.csv"
 
     # user_profile
     identifier = store_user_profile['Identifier']
@@ -73,18 +66,15 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
     data_source = "oedb"
 
     # WindPower ModelChain data
-    # wind_file = f"{parentdir}/input/wind/dwd_wind_data_2015.csv"
     wind_speed_model = store_wind['Speed Model']
     density_model = store_wind['Density Model']
     temperature_model = store_wind['Temperature Model']
     power_output_model = store_wind['Power Output Model']
-    #TODO: Implement toggle for density_correction
     density_correction = True
     obstacle_height = store_wind['Obstacle Height']
     hellman_exp = None
 
     # PV data
-    # pv_file = f"{parentdir}/input/pv/dwd_pv_data_2015.csv"
     module_lib = store_pv['PV Module Library']
     module = store_pv['PV Module']
     inverter_lib = store_pv['PV Inverter Library']
@@ -142,12 +132,6 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
         time_freq=time_freq,
         force_end_time=force_end_time,
     )
-    '''
-    environment.get_wind_data(file=wind_file, utc=False)
-    environment.get_pv_data(file=pv_file)
-    environment.get_mean_temp_days(file=temp_days_file)
-    environment.get_mean_temp_hours(file=temp_hours_file)
-    '''
 
     environment.get_dwd_wind_data(lat=latitude,lon=longitude, distance=radius_weather_station)
     environment.get_dwd_pv_data(lat=latitude,lon=longitude, distance=radius_weather_station)
@@ -293,11 +277,7 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
 
 
         df_timeseries=vpp.export_component_timeseries()
-        # print(df_timeseries, type(df_timeseries))
-        # print(type(df_timeseries[0]))
         DF=df_timeseries[0]
-        # Df2=environment.pv_data['dhi']
-        # print(Df2)
         DF.to_csv('GUI/df_timeseries.csv')
-        # print(DF)
+
 

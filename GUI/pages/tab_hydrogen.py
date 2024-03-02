@@ -1,10 +1,13 @@
-from dash import dash, html, dcc, Input, Output, State, callback, callback_context as ctx
+from dash import html, dcc, Input, Output, State, callback, callback_context as ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash.exceptions import PreventUpdate
 from a_Ausführem_Elektrolyseur_input import simulate_electrolyzer
 import time
 import plotly.express as px
+import zipfile
+import shutil
+import os 
 
 layout=dbc.Container([
 dbc.Row([
@@ -17,7 +20,7 @@ dbc.Row([
                                 id='input_electrolyzer_power',
                                 type='number',
                                 placeholder='e.g. 100 kW',
-                                value=500),
+                                value=15000),
                             dbc.InputGroupText('kW')
                     ])
                     ], width=2),
@@ -38,19 +41,6 @@ dbc.Row([
                     ])
                     ], width=2),
                 ]),
-                # dbc.Row([
-                #     dbc.Col([
-                #         html.P('Quantity') 
-                #     ], width=3),
-                #     dbc.Col([
-                #         dbc.Input(
-                #             id='input_electrolyzer_quantity',
-                #             type='number',
-                #             placeholder='e.g. 100 kg',
-                #             value=10
-                #         )
-                #     ], width=2),
-                # ]),
                 dbc.Row([
                                 dbc.Col([
                                     dbc.Button('Submit Settings',
@@ -242,9 +232,29 @@ def download(n_clicks, value, store_hydrogen):
     if 'download_button_hydrogen' == ctx.triggered_id and n_clicks is not None:
         print('downloading')
         new_project_name = value
+         # Create a temporary directory to store the dataframes
+        temp_dir = 'temp'
+        os.makedirs(temp_dir, exist_ok=True)
         new_project_df = pd.read_csv('GUI/a_hydrogen_time_series.csv')
-        df_hydrogen_settings = pd.DataFrame(store_hydrogen, index=[0]).to_dict('records')
-        return dcc.send_data_frame(new_project_df.to_csv, new_project_name+'_timeseries.csv'), dcc.send_data_frame(df_hydrogen_settings.to_csv, new_project_name+'_hydrogen_settings.csv')
+        df_hydrogen_settings = pd.DataFrame([store_hydrogen])
+
+        new_project_df.to_csv(os.path.join(temp_dir, new_project_name+'_timeseries.csv'))
+        df_hydrogen_settings.to_csv(os.path.join(temp_dir, new_project_name+'_hydrogen_settings.csv'))
+
+        # Create a zip file
+        zip_file_name = new_project_name + '_data_hydrogen.zip'
+
+        with zipfile.ZipFile(zip_file_name, 'w') as zipf:
+
+            # Add the CSV files to the zip file
+            zipf.write(os.path.join(temp_dir, new_project_name+'_timeseries.csv'), arcname=new_project_name+'_timeseries.csv')
+            zipf.write(os.path.join(temp_dir, new_project_name+'_hydrogen_settings.csv'), arcname=new_project_name+'_hydrogen_settings.csv')
+
+          # Remove the temporary directory
+        shutil.rmtree(temp_dir)
+        
+        # Return the zip file
+        return dcc.send_file(zip_file_name)
     
     else:
         raise PreventUpdate

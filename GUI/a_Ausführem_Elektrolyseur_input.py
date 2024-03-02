@@ -1,6 +1,5 @@
 import pandas as pd
 from a_hydrogen_electrolyseur import ElectrolysisMoritz 
-import datetime
 #-------------------------------------------------------------------------------------------------
 #test mit input
 def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_settings):

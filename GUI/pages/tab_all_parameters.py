@@ -1,7 +1,6 @@
-from dash import dash, dcc, html, callback, Input, Output, State, dash_table, callback_context as ctx
+from dash import html, callback, Input, Output, State, dash_table, callback_context as ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
-from dash.exceptions import PreventUpdate
 
 
 layout=dbc.Container(id='data_table_settings', children=[])

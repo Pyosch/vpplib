@@ -1,4 +1,4 @@
-from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
+from dash import dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash.exceptions import PreventUpdate
@@ -18,8 +18,8 @@ layout=dbc.Container([
                                             dbc.Input(
                                                 id='input_wind_turbine_type',
                                                 type='text',
-                                                placeholder='e.g. E-126/4200',
-                                                value='E-126/4200'
+                                                placeholder='e.g. E-141/4200',
+                                                value='E-141/4200'
                                             )
                                         ], width=4),
                                     ]),
@@ -33,7 +33,7 @@ layout=dbc.Container([
                                                     id='input_wind_hub_height',
                                                     type='number',
                                                     placeholder='e.g. 135 m',
-                                                    value=141
+                                                    value=159
                                                 ),
                                                 dbc.InputGroupText('m')
                                             ])
@@ -49,7 +49,7 @@ layout=dbc.Container([
                                                     id='input_wind_rotor_diameter',
                                                     type='number',
                                                     placeholder='e.g. 127 m',
-                                                    value=159
+                                                    value=141
                                                 ),
                                                 dbc.InputGroupText('m')
                                             ])

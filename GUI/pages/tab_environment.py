@@ -1,6 +1,5 @@
-from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
+from dash import  dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
-import pandas as pd
 from dash.exceptions import PreventUpdate
 import dash_daq as daq
 
