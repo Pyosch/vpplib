@@ -235,14 +235,16 @@ def simulate_button_hydrogen(n_clicks, store_hydrogen, store_environment, store_
 @callback(
     Output("download-time-series-hydrogen", "data"),
     Input("download_button_hydrogen", "n_clicks"),
-    Input('project_file_name_hydrogen', 'value')
+    Input('project_file_name_hydrogen', 'value'),
+    Input('store_hydrogen', 'data')
 )
-def download(n_clicks, value):
+def download(n_clicks, value, store_hydrogen):
     if 'download_button_hydrogen' == ctx.triggered_id and n_clicks is not None:
         print('downloading')
         new_project_name = value
         new_project_df = pd.read_csv('GUI/a_hydrogen_time_series.csv')
-        return dcc.send_data_frame(new_project_df.to_csv, new_project_name+'_timeseries.csv')
+        df_hydrogen_settings = pd.DataFrame(store_hydrogen, index=[0]).to_dict('records')
+        return dcc.send_data_frame(new_project_df.to_csv, new_project_name+'_timeseries.csv'), dcc.send_data_frame(df_hydrogen_settings.to_csv, new_project_name+'_hydrogen_settings.csv')
     
     else:
         raise PreventUpdate
