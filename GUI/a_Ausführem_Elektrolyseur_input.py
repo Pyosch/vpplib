@@ -1,8 +1,23 @@
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 from a_hydrogen_electrolyseur import ElectrolysisMoritz 
+
 #-------------------------------------------------------------------------------------------------
 #test mit input
 def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_settings):
+    """
+    Simulates the operation of an electrolyzer based on the provided input parameters.
+    The results are stored in a CSV file.
+
+    Args:
+        store_hydrogen (dict): A dictionary containing hydrogen storage parameters.
+        store_environment (dict): A dictionary containing environmental parameters.
+        store_basic_settings (dict): A dictionary containing basic settings.
+
+    Returns:
+        None
+    """
     aa = str(store_hydrogen['Power_Electrolyzer'])+'kW'
     a = ''.join([c for c in aa if c.isnumeric() or c == '.'])
     b = ''.join([c for c in aa if c.isalpha()])
@@ -30,7 +45,7 @@ def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_setting
 
     # ---------------------------------------------------------------------------
 
-    # ff = str(store_hydrogen['Quantity_Hydrogen'])+'kg'
+   
     ff = str('0' +'kg')
     if not ff.strip():
         f=""
@@ -56,10 +71,11 @@ def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_setting
     ts['P_ac'] = round(ts['Wind_0']*store_basic_settings['wind_number'],2)
 
     electrolyzer.prepare_timeseries(ts)
-    print(ts)
+    # print(ts)
 
     #CSV-Datei
     ts.to_csv(r'GUI/a_hydrogen_time_series.csv', index=False)
+    print('done')
     # ts.to_csv('electrolyzer_timeseries.csv', index=True)
     #EXCEL-Datei
     # excel_file_path = r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_output.xlsx'

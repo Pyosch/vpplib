@@ -1,7 +1,26 @@
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+This module defines the layout and callbacks for the wind tab in the GUI.
+It contains inputfields for the user to select the wind turbine type, hub height, rotor diameter, comfort factor, data source, wind speed model, density model, temperature model, power output model, density correction, obstacle height, and hellmann exponent.
+
+Functions:
+- update_wind_settings: Update wind settings based on user inputs.
+
+
+The layout is defined using the Dash Bootstrap Components library.
+The submitted data is stored in store_wind.
+
+@author: sharth1
+"""
+
 from dash import dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash.exceptions import PreventUpdate
+
+#Layout Section_________________________________________________________________________________________    
 
 layout=dbc.Container([
         dbc.Row([
@@ -217,6 +236,8 @@ layout=dbc.Container([
                
 ])
 
+#Callback Section_______________________________________________________________________________________
+
 @callback(
     Output('store_wind', 'data'),
     [Input('submit_wind_settings', 'n_clicks')],
@@ -237,19 +258,46 @@ def update_wind_settings(n_clicks, turbine_type, hub_height, rotor_diameter,
                                 comfort_factor, data_source, speed_model, density_model,
                                 temperature_model, power_output_model, density_correction,
                                 obstacle_height, hellmann_exponent):
-    if 'submit_wind_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_wind_settings={'Turbine Type': turbine_type,
-                            'Hub Height': hub_height,
-                            'Rotor Diameter': rotor_diameter,
-                            'Comfort Factor': comfort_factor,
-                            'Data Source': data_source,
-                            'Speed Model': speed_model,
-                            'Density Model': density_model,
-                            'Temperature Model': temperature_model,
-                            'Power Output Model': power_output_model,
-                            'Density Correction': density_correction,
-                            'Obstacle Height': obstacle_height,
-                            'Hellmann Exponent': hellmann_exponent}
+    """
+    Update wind settings based on user inputs.
+
+    Args:
+        n_clicks (int): Number of times the submit button is clicked.
+        turbine_type (str): Type of turbine.
+        hub_height (float): Height of the turbine hub.
+        rotor_diameter (float): Diameter of the turbine rotor.
+        comfort_factor (float): Comfort factor for wind calculations.
+        data_source (str): Source of wind data.
+        speed_model (str): Model for wind speed calculations.
+        density_model (str): Model for air density calculations.
+        temperature_model (str): Model for temperature calculations.
+        power_output_model (str): Model for power output calculations.
+        density_correction (float): Density correction factor.
+        obstacle_height (float): Height of obstacles in the wind flow.
+        hellmann_exponent (float): Hellmann exponent for wind speed measurements.
+
+    Returns:
+        dict: A dictionary containing the updated wind settings.
+
+    Raises:
+        PreventUpdate: If the submit button is not clicked.
+
+    """
+    if 'submit_wind_settings' == ctx.triggered_id and n_clicks is not None:
+        data_wind_settings = {
+            'Turbine Type': turbine_type,
+            'Hub Height': hub_height,
+            'Rotor Diameter': rotor_diameter,
+            'Comfort Factor': comfort_factor,
+            'Data Source': data_source,
+            'Speed Model': speed_model,
+            'Density Model': density_model,
+            'Temperature Model': temperature_model,
+            'Power Output Model': power_output_model,
+            'Density Correction': density_correction,
+            'Obstacle Height': obstacle_height,
+            'Hellmann Exponent': hellmann_exponent
+        }
         return data_wind_settings
     elif n_clicks is None:
         raise PreventUpdate

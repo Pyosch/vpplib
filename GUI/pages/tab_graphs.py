@@ -1,13 +1,22 @@
-    
-from dash import dcc, Input, Output, callback, callback_context as ctx
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+This module defines the layout and callbacks for the graphs tab in the GUI.
+It contains a dropdown menu for the user to select the data to be plotted and a graph to display the selected data.
+
+The layout is defined using the Dash Bootstrap Components library.
+The submitted data is stored in store_graphs.
+
+@author: sharth1
+"""
+
+from dash import dcc, Input, Output, callback
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
 
-
-# df =pd.read_csv('GUI/df_timeseries.csv', index_col=0)
-# df.index.name = 'time'
-
+#Layout Section_________________________________________________________________________________________
 layout=dbc.Container([
             dbc.Row([
                     dcc.Dropdown(id='dropdown_plot',multi=True,
@@ -29,13 +38,22 @@ layout=dbc.Container([
                 ])
     ])
 
-
+#Callback Section_________________________________________________________________________________________
 @callback(
     Output('graph_timeseries', 'figure'),
     [Input('dropdown_plot', 'value')]
     )
 
 def build_graph(dropdown_plot):
+    """
+    Build a line graph based on the selected dropdown plot.
+
+    Parameters:
+    dropdown_plot (str): The selected dropdown plot.
+
+    Returns:
+    fig (plotly.graph_objs._figure.Figure): The generated line graph.
+    """
     fig = px.line(pd.read_csv('GUI/df_timeseries.csv', index_col=0), y=dropdown_plot)
     fig.update_layout(xaxis={'title': 'Time'}, yaxis={'title': 'Power [kW]'},
                       title={'text': 'Time Series'},

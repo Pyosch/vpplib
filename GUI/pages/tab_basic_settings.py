@@ -1,7 +1,22 @@
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+This module defines the layout and callbacks for the basic settings tab in the GUI.
+It contains inputfields for the user to input the number of pv plants, storage units, battery electric vehicles, heat pumps, and wind turbines.
+
+Functions:
+- update_basic_settings: Update basic settings based on user inputs.
+
+The layout is defined using the Dash Bootstrap Components library.
+The submitted data is stored in store_basic_settings.
+"""
+
 from dash import html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
+#Layout Section_________________________________________________________________________________________
 layout=dbc.Container([
     
      dbc.Row([
@@ -73,6 +88,8 @@ layout=dbc.Container([
                         ])
                     
 ])
+
+#Callback Section_________________________________________________________________________________________
 @callback(
     Output('store_basic_settings', 'data'),
     [Input('submit_basic_settings', 'n_clicks')],
@@ -84,12 +101,32 @@ layout=dbc.Container([
 )
 def update_basic_settings(n_clicks, pv_plants, storage_units, 
                           bev_number, hp_number, wind_number):
-    if 'submit_basic_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_basic_settings={'pv_plants': pv_plants,
-                 'storage_units': storage_units,
-                 'bev_number': bev_number,
-                 'hp_number': hp_number,
-                 'wind_number': wind_number}
+    """
+    Update the basic settings based on user input.
+
+    Parameters:
+    - n_clicks (int): The number of times the submit button is clicked.
+    - pv_plants (int): The number of PV plants.
+    - storage_units (int): The number of storage units.
+    - bev_number (int): The number of battery electric vehicles.
+    - hp_number (int): The number of heat pumps.
+    - wind_number (int): The number of wind turbines.
+
+    Returns:
+    - data_basic_settings (dict): A dictionary containing the updated basic settings.
+
+    Raises:
+    - PreventUpdate: If the submit button is not clicked.
+
+    """
+    if 'submit_basic_settings' == ctx.triggered_id and n_clicks is not None:
+        data_basic_settings = {
+            'pv_plants': pv_plants,
+            'storage_units': storage_units,
+            'bev_number': bev_number,
+            'hp_number': hp_number,
+            'wind_number': wind_number
+        }
         return data_basic_settings
     elif n_clicks is None:
         raise PreventUpdate

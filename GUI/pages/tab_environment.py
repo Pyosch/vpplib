@@ -1,8 +1,25 @@
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+This module defines the layout and callbacks for the environment tab in the GUI.
+It contains inputfields for the user to input the start date, end date, timezone, time step, and force end time of the environment settings.
+
+Functions:
+- update_environment_settings: Update environment settings based on user inputs.
+
+The layout is defined using the Dash Bootstrap Components library.
+The submitted data is stored in store_environment.
+
+@author: sharth1
+"""
+
 from dash import  dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import dash_daq as daq
 
+#Layout Section_________________________________________________________________________________________
 layout=dbc.Container([
 dbc.Row([
                             dbc.Col([
@@ -118,12 +135,22 @@ dbc.Row([
 
 ])                       
 
+#Callback Section_________________________________________________________________________________________
 @callback(
         Output('force_end_time_output', 'children'),
         [Input('force_end_time', 'on')]
         )
 
 def switch_force_end_time(on):
+    """
+    Switches the force end time on or off.
+
+    Parameters:
+    - on (bool): If True, the force end time is switched on. If False, it is switched off.
+
+    Returns:
+    - bool: The updated state of the force end time.
+    """
     return on
 
     
@@ -138,6 +165,24 @@ def switch_force_end_time(on):
 )
 def update_environment_settings(n_clicks, start_date, end_date, 
                           timezone, timestep, on):
+    """
+    Update the environment settings based on user input.
+
+    Parameters:
+    - n_clicks (int): The number of times the button was clicked.
+    - start_date (str): The start date of the environment settings.
+    - end_date (str): The end date of the environment settings.
+    - timezone (str): The timezone for the environment settings.
+    - timestep (str): The time step for the environment settings.
+    - on (bool): The flag indicating whether to force the end time.
+
+    Returns:
+    - data_environment (dict): A dictionary containing the updated environment settings.
+
+    Raises:
+    - PreventUpdate: If the button was not clicked.
+
+    """
     if 'submit_environment_settings' == ctx.triggered_id and n_clicks is not None:
         data_environment={'Start Date': start_date + ' 00:00:00',
                             'End Date': end_date + ' 00:00:00',

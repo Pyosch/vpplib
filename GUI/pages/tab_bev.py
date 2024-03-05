@@ -1,7 +1,24 @@
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+This module defines the layout and callbacks for the bev tab in the GUI.
+It contains inputfields for the user to input the max. battery capacity, min. battery capacity, battery usage, charging power, and charging efficiency of the bev.
+
+Functions:
+- update_bev_settings: Update bev settings based on user inputs.
+
+The layout is defined using the Dash Bootstrap Components library.
+The submitted data is stored in store_bev.
+
+@author: sharth1
+"""
+
 from dash import html, Input, Output, State, callback, callback_context as ctx
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
+#Layout Section_________________________________________________________________________________________
 layout=dbc.Container([
 dbc.Row([
                     dbc.Col([
@@ -89,6 +106,8 @@ dbc.Row([
 
             
 ])
+
+#Callback Section_________________________________________________________________________________________
 @callback(
     Output('store_bev', 'data'),
     [Input('submit_bev_settings', 'n_clicks')],
@@ -102,12 +121,32 @@ dbc.Row([
 def update_bev_settings(n_clicks, max_battery_capacity, 
                               min_battery_capacity, battery_usage, 
                               charging_power, charging_efficiency):
-    if 'submit_bev_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_bev_settings={'max_battery_capacity': max_battery_capacity,
-                            'min_battery_capacity': min_battery_capacity,
-                            'battery_usage': battery_usage,
-                            'charging_power': charging_power,
-                            'charging_efficiency': charging_efficiency/100}
+    """
+    Update the BEV (Battery Electric Vehicle) settings based on user inputs.
+
+    Parameters:
+    - n_clicks (int): The number of times the submit button is clicked.
+    - max_battery_capacity (float): The maximum battery capacity of the BEV.
+    - min_battery_capacity (float): The minimum battery capacity of the BEV.
+    - battery_usage (float): The battery usage of the BEV.
+    - charging_power (float): The charging power of the BEV.
+    - charging_efficiency (float): The charging efficiency of the BEV (in percentage).
+
+    Returns:
+    - data_bev_settings (dict): A dictionary containing the updated BEV settings.
+
+    Raises:
+    - PreventUpdate: If the submit button is not clicked.
+
+    """
+    if 'submit_bev_settings' == ctx.triggered_id and n_clicks is not None:
+        data_bev_settings = {
+            'max_battery_capacity': max_battery_capacity,
+            'min_battery_capacity': min_battery_capacity,
+            'battery_usage': battery_usage,
+            'charging_power': charging_power,
+            'charging_efficiency': charging_efficiency / 100
+        }
         return data_bev_settings
     
     elif n_clicks is None:

@@ -1,8 +1,4 @@
-"""
-Created on Tue Jul  2 10:38:17 2019
-
-@author: Sascha Birk
-"""
+# -*- coding: utf-8 -*-
 
 import pandas as pd
 import os
@@ -21,6 +17,22 @@ from vpplib.virtual_power_plant import VirtualPowerPlant
 
 def simulation(store_basic_settings, store_environment, store_user_profile, store_bev,
                store_pv, store_wind, store_heatpump, store_storage):
+    """
+    Run a simulation using the provided settings and components.
+
+    Args:
+        store_basic_settings (dict): Dictionary containing basic simulation settings.
+        store_environment (dict): Dictionary containing environment settings.
+        store_user_profile (dict): Dictionary containing user profile settings.
+        store_bev (dict): Dictionary containing battery electric vehicle (BEV) settings.
+        store_pv (dict): Dictionary containing photovoltaic (PV) settings.
+        store_wind (dict): Dictionary containing wind power settings.
+        store_heatpump (dict): Dictionary containing heat pump settings.
+        store_storage (dict): Dictionary containing electrical energy storage settings.
+
+    Returns:
+        None
+    """
 
     parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

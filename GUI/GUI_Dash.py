@@ -1,46 +1,49 @@
-import pandas as pd
-import pandapower as pp
-import pandapower.networks as pn
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+This script creates a Dash application for the VPPlib Simulation GUI.
+
+The application consists of a tabbed layout with various tabs for different settings and functionalities.
+Each tab is associated with a specific layout defined in separate modules.
+
+The main layout of the application is a container with a row containing a heading, and a tab component.
+The tab component contains multiple tabs, each representing a different aspect of the simulation.
+These tabs include basic settings, environment, user profile, BEV, photovoltaic, wind, heat pump, storage, hydrogen, simulation and results, and graphs.
+Those tabs are defined in separate modules saved in the pages folder.
+
+The application uses Dash Bootstrap Components for styling.
+
+Functions:
+- render_content: Renders the content of the active tab based on user selection.
+
+To run the application, execute this script.
+
+Note: This script assumes that the necessary modules and packages are imported and available.
+
+@author: sharth1
+"""
+
 import dash 
 from dash import dcc
 from dash import html
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc  
 import sys
 import os
-
-
-sys.path.append(os.path.abspath(os.path.join('')))
-from vpplib.environment import Environment
-from vpplib.user_profile import UserProfile
-from vpplib.photovoltaic import Photovoltaic
-from vpplib.battery_electric_vehicle import BatteryElectricVehicle
-from vpplib.heat_pump import HeatPump
-from vpplib.electrical_energy_storage import ElectricalEnergyStorage
-from vpplib.wind_power import WindPower
-from vpplib.virtual_power_plant import VirtualPowerPlant
-from vpplib.operator import Operator
-
 from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_hydrogen, tab_run_simulation, tab_all_parameters, tab_graphs
+sys.path.append(os.path.abspath(os.path.join('')))
 
-
-
+#Layout Section_________________________________________________________________________________________
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY], suppress_callback_exceptions=True)  
 
-
 app.layout = dbc.Container([
-
-dbc.Row([
-    dbc.Col([
-        html.H1('VPPlib Simulation')
-    ],align='middle')
-    
+    dbc.Row([
+        dbc.Col([
+            html.H1('VPPlib Simulation')
+        ],align='middle')
     ],style={'margin-top': '20px', 
-             'margin-bottom': '20px',
-             }),
+             'margin-bottom': '20px'}),
     dbc.Tabs(id='tabs', children=[
         dbc.Tab(label='Basic Settings', 
                 tab_id='tab_basic_settings',
@@ -78,29 +81,35 @@ dbc.Row([
         dbc.Tab(label='Hydrogen',
                 tab_id='tab_hydrogen',
                 active_label_style={'color': 'grey'}),
-        
-]),
-dbc.Container(id='tab-content'),
-dcc.Store(id='store_basic_settings', data={}, storage_type='session'),
-dcc.Store(id='store_environment', data={}, storage_type='session'),
-dcc.Store(id='store_user_profile', data={}, storage_type='session'),
-dcc.Store(id='store_bev', data={}, storage_type='session'),
-dcc.Store(id='store_pv', data={}, storage_type='session'),
-dcc.Store(id='store_wind', data={}, storage_type='session'),
-dcc.Store(id='store_heatpump', data={}, storage_type='session'),
-dcc.Store(id='store_storage', data={}, storage_type='session'),
-dcc.Store(id='store_results', data={}, storage_type='session'),
-dcc.Store(id='store_simulation', data={}, storage_type='session'),
-dcc.Store(id='store_hydrogen', data={}, storage_type='session'),
-# dcc.Store(id='store_base_load', data={}, storage_type='session'),
+    ]),
+    dbc.Container(id='tab-content'),
+    dcc.Store(id='store_basic_settings', data={}, storage_type='session'),
+    dcc.Store(id='store_environment', data={}, storage_type='session'),
+    dcc.Store(id='store_user_profile', data={}, storage_type='session'),
+    dcc.Store(id='store_bev', data={}, storage_type='session'),
+    dcc.Store(id='store_pv', data={}, storage_type='session'),
+    dcc.Store(id='store_wind', data={}, storage_type='session'),
+    dcc.Store(id='store_heatpump', data={}, storage_type='session'),
+    dcc.Store(id='store_storage', data={}, storage_type='session'),
+    dcc.Store(id='store_results', data={}, storage_type='session'),
+    dcc.Store(id='store_simulation', data={}, storage_type='session'),
+    dcc.Store(id='store_hydrogen', data={}, storage_type='session'),
 ])
 
-
-# Define the callback to switch between tabs
+#Callback Section_______________________________________________________________________________________
 @app.callback(Output('tab-content', 'children'),
             [Input('tabs', 'active_tab')]
             )
 def render_content(active_tab):
+    """
+    Callback function to render the content of the active tab.
+
+    Parameters:
+    - active_tab (str): The ID of the active tab.
+
+    Returns:
+    - The layout of the active tab.
+    """
     if active_tab == 'tab_basic_settings':
         return tab_basic_settings.layout
     elif active_tab == 'tab_environment':

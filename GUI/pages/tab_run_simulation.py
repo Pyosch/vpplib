@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+This module defines the layout and callbacks for the run simulation tab in the GUI.
+It contains a button to start the simulation and a button to download the results.
+
+Functions:
+- simulate: Simulate the energy system based on the user inputs.
+- download: Download the results of the simulation.
+
+The layout is defined using the Dash Bootstrap Components library.
+The used data is taken from in store_basic_settings, store_environment, store_user_profile, store_bev, store_pv, store_wind, store_heatpump, and store_storage.
+The results of the simulation are stored in the df_timeseries.csv file.
+
+@author: sharth1
+"""
+
 from dash import  dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -7,10 +25,9 @@ import os
 import time
 import zipfile
 import shutil
-
-
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+#Layout Section_________________________________________________________________________________________
 layout=dbc.Container([
     dbc.Row([
              dbc.Button('Simulate',
@@ -34,7 +51,7 @@ layout=dbc.Container([
     dcc.Download(id="download-basic-settings"),
     
 ])
-
+#Callback Section_________________________________________________________________________________________
 @callback(
     Output('is-loading-output', 'children'),
     [Input('simulate_button', 'n_clicks'),
@@ -50,6 +67,26 @@ layout=dbc.Container([
 )
 def simulate(n_clicks, store_basic_settings, store_environment, store_user_profile, store_bev,
                store_pv, store_wind, store_heatpump, store_storage):
+    """
+    Simulates the scenario based on the provided settings and data.
+
+    Parameters:
+    - n_clicks (int): The number of times the simulate button has been clicked.
+    - store_basic_settings (dict): The basic settings for the simulation.
+    - store_environment (dict): The environmental data for the simulation.
+    - store_user_profile (dict): The user profile data for the simulation.
+    - store_bev (dict): The battery electric vehicle data for the simulation.
+    - store_pv (dict): The photovoltaic data for the simulation.
+    - store_wind (dict): The wind turbine data for the simulation.
+    - store_heatpump (dict): The heat pump data for the simulation.
+    - store_storage (dict): The energy storage data for the simulation.
+
+    Raises:
+    - PreventUpdate: If the simulate button was not triggered or if n_clicks is None.
+
+    Returns:
+    - None
+    """
     if 'simulate_button' == ctx.triggered_id and n_clicks is not None:
         print('simulating')
         simulation(store_basic_settings, store_environment, store_user_profile, store_bev,
@@ -63,7 +100,6 @@ def simulate(n_clicks, store_basic_settings, store_environment, store_user_profi
 
 @callback(
     Output("download-time-series", "data"),
-
     Input("download_button", "n_clicks"),
     Input('project_file_name', 'value'),
     Input('store_basic_settings', 'data'),
@@ -79,6 +115,27 @@ def simulate(n_clicks, store_basic_settings, store_environment, store_user_profi
 
 )
 def download(n_clicks, value, store_basic_settings, store_environment, store_user_profile, store_bev, store_pv, store_wind, store_heatpump, store_storage):
+    """
+    Downloads the dataframes as CSV files and creates a zip file containing them.
+
+    Args:
+        n_clicks (int): The number of times the download button has been clicked.
+        value (str): The name of the new project.
+        store_basic_settings (dict): The basic settings dataframe.
+        store_environment (dict): The environment dataframe.
+        store_user_profile (dict): The user profile dataframe.
+        store_bev (dict): The BEV dataframe.
+        store_pv (dict): The PV dataframe.
+        store_wind (dict): The wind dataframe.
+        store_heatpump (dict): The heat pump dataframe.
+        store_storage (dict): The storage dataframe.
+
+    Returns:
+        dash.dependencies.send_file: The zip file containing the CSV files.
+
+    Raises:
+        PreventUpdate: If the download button was not triggered or if n_clicks is None.
+    """
     if 'download_button' == ctx.triggered_id and n_clicks is not None:
         print('downloading')
         new_project_name = value
