@@ -267,7 +267,7 @@ class Environment(object):
         )
         return wd_time_result.now.replace(second=0,microsecond=0)
         
-    def __get_solar_parameter (self, date, ghi, temperature, pressure, drew_point, lat, lon, height, methode = 'disc', use_methode_name_in_columns = False):
+    def __get_solar_parameter (self, date, ghi, lat, lon, height, temperature = None, pressure = None, drew_point = None, methode = 'disc', use_methode_name_in_columns = False):
         """
             Calculates solar parameters based on the given method by using pvlib estimation modells.
 
@@ -277,18 +277,18 @@ class Environment(object):
                 date assumet in UTC if no tz given
             ghi : list or series
                 Global Irradiance       [W/m2]
-            temperature : list or series
-                temperature at height   [C]
-            drew_pint : list or series
-                 drew point             [C]
-            pressure : list or series
-                pressure at height      [Pa]
             lat : float
                 Latitude of the location.
             lon : float
                 Longitude of the location.
             height : float
                 Altitude or height of the location. [m]
+            temperature : list or series, optional
+                temperature at height   [C]
+            drew_pint : list or series, optional
+                 drew point             [C]
+            pressure : list or series, optional
+                pressure at height      [Pa]
             method : str, optional
                 Method for solar parameter calculation (default is 'disc').
                 Options: 'disc', 'erbs', 'dirint', 'boland'.
@@ -323,7 +323,7 @@ class Environment(object):
                     longitude   = lon, 
                     altitude    = height,
                     pressure    = pressure,
-                    temperature = temperature
+                    temperature = temperature if temperature is not None else 12
                     )
         #Shift back after calculation
         solpos.index = date
@@ -389,7 +389,8 @@ class Environment(object):
         if self.__extended_solar_data:
             out_df['bh'] = ghi - out_df['dhi']
             out_df['zenith'] = solpos.zenith
-            out_df['apparent_zenith'] = solpos.apparent_zenith
+            if temperature is not None:
+                out_df['apparent_zenith'] = solpos.apparent_zenith
         
         
         #Add methode to column name of the parameters
@@ -676,7 +677,7 @@ class Environment(object):
         
         
     def __process_mosmix_parameter (
-            self, pd_sorted_data_for_station, dataset, pd_station_metadata, additional_parameter_lst = None, estimation_methode_lst = ['disc']
+            self, pd_sorted_data_for_station, dataset, pd_station_metadata, estimation_methode_lst = ['disc']
             ):
         """
             Processes MOSMIX parameters based on the dataset.
@@ -695,8 +696,6 @@ class Environment(object):
                 DataFrame containing station metadata.
                 lat, lon
                 height [m]
-            additional_parameter_lst : list, optional
-                List of additional parameters, which where retrieved for calculating missing solar parameters dhi and dni.
             estimation_methode_lst : list, optional
                 List of estimation methode names, which where used for calculating missing parameters such as dhi dni, by default ['disc'].
             Returns
@@ -722,22 +721,23 @@ class Environment(object):
         """
         if dataset == 'solar':
             pd_sorted_data_for_station.update( self.__get_solar_power_from_energy(pd_sorted_data_for_station, 'MOSMIX'), overwrite=True)
-            
-            pd_sorted_data_for_station.pressure = self.__get_station_pressure_from_reduced_pressure(
-                height = pd_station_metadata['height'].values[0], 
-                pressure_reduced = pd_sorted_data_for_station.pressure, 
-                temperature = pd_sorted_data_for_station.temperature)
+            if 'pressure' in pd_sorted_data_for_station.columns:
+                pd_sorted_data_for_station.pressure = self.__get_station_pressure_from_reduced_pressure(
+                    height = pd_station_metadata['height'].values[0], 
+                    pressure_reduced = pd_sorted_data_for_station.pressure, 
+                    temperature = pd_sorted_data_for_station.temperature)
             """
             Available methods for solar parameter calculation:
              ['disc','erbs','dirint','boland']
             """
+            
             for methode in estimation_methode_lst:
                 calculated_solar_parameter = self.__get_solar_parameter(
                         date        = pd_sorted_data_for_station.index, 
                         ghi         = pd_sorted_data_for_station.ghi, 
-                        temperature = pd_sorted_data_for_station.temperature - 273.15, 
-                        pressure    = pd_sorted_data_for_station.pressure, 
-                        drew_point  = pd_sorted_data_for_station.drew_point - 273.15,
+                        temperature = pd_sorted_data_for_station.temperature - 273.15 if 'temperature' in pd_sorted_data_for_station.columns else None, 
+                        pressure    = pd_sorted_data_for_station.pressure             if 'pressure'    in pd_sorted_data_for_station.columns else None, 
+                        drew_point  = pd_sorted_data_for_station.drew_point - 273.15  if 'drew_point'  in pd_sorted_data_for_station.columns else None,
                         lat         = pd_station_metadata['latitude' ].values[0], 
                         lon         = pd_station_metadata['longitude'].values[0],
                         height      = pd_station_metadata['height'   ].values[0],
@@ -745,7 +745,9 @@ class Environment(object):
                         use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
                 pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             if not self.__extended_solar_data:
-                pd_sorted_data_for_station.drop(additional_parameter_lst, axis = 1, inplace = True)
+                for additional_parameter in ['temperature','drew_point','pressure']:
+                    if additional_parameter in pd_sorted_data_for_station.columns:
+                        pd_sorted_data_for_station.drop(additional_parameter, axis = 1, inplace = True)
         elif dataset == 'air':
             pd_sorted_data_for_station.temperature = pd_sorted_data_for_station.temperature - 273.15  # K to °C
         elif dataset == 'wind':
@@ -793,8 +795,6 @@ class Environment(object):
                 raw dwd data for the selected station
             station_metadata : pandas.DataFrame
                 Metadata of the selected weather station.
-            additional_parameter_lst : list
-                additional parameter, which where retrieved for calculating missing parameters such as dhi dni.
 
             Raises
             ------
@@ -825,9 +825,10 @@ class Environment(object):
             raise ValueError("No location or station-ID given!")
         
         dataset_dict = {
-            'solar' : ['ghi', 'dhi'],
-            'air'   : ['temperature'],
-            'wind'  : ['wind_speed', 'pressure', 'temperature'],
+            'solar'       : ['ghi', 'dhi' ],
+            'air'         : ['temperature'],
+            'wind'        : ['wind_speed', 'pressure', 'temperature'],
+            'solar_est'   : ["pressure", "temperature", "drew_point"],
             'wind_speed'  : ['wind_speed'],
             'pressure'    : ['pressure'],
             'temperature' : ['temperature']
@@ -888,11 +889,8 @@ class Environment(object):
             if dataset == 'solar':
                 #dhi is not available for MOSMIX
                 req_parameter_dict.pop("dhi")
-                #get additional parameter for calculating dhi with pvlib
-                additional_parameter_lst = ["pressure", "temperature", "drew_point"]
-                req_parameter_dict.update({param: avalible_parameter_dict[param] for param in additional_parameter_lst})
-            #pressure is called pressure_air_site_reduced in MOSMIX
             if "pressure" in req_parameter_dict:
+                #pressure is called pressure_air_site_reduced in MOSMIX
                 req_parameter_dict.update({"pressure" : "pressure_air_site_reduced"})
             
             #Get weather data for your location from dwd MOSMIX database
@@ -994,13 +992,15 @@ class Environment(object):
         if activate_output:
             print("Query successful!")
             
-        station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
+        station_metadata = (pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id])
         station_metadata ['station_type'] = 'OBSERVATION' if isinstance(wd_query_result,DwdObservationRequest) else 'MOSMIX',  
+        station_metadata ['distance_itaration'] = station_metadata.index
+        station_metadata['Index'] = range(len(station_metadata))
+        station_metadata = station_metadata.set_index('Index')
         
         return (
             pd_sorted_data_for_station,
-            station_metadata,
-            additional_parameter_lst if 'additional_parameter_lst' in locals() else None )
+            station_metadata)
        
     def get_dwd_pv_data(
         self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, estimation_methode_lst = ['disc']
@@ -1035,14 +1035,14 @@ class Environment(object):
             - Station metadate is not saved in class      
     """
         dataset = 'solar'
-        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
-            dataset = dataset, 
+        raw_dwd_data, station_metadata = self.__get_dwd_data(
+            dataset = dataset,
             lat = lat, 
             lon = lon, 
             user_station_id = station_id,
             distance = distance, 
             min_quality_per_parameter = min_quality_per_parameter
-            )    
+            )   
         if station_metadata.station_type.iloc[0] == 'OBSERVATION':
             self.pv_data = self.__process_observation_parameter(
                  pd_sorted_data_for_station = raw_dwd_data, 
@@ -1050,11 +1050,23 @@ class Environment(object):
                  dataset = dataset
                  )
         elif station_metadata.station_type.iloc[0] == 'MOSMIX':
+            if 'disc' in estimation_methode_lst or 'dirint' in estimation_methode_lst:
+                raw_dwd_data_buf, station_metadata_buf = self.__get_dwd_data(
+                    dataset = 'solar_est',
+                    lat = lat, 
+                    lon = lon, 
+                    user_station_id = station_id,
+                    distance = distance, 
+                    min_quality_per_parameter = min_quality_per_parameter
+                    )
+                if station_metadata_buf.station_type.iloc[0] != 'MOSMIX':
+                    raise Exception("Station type error while dataset splitting. Please check times!")
+                raw_dwd_data = pd.concat([raw_dwd_data,raw_dwd_data_buf], axis = 1)
+            
             self.pv_data = self.__process_mosmix_parameter(
                  pd_sorted_data_for_station = raw_dwd_data, 
                  pd_station_metadata = station_metadata,
                  dataset = dataset,
-                 additional_parameter_lst = additional_parameter_lst,
                  estimation_methode_lst = estimation_methode_lst
                  )
             
@@ -1095,7 +1107,7 @@ class Environment(object):
         """
         dataset = 'wind'
         if not single_parameter_request:
-            raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+            raw_dwd_data, station_metadata = self.__get_dwd_data(
                 dataset = dataset, 
                 lat = lat, 
                 lon = lon, 
@@ -1104,10 +1116,10 @@ class Environment(object):
                 min_quality_per_parameter = min_quality_per_parameter
                 )
         else:
-            parameter_lst = ['wind_speed', 'temperature', 'pressure']
             raw_dwd_data = pd.DataFrame()
-            for parameter in parameter_lst:
-                raw_dwd_data_buf, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+            station_metadata = pd.DataFrame()
+            for parameter in ['wind_speed', 'temperature', 'pressure']:
+                raw_dwd_data_buf, station_metadata_buf = self.__get_dwd_data(
                     dataset = parameter, 
                     lat = lat, 
                     lon = lon, 
@@ -1115,7 +1127,14 @@ class Environment(object):
                     distance = distance, 
                     min_quality_per_parameter = min_quality_per_parameter
                     )
+                station_metadata = pd.concat([station_metadata,station_metadata_buf], axis = 0)
                 raw_dwd_data = pd.concat([raw_dwd_data,raw_dwd_data_buf], axis = 1)
+                
+            if station_metadata.station_type.nunique() != 1:
+                raise Exception("Station type error while dataset splitting. Please check times!")
+            if station_metadata.station_id.nunique() != 1:
+                print("Warning: Used different stations for one dataset. station_metadata may be inconsistent")
+
         if station_metadata.station_type.iloc[0] == 'OBSERVATION': 
             self.wind_data = self.__process_observation_parameter(
                  pd_sorted_data_for_station = raw_dwd_data, 
@@ -1161,7 +1180,7 @@ class Environment(object):
             - Station meta data is saved in class variable __temp_station_metadata for usage in get_dwd_mean_temp_hours / get_dwd_mean_temp_days
         """
         dataset = 'air'
-        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+        raw_dwd_data, station_metadata = self.__get_dwd_data(
             dataset = dataset, 
             lat = lat, 
             lon = lon, 
