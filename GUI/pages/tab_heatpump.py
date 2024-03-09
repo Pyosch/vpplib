@@ -1,8 +1,24 @@
-from dash import dash, dcc, html, callback, Input, Output, State, callback_context as ctx
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+This module defines the layout and callbacks for the heatpump tab in the GUI.
+It contains inputfields for the user to input the type of heatpump, the heat system temperature, and the electrical power of the heatpump.
+
+Functions:
+- update_heatpump_settings: Update heatpump settings based on user inputs.
+
+The layout is defined using the Dash Bootstrap Components library.
+The submitted data is stored in store_heatpump.
+
+@author: sharth1
+"""
+
+from dash import  dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
-import pandas as pd
 from dash.exceptions import PreventUpdate
 
+#Layout Section_________________________________________________________________________________________
 layout=dbc.Container([
 dbc.Row([
                 dbc.Col([
@@ -63,6 +79,7 @@ dbc.Row([
                 
 ])
 
+#Callback Section_________________________________________________________________________________________
 @callback(
     Output('store_heatpump', 'data'),
     [Input('submit_hp_settings', 'n_clicks')],
@@ -71,10 +88,24 @@ dbc.Row([
      State('input_heatpump_electrical_power', 'value')]
 )
 def update_heatpump_settings(n_clicks, type_hp, temp_hp, power_hp):
-    if 'submit_hp_settings' ==ctx.triggered_id and n_clicks is not None:
-        data_heatpump={'Type Heatpump': type_hp,
-                 'Heat System Temperature': temp_hp,
-                 'Power': power_hp,}
+    """
+    Update the heat pump settings based on the user inputs.
+
+    Parameters:
+    - n_clicks (int): The number of times the submit button is clicked.
+    - type_hp (str): The type of heat pump.
+    - temp_hp (float): The desired heat system temperature.
+    - power_hp (float): The power of the heat pump.
+
+    Returns:
+    - data_heatpump (dict): A dictionary containing the updated heat pump settings.
+    """
+    if 'submit_hp_settings' == ctx.triggered_id and n_clicks is not None:
+        data_heatpump = {
+            'Type Heatpump': type_hp,
+            'Heat System Temperature': temp_hp,
+            'Power': power_hp,
+        }
         return data_heatpump
     elif n_clicks is None:
         raise PreventUpdate
