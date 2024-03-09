@@ -471,7 +471,7 @@ class Environment(object):
         - https://de.wikipedia.org/wiki/Barometrische_Höhenformel
         """
         pressure_station = (
-            pressure_reduced * ( 1 - ( -0.0065  * height) / temperature) ** ((9.81 * 0.02897) / (8.314 * -0.0065))
+            pressure_reduced * ( 1 - ( 0.0065  * height) / temperature) ** ((9.81 * 0.02897) / (8.314 * 0.0065))
             )
         return pressure_station
      
@@ -640,8 +640,9 @@ class Environment(object):
             #Calculate power from irradiance
             pd_sorted_data_for_station.update(self.__get_solar_power_from_energy(pd_sorted_data_for_station,'OBSERVATION'), overwrite=True)
             pd_sorted_data_for_station['bh'] = pd_sorted_data_for_station.ghi - pd_sorted_data_for_station.dhi
+            
             #Calculate solar zenith angle from time, lat, lon, and height
-            #Temperature is not needed for zenit. Nessessary for apperent_zenith
+            #Temperature (positinonal argument) is not needed for zenit. Nessessary for apperent_zenith --> set to 0
             #Zenith angle is calculatet for the middle of the time intervall
             #Shift back after calculation to align with observation data
             pd_sorted_data_for_station['zenith'] = get_solarposition(
@@ -660,7 +661,6 @@ class Environment(object):
                 )
             #Remove sign error for -0.0 values
             pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station['dni'].replace(-0.0, 0.0)
-            
             
             if not self.__extended_solar_data:
                 pd_sorted_data_for_station.drop(['zenith', 'bh'], axis = 1, inplace = True)
@@ -823,12 +823,14 @@ class Environment(object):
             raise ValueError("Class instance does not contain start or end time!")
         if (lat is None or lon is None) and user_station_id is None:
             raise ValueError("No location or station-ID given!")
-            
-
+        
         dataset_dict = {
             'solar' : ['ghi', 'dhi'],
             'air'   : ['temperature'],
-            'wind'  : ['wind_speed', 'pressure', 'temperature']
+            'wind'  : ['wind_speed', 'pressure', 'temperature'],
+            'wind_speed'  : ['wind_speed'],
+            'pressure'    : ['pressure'],
+            'temperature' : ['temperature']
             }
 
         avalible_parameter_dict = {
@@ -848,7 +850,7 @@ class Environment(object):
         Settings.cache_disable = True
         settings.ts_si_units = False
         
-        #observation data is updated every full hour
+        #observation database is updated every full hour
         observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
 
         if self.__start_dt_utc < observation_end_date - datetime.timedelta(hours = 1) or (
@@ -897,7 +899,7 @@ class Environment(object):
             wd_query_result = DwdMosmixRequest(
                 parameter   = list(req_parameter_dict.values()), 
                 mosmix_type = DwdMosmixType.LARGE,
-                settings    =  settings,
+                settings    = settings,
                 start_date  = self.__start_dt_utc,
                 end_date    = self.__end_dt_utc + datetime.timedelta(hours = 1)
                 )
@@ -1059,7 +1061,7 @@ class Environment(object):
         return station_metadata
 
     def get_dwd_wind_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, single_parameter_request = False
         ):
         """
         Retrieves wind weather data from the DWD database and processes it.
@@ -1092,14 +1094,28 @@ class Environment(object):
             - Station meta data is not saved in class      
         """
         dataset = 'wind'
-        raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
-            dataset = dataset, 
-            lat = lat, 
-            lon = lon, 
-            user_station_id = station_id,
-            distance = distance, 
-            min_quality_per_parameter = min_quality_per_parameter
-            )    
+        if not single_parameter_request:
+            raw_dwd_data, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+                dataset = dataset, 
+                lat = lat, 
+                lon = lon, 
+                user_station_id = station_id,
+                distance = distance, 
+                min_quality_per_parameter = min_quality_per_parameter
+                )
+        else:
+            parameter_lst = ['wind_speed', 'temperature', 'pressure']
+            raw_dwd_data = pd.DataFrame()
+            for parameter in parameter_lst:
+                raw_dwd_data_buf, station_metadata, additional_parameter_lst = self.__get_dwd_data(
+                    dataset = parameter, 
+                    lat = lat, 
+                    lon = lon, 
+                    user_station_id = station_id,
+                    distance = distance, 
+                    min_quality_per_parameter = min_quality_per_parameter
+                    )
+                raw_dwd_data = pd.concat([raw_dwd_data,raw_dwd_data_buf], axis = 1)
         if station_metadata.station_type.iloc[0] == 'OBSERVATION': 
             self.wind_data = self.__process_observation_parameter(
                  pd_sorted_data_for_station = raw_dwd_data, 
