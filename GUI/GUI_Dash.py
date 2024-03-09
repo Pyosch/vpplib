@@ -31,7 +31,7 @@ from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc  
 import sys
 import os
-from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_hydrogen, tab_run_simulation, tab_all_parameters, tab_graphs
+from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_hydrogen, tab_run_simulation, tab_all_parameters, tab_graphs, tab_comparison
 sys.path.append(os.path.abspath(os.path.join('')))
 
 #Layout Section_________________________________________________________________________________________
@@ -80,6 +80,9 @@ app.layout = dbc.Container([
                 active_label_style={'color': 'grey'}),
         dbc.Tab(label='Hydrogen',
                 tab_id='tab_hydrogen',
+                active_label_style={'color': 'grey'}),
+        dbc.Tab(label='Comparison',
+                tab_id='tab_comparison',
                 active_label_style={'color': 'grey'}),
     ]),
     dbc.Container(id='tab-content'),
@@ -134,6 +137,8 @@ def render_content(active_tab):
         return tab_hydrogen.layout
     elif active_tab == 'tab_graphs':
         return tab_graphs.layout
+    elif active_tab == 'tab_comparison':
+        return tab_comparison.layout
 
 if __name__ == '__main__':
     app.run_server(debug=True)

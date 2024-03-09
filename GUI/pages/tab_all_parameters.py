@@ -14,7 +14,7 @@ The  data is taken from store_basic_settings, store_environment, store_user_prof
 @author: sharth1
 """
 
-from dash import html, callback, Input, Output, State, dash_table, callback_context as ctx
+from dash import html, callback, Input, Output, dash_table, callback_context as ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
 

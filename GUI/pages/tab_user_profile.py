@@ -5,11 +5,9 @@ Info
 This module defines the layout and callbacks for the user profile tab in the GUI.
 It contains inputfields for the user to input the identifier, latitude, longitude, max. radius to weather stations,
 thermal energy demand, comfort factor, daily vehicle usage, building type, and T0.
-The user can also upload a base load file.
 
 Functions:
 - update_user_profile: Update user profile based on user inputs.
-- parse_contents: Parse the contents of the uploaded file.
 
 The layout is defined using the Dash Bootstrap Components library.
 The submitted data is stored in store_user_profile.
@@ -150,27 +148,6 @@ dbc.Row([
                             dbc.InputGroupText('°C')])
                             ], width=2)
                     ], align='center'),
-                dbc.Row([
-                    dbc.Col([
-                                html.P('Upload Base Load')   
-                            ], width=3),
-                    dbc.Col([
-                        dcc.Upload(
-                            id='upload_base_load',
-                            children=dbc.Container([
-                                'Drag and Drop or ',
-                                html.A('Select Files')
-                            ]),style={
-                                'height': 'auto',
-                                'lineHeight': '60px',
-                                'borderWidth': '1px',
-                                'borderStyle': 'dashed',
-                                'textAlign': 'center',
-                                'margin': '10px',
-                            }, multiple=False)
-                            
-                        ], width=3)
-                    ], align='center'),
                     dbc.Row([
                                 dbc.Col([
                                     dbc.Button('Submit Settings',
@@ -178,67 +155,11 @@ dbc.Row([
                                                color='primary')
                                 ])
                             ]),
-        html.Div(id='output-data-upload'),                
 ])
 
 
-def parse_contents(contents, filename, date):
-    content_type, content_string = contents.split(',')
 
-    decoded = base64.b64decode(content_string)
-    try:
-        if 'csv' in filename:
-            # Assume that the user uploaded a CSV file
-            df = pd.read_csv(
-                io.StringIO(decoded.decode('utf-8')))
-            # print(df)
-        elif 'xls' in filename:
-            # Assume that the user uploaded an excel file
-            df = pd.read_excel(io.BytesIO(decoded))
-    except Exception as e:
-        print(e)
-        return html.Div([
-            'There was an error processing this file.'
-        ])
-
-    return html.Div([
-        html.H5(filename),
-        html.H6(datetime.datetime.fromtimestamp(date)),
-
-        dash_table.DataTable(
-            df.to_dict('records'),
-            [{'name': i, 'id': i} for i in df.columns],
-                                    page_action='native',  page_current=0,
-                        page_size=20, sort_action='native',
-                        style_header={'backgroundColor': 'rgb(30, 30, 30)',
-                                    'color': 'white', 'textAlign':'center'},
-                        style_data={'backgroundColor': 'rgb(50, 50, 50)',
-                                    'color': 'white', 'width':'auto'},
-                        style_cell={'font-family':'sans-serif'},
-                        style_table={'margin-bottom': '20px'}
-        ),
-
-        html.Hr(),  # horizontal line
-
-        # For debugging, display the raw contents provided by the web browser
-        html.Div('Raw Content'),
-        html.Pre(contents[0:200] + '...', style={'whiteSpace': 'pre-wrap',
-            'wordBreak': 'break-all'})
-    ])
-
-#Layout Section_________________________________________________________________________________________
-@callback(Output('output-data-upload', 'children'),
-        #   Output('store_base_load', 'data'),
-              Input('upload_base_load', 'contents'),
-              State('upload_base_load', 'filename'),
-              State('upload_base_load', 'last_modified'))
-
-def update_output(list_of_contents, list_of_names, list_of_dates):
-   if list_of_contents is not None:
-        children = [parse_contents(list_of_contents, list_of_names, list_of_dates)]
-        return children, children
-   else:
-        raise PreventUpdate
+#Callback Section_________________________________________________________________________________________
 
 @callback(
     Output('store_user_profile', 'data'),
