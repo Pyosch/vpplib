@@ -383,8 +383,8 @@ class ElectrolysisMoritz:
         :param P_ac:
         :return:
         '''
-        P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100)
-        #P_dc = P_ac - self.power_electronics(P_ac, self.P_nominal/100)
+        P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/1000)
+        # P_dc = P_ac - self.power_electronics(P_ac, self.P_nominal/100)
         return P_dc
 
     def run(self, P_dc):        

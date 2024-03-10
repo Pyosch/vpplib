@@ -75,7 +75,6 @@ def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_setting
 
     #CSV-Datei
     ts.to_csv(r'GUI/hydrogen_time_series.csv', index=False)
-    print('done')
     # ts.to_csv('electrolyzer_timeseries.csv', index=True)
     #EXCEL-Datei
     # excel_file_path = r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_output.xlsx'
