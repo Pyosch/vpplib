@@ -599,7 +599,7 @@ class Environment(object):
         return df.columns
     
     
-    def __process_observation_parameter (self, pd_sorted_data_for_station, pd_station_metadata, dataset):
+    def __process_observation_parameter (self, pd_sorted_data_for_station, dataset, pd_station_metadata = None):
         """
             Processes observation parameters based on the dataset.
 
@@ -611,7 +611,7 @@ class Environment(object):
                 solar: ghi, dhi [J/cm^2]
                 air:   temperature [C]
                 wind:  wind_speed [m/s], pressure [hPa], temperature [C]
-            pd_station_metadata : pandas.DataFrame
+            pd_station_metadata : pandas.DataFrame, optional for wind and temperature dataset
                 DataFrame containing station metadata.
                 lat, lon
                 height [m]
@@ -677,7 +677,7 @@ class Environment(object):
         
         
     def __process_mosmix_parameter (
-            self, pd_sorted_data_for_station, dataset, pd_station_metadata, estimation_methode_lst = ['disc']
+            self, pd_sorted_data_for_station, dataset, estimation_methode_lst = ['disc'], pd_station_metadata = None
             ):
         """
             Processes MOSMIX parameters based on the dataset.
@@ -692,7 +692,7 @@ class Environment(object):
                 wind:  wind_speed [m/s], pressure at sea level [hPa], temperature [K]
             dataset : str
                 Type of weather dataset, either 'solar', 'air', or 'wind'.
-            pd_station_metadata : pandas.DataFrame
+            pd_station_metadata : pandas.DataFrame, optional for temperature dataset
                 DataFrame containing station metadata.
                 lat, lon
                 height [m]
@@ -1053,9 +1053,7 @@ class Environment(object):
             if 'disc' in estimation_methode_lst or 'dirint' in estimation_methode_lst:
                 raw_dwd_data_buf, station_metadata_buf = self.__get_dwd_data(
                     dataset = 'solar_est',
-                    lat = lat, 
-                    lon = lon, 
-                    user_station_id = station_id,
+                    user_station_id = station_metadata.station_id.iloc[0],
                     distance = distance, 
                     min_quality_per_parameter = min_quality_per_parameter
                     )
@@ -1073,7 +1071,7 @@ class Environment(object):
         return station_metadata
 
     def get_dwd_wind_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, single_parameter_request = False
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, single_parameter_request = True
         ):
         """
         Retrieves wind weather data from the DWD database and processes it.
@@ -1133,17 +1131,16 @@ class Environment(object):
             if station_metadata.station_type.nunique() != 1:
                 raise Exception("Station type error while dataset splitting. Please check times!")
             if station_metadata.station_id.nunique() != 1:
-                print("Warning: Used different stations for one dataset. station_metadata may be inconsistent")
+                print ("Warning! Used different stations for one dataset.")
 
         if station_metadata.station_type.iloc[0] == 'OBSERVATION': 
             self.wind_data = self.__process_observation_parameter(
-                 pd_sorted_data_for_station = raw_dwd_data, 
-                 pd_station_metadata = station_metadata,
+                 pd_sorted_data_for_station = raw_dwd_data,
                  dataset = dataset
                  )
         elif station_metadata.station_type.iloc[0] == 'MOSMIX': 
             self.wind_data = self.__process_mosmix_parameter(
-                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_sorted_data_for_station = raw_dwd_data,
                  pd_station_metadata = station_metadata,
                  dataset = dataset
                  )
@@ -1191,13 +1188,11 @@ class Environment(object):
         if station_metadata.station_type.iloc[0] == 'OBSERVATION':
             self.temp_data = self.__process_observation_parameter(
                  pd_sorted_data_for_station = raw_dwd_data, 
-                 pd_station_metadata = station_metadata,
                  dataset = dataset
                  )
         elif station_metadata.station_type.iloc[0] == 'MOSMIX': 
             self.temp_data = self.__process_mosmix_parameter(
-                 pd_sorted_data_for_station = raw_dwd_data, 
-                 pd_station_metadata = station_metadata,
+                 pd_sorted_data_for_station = raw_dwd_data,
                  dataset = dataset
                  )
         return self.__temp_station_metadata
