@@ -146,6 +146,12 @@ Results/
 vpplib/__pycache__/
 input/input_vise/
 dwd_results/
+
+#To prevent timeout merge conflicts
+.csv
+
+
+
 # Icon must end with two \r
 Icon
 
