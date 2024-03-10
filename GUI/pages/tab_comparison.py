@@ -24,7 +24,7 @@ import plotly.express as px
 
 df_vpp_forecast = pd.read_csv('GUI/03.03-13.03_Simu_VPP_forecast.csv', index_col=0).sum(axis=1)
 # df_hydrogen_historical = pd.read_csv('GUI/03.03_08.03_Simu_Hydrogen_historical_timeseries.csv', index_col=0)
-df_vpp_historical = pd.read_csv('GUI/03.03-08.03_Simu_VPP_historical_timeseries.csv', index_col=0).sum(axis=1)
+df_vpp_historical = pd.read_csv('GUI/df_timeseries.csv', index_col=0).sum(axis=1)
 
 df_vpp_diff = df_vpp_forecast - df_vpp_historical
 # df_hydrogen_diff = df_hydrogen_forecast - df_hydrogen_historical
@@ -82,5 +82,5 @@ def build_graph(dropdown_plot):
     if dropdown_plot is None:
         raise PreventUpdate
 
-    fig = px.area(df_combined, y=dropdown_plot)
+    fig = px.line(df_combined, y=dropdown_plot)
     return fig

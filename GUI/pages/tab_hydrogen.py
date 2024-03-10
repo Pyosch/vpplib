@@ -88,14 +88,14 @@ dbc.Row([
                             ],style={'margin-bottom': '20px'}),
                 dbc.Row([
                     dcc.Dropdown(id='dropdown_power_hydrogen',multi=True, 
-                                 options=[{'label':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[6], 
-                                           'value':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[6]},
-                                           {'label':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[7], 
-                                            'value':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[7]},
-                                           {'label':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[8], 
-                                            'value':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[8]},
-                                           {'label':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[10], 
-                                            'value':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[10]},
+                                 options=[{'label':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[6], 
+                                           'value':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[6]},
+                                           {'label':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[7], 
+                                            'value':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[7]},
+                                           {'label':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[8], 
+                                            'value':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[8]},
+                                           {'label':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[10], 
+                                            'value':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[10]},
                                  ],
                                 style={'width': '100%',
                                        'color':'black'},
@@ -116,14 +116,14 @@ dbc.Row([
                 dbc.Row([
                     dcc.Dropdown(id='dropdown_quantities_hydrogen',multi=True, 
                                 # options=[{'label': y, 'value': y} for y in pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns],
-                                 options=[{'label':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[9], 
-                                           'value':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[9]},
-                                           {'label':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[13], 
-                                            'value':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[13]},
-                                           {'label':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[14], 
-                                            'value':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[14]},
-                                           {'label':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[15], 
-                                            'value':pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0).columns[15]},
+                                 options=[{'label':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[9], 
+                                           'value':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[9]},
+                                           {'label':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[13], 
+                                            'value':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[13]},
+                                           {'label':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[14], 
+                                            'value':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[14]},
+                                           {'label':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[15], 
+                                            'value':pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0).columns[15]},
                                  ],
                                 style={'width': '100%',
                                        'color':'black'},
@@ -255,7 +255,7 @@ def download(n_clicks, value, store_hydrogen):
          # Create a temporary directory to store the dataframes
         temp_dir = 'temp'
         os.makedirs(temp_dir, exist_ok=True)
-        new_project_df = pd.read_csv('GUI/a_hydrogen_time_series.csv')
+        new_project_df = pd.read_csv('GUI/hydrogen_time_series.csv')
         df_hydrogen_settings = pd.DataFrame([store_hydrogen])
 
         new_project_df.to_csv(os.path.join(temp_dir, new_project_name+'_timeseries.csv'))
@@ -296,7 +296,7 @@ def build_graph(dropdown_power_hydrogen):
     """
     if dropdown_power_hydrogen is None:
         raise PreventUpdate
-    df=pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0)
+    df=pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0)
     df_selected=df[dropdown_power_hydrogen]
     fig = px.line(df_selected, y=dropdown_power_hydrogen)
     fig.update_layout(xaxis={'title': 'Time'}, yaxis={'title': 'Power [kW]'},
@@ -323,7 +323,7 @@ def build_graph(dropdown_quantities_hydrogen):
 
     if dropdown_quantities_hydrogen is None:
         raise PreventUpdate
-    df=pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0)
+    df=pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0)
     df_selected=df[dropdown_quantities_hydrogen]
     fig = px.line(df_selected)
     fig.update_layout(xaxis={'title': 'Time'}, yaxis={'title': 'Power [kW]'}, title={'text': 'Production profile'}, legend={'title': 'Component'})
@@ -350,7 +350,7 @@ def build_graph(n_clicks):
     """
     if n_clicks is not None:
         time.sleep(5)
-        df = pd.read_csv('GUI/a_hydrogen_time_series.csv', index_col=0)
+        df = pd.read_csv('GUI/hydrogen_time_series.csv', index_col=0)
         sum_H2 = df['hydrogen production [Kg/dt]'].sum()
         sum_O2 = df['Oxygen [kg/dt]'].sum()
         sum_H2O = df['H20 [kg/dt]'].sum()
