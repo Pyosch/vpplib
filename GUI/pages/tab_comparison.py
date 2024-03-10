@@ -24,7 +24,7 @@ import plotly.express as px
 
 df_vpp_forecast = pd.read_csv('GUI/03.03-13.03_Simu_VPP_forecast.csv', index_col=0).sum(axis=1)
 # df_hydrogen_historical = pd.read_csv('GUI/03.03_08.03_Simu_Hydrogen_historical_timeseries.csv', index_col=0)
-df_vpp_historical = pd.read_csv('GUI/03.03-08.03_Simu_VPP_historical_timeseries.csv', index_col=0).sum(axis=1)
+df_vpp_historical = pd.read_csv('GUI/df_timeseries.csv', index_col=0).sum(axis=1)
 
 df_vpp_diff = df_vpp_forecast - df_vpp_historical
 # df_hydrogen_diff = df_hydrogen_forecast - df_hydrogen_historical
@@ -38,7 +38,12 @@ df_combined.columns = ['VPP Forecast', 'VPP Historical', 'VPP Difference']
 #Layout Section_________________________________________________________________________________________
 layout=dbc.Container([
             dbc.Row([
-                dcc.Dropdown(id='dropdown_plot',multi=True,
+                dbc.Col([
+                        dcc.Graph(figure=px.box(df_combined, y='VPP Difference', title='VPP Difference').update_layout(showlegend=False), style={'width': '100%'}, id='box_plot_vpp_difference'),
+
+            ],width=4),
+                dbc.Col([
+                      dcc.Dropdown(id='dropdown_plot',multi=True,
                                 options=[{'label': y, 'value': y} for y in df_combined],
                                 style={'width': '100%',
                                        'color':'black'},
@@ -52,6 +57,8 @@ layout=dbc.Container([
                                     'watermark': True,
                                     'displaylogo': False,
                                     'toImageButtonOptions': {'format': 'png', 'filename': 'custom_image', 'height': 1080, 'width': 1920, 'scale': 1}})
+            ], width = 8)
+               
                 ])
     ])
 
@@ -76,9 +83,4 @@ def build_graph(dropdown_plot):
         raise PreventUpdate
 
     fig = px.line(df_combined, y=dropdown_plot)
-    if dropdown_plot == 'VPP Difference':
-            fig.add_trace(px.area(df_combined, y='VPP Difference'))
-    fig.update_layout(xaxis={'title': 'Time'}, yaxis={'title': 'Power [kW]'},
-                      title={'text': 'Power profile'},
-                      legend={'title': 'Component'})
     return fig
