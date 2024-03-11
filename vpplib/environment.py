@@ -40,7 +40,7 @@ class Environment(object):
         pv_data=[],
         wind_data=[],
         temp_data=[],
-        surpress_output_globally = True,
+        surpress_output_globally = False,
         force_end_time = True,
         use_timezone_aware_time_index = False,
         extended_solar_data = False,
@@ -1071,7 +1071,7 @@ class Environment(object):
         return station_metadata
 
     def get_dwd_wind_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, single_parameter_request = True
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, station_splitting = True
         ):
         """
         Retrieves wind weather data from the DWD database and processes it.
@@ -1093,6 +1093,8 @@ class Environment(object):
             Search radius [m] for stations, by default 30.
         min_quality_per_parameter : int, optional
             Minimum percentage of valid data required for each parameter, by default 80.
+        station_splitting : bool, optional
+            if enabled, the function retrieves wind, temperature and pressure data separately (may be not the same station) and combines them afterwards, by default False
        
         Returns
         -------
@@ -1103,8 +1105,11 @@ class Environment(object):
             - The query result is saved in class variable wind_data  
             - Station meta data is not saved in class      
         """
+        #station_id = '01078'
+        #lat = None
+        #lon = None
         dataset = 'wind'
-        if not single_parameter_request:
+        if not station_splitting:
             raw_dwd_data, station_metadata = self.__get_dwd_data(
                 dataset = dataset, 
                 lat = lat, 
@@ -1132,7 +1137,7 @@ class Environment(object):
                 raise Exception("Station type error while dataset splitting. Please check times!")
             if station_metadata.station_id.nunique() != 1:
                 print ("Warning! Used different stations for one dataset.")
-
+        
         if station_metadata.station_type.iloc[0] == 'OBSERVATION': 
             self.wind_data = self.__process_observation_parameter(
                  pd_sorted_data_for_station = raw_dwd_data,

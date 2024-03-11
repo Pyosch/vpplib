@@ -371,6 +371,17 @@ class ElectrolysisMoritz:
         # Interpolationsfunktion erstellen
         f_eta = interp1d(relative_performance, eta)
 
+        """
+        jq
+        Hier sollte eigentlich dafür gesorgt werden, eta nicht so groß wird, wenn die Leistung kleiner 1 ist
+        Im Funktionsaufruf sind die Argumente verdreht
+        Dadurch ist p_nominal scheinbar p_ac und umgekehrt
+        Setzte P_ac auf 0 wenn p_nominal (also eigentlich P_ac) kleiner 1 ist, um div0 zu verhindern
+        """
+        if P_nominal < 1:
+            P_ac = 0
+
+
         # Eigenverbrauch berechnen
         eta_interp = f_eta(P_ac / P_nominal)  # Interpoliere den eta-Wert
 
@@ -383,7 +394,12 @@ class ElectrolysisMoritz:
         :param P_ac:
         :return:
         '''
+        if P_ac == 0:
+            P_ac = 0.0001
+            print("AC Power is 0, setting to 0.0001")
         P_dc = P_ac - self.power_electronics(P_ac, self.stack_nominal()/100)
+        
+        #P_dc = P_ac - self.power_electronics(self.stack_nominal(), P_ac)
         #P_dc = P_ac - self.power_electronics(P_ac, self.P_nominal/100)
         return P_dc
 
