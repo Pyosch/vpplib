@@ -423,8 +423,8 @@ class Environment(object):
             -----
             - The input DataFrame (df) has to contain 'ghi' in columns. Additionaly there can be 'dhi' in columns.
             - The Units for all irradiance parameter are:
-            [kJ/m^2/resulution] for MOSMIX
-            [J/cm^2/resulution] for OBSERVATION
+            [kJ/m^2/resolution] for MOSMIX
+            [J/cm^2/resolution] for OBSERVATION
             - The query_type parameter specifies the type of data query, either 'MOSMIX' or 'OBSERVATION'.
             - The calculated solar power is returned in units of [W/m^2].
         """
@@ -434,13 +434,13 @@ class Environment(object):
         if 'dhi' in df.columns:
             df_power['dhi'] = 0
         
-        resulution = (df.index[1]-df.index[0]).seconds
+        resolution = (df.index[1]-df.index[0]).seconds
         if query_type == 'MOSMIX':
             for column in df_power.columns:
-                df_power[column] = df[column] * 1000 / resulution #kJ/m2 -> J/m2 -> W/m2
+                df_power[column] = df[column] * 1000 / resolution #kJ/m2 -> J/m2 -> W/m2
         elif query_type == 'OBSERVATION':
             for column in df_power.columns:
-                df_power[column] = df[column] * 10e3 / resulution #/J/cm2 -> J/m2 -> W/m2
+                df_power[column] = df[column] * 10e3 / resolution #/J/cm2 -> J/m2 -> W/m2
 
         return df_power
     
@@ -730,7 +730,6 @@ class Environment(object):
             Available methods for solar parameter calculation:
              ['disc','erbs','dirint','boland']
             """
-            
             for methode in estimation_methode_lst:
                 calculated_solar_parameter = self.__get_solar_parameter(
                         date        = pd_sorted_data_for_station.index, 
