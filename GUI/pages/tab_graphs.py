@@ -20,7 +20,7 @@ import plotly.express as px
 layout=dbc.Container([
             dbc.Row([
                     dcc.Dropdown(id='dropdown_plot',multi=True,
-                                options=[{'label': y, 'value': y} for y in pd.read_csv('GUI/df_timeseries.csv', index_col=0).columns],
+                                options=[{'label': y, 'value': y} for y in pd.read_csv('GUI/csv-files/df_timeseries.csv', index_col=0).columns],
                                 style={'width': '100%',
                                        'color':'black'},
                                        value=None)
@@ -55,7 +55,7 @@ def build_graph(dropdown_plot):
     fig (plotly.graph_objs._figure.Figure): The generated line graph.
     """
 
-    fig = px.line(pd.read_csv('GUI/df_timeseries.csv', index_col=0), y=dropdown_plot)
+    fig = px.line(pd.read_csv('GUI/csv-files/df_timeseries.csv', index_col=0), y=dropdown_plot)
     fig.update_layout(xaxis={'title': 'Time'}, yaxis={'title': 'Power [kW]'},
                       title={'text': 'Time Series'},
                       legend={'title': 'Component'})

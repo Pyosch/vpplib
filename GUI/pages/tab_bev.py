@@ -108,6 +108,10 @@ dbc.Row([
 ])
 
 #Callback Section_________________________________________________________________________________________
+#Callback Structure:
+#1. Update the BEV settings based on user inputs.
+#2. The updated BEV settings are returned.
+
 @callback(
     Output('store_bev', 'data'),
     [Input('submit_bev_settings', 'n_clicks')],

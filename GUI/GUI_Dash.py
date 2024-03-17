@@ -31,10 +31,11 @@ from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc  
 import sys
 import os
-from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_hydrogen, tab_run_simulation, tab_all_parameters, tab_graphs, tab_comparison
+from pages import tab_basic_settings, tab_environment, tab_user_profile, tab_bev, tab_pv, tab_wind, tab_heatpump, tab_storage, tab_hydrogen, tab_run_simulation, tab_all_parameters, tab_graphs
 sys.path.append(os.path.abspath(os.path.join('')))
 
 #Layout Section_________________________________________________________________________________________
+
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY], suppress_callback_exceptions=True)  
 
 app.layout = dbc.Container([
@@ -81,9 +82,7 @@ app.layout = dbc.Container([
         dbc.Tab(label='Hydrogen',
                 tab_id='tab_hydrogen',
                 active_label_style={'color': 'grey'}),
-        dbc.Tab(label='Comparison',
-                tab_id='tab_comparison',
-                active_label_style={'color': 'grey'}),
+
     ]),
     dbc.Container(id='tab-content'),
     dcc.Store(id='store_basic_settings', data={}, storage_type='session'),
@@ -100,6 +99,10 @@ app.layout = dbc.Container([
 ])
 
 #Callback Section_______________________________________________________________________________________
+#Callback Structure:
+#1. Update the content of the active tab based on user selection.
+#2. The content of the active tab is returned.
+
 @app.callback(Output('tab-content', 'children'),
             [Input('tabs', 'active_tab')]
             )
@@ -137,8 +140,7 @@ def render_content(active_tab):
         return tab_hydrogen.layout
     elif active_tab == 'tab_graphs':
         return tab_graphs.layout
-    elif active_tab == 'tab_comparison':
-        return tab_comparison.layout
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)

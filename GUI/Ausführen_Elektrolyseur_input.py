@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd
-from a_hydrogen_electrolyseur import ElectrolysisMoritz 
+from hydrogen_electrolyseur import ElectrolysisMoritz 
 
 #-------------------------------------------------------------------------------------------------
 #test mit input
@@ -62,7 +62,7 @@ def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_setting
 
     #Import der Eingangsleistung
     # ts = pd.read_csv(r'GUI/a_wind_energy_cologne.csv', sep=',', decimal='.',nrows=Zeitschritte)
-    ts = pd.read_csv(r'GUI/df_timeseries.csv', sep=',', decimal='.',nrows=Zeitschritte)
+    ts = pd.read_csv(r'GUI/csv-files/df_timeseries.csv', sep=',', decimal='.',nrows=Zeitschritte)
     #ts = pd.read_csv(r"C:\Users\katri\vpplib\vpplib\a_wind_energy_cologne.csv", sep=',', decimal='.',nrows=100)
 
 
@@ -74,7 +74,7 @@ def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_setting
     # print(ts)
 
     #CSV-Datei
-    ts.to_csv(r'GUI/hydrogen_time_series.csv', index=False)
+    ts.to_csv(r'GUI/csv-files/hydrogen_time_series.csv', index=False)
     # ts.to_csv('electrolyzer_timeseries.csv', index=True)
     #EXCEL-Datei
     # excel_file_path = r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_output.xlsx'

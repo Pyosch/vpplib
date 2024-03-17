@@ -22,6 +22,11 @@ import pandas as pd
 layout=dbc.Container(id='data_table_settings', children=[])
 
 #Callback Section_________________________________________________________________________________________
+#Callback Structure: 
+#1. Update the tables with the given data.
+#2. The data is taken from store_basic_settings, store_environment, store_user_profile, store_bev, store_pv, store_wind, store_heatpump, store_storage, and store_hydrogen.
+#3. The tables are updated with the given data.
+#4. The updated tables are returned.
 @callback(
     Output('data_table_settings', 'children'),
     [Input('store_basic_settings', 'data'),

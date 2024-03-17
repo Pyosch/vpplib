@@ -90,6 +90,10 @@ layout=dbc.Container([
 ])
 
 #Callback Section_________________________________________________________________________________________
+#Callback Structure:
+#1. Update the basic settings based on user input.
+#2. The updated basic settings are returned.
+
 @callback(
     Output('store_basic_settings', 'data'),
     [Input('submit_basic_settings', 'n_clicks')],

@@ -290,6 +290,6 @@ def simulation(store_basic_settings, store_environment, store_user_profile, stor
 
         df_timeseries=vpp.export_component_timeseries()
         DF=df_timeseries[0]
-        DF.to_csv('GUI/df_timeseries.csv')
+        DF.to_csv('GUI/csv-files/df_timeseries.csv')
 
 
