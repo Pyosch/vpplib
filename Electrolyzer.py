@@ -9,6 +9,8 @@ from scipy.optimize import minimize_scalar
 from scipy.optimize import fsolve
 
 class ElectrolysisMoritz:
+
+    
     
     def __init__(self,P_elektrolyseur_,unit_P,dt_1,unit_dt,p2,production_H2_,unit_production_H2):
         
@@ -931,8 +933,190 @@ class ElectrolysisMoritz:
 
         return observations
 
+    def Erklärung():
+
+        #In diesem Elektolyseurmodell, welches von Moritz End inerhalb der Masterarbeit erstellt wurde, wird ein PEM Elektrolyseur modelliert.
+
+        #Als Eingabedataframe dient ein Windmodell mehrere WKA.
 
 
+
+        #Das Modell ist in die folgenden Funktionen unterteilt:
+
+        #def __init__
+
+        #In der folgenden Funktion werden die folgenden Eingabeparamter eingelesen:
+
+        #P_elektrolyseur_       :Elektolyseurleistung.
+        #unit_P                 :Einheit Elektrolyseurleistung
+        #dt_1                   :Zeitschritt
+        #unit_dt                :Einheit Zeitschritt
+        #p2                     :Kompression Druck
+        #production_H2_         :Zu Produzierende Wasserstoffmenge
+        #unit_production_H2     : Einheit Zu Produzierende Wasserstoffmenge
+
+        #Desweiteren werden weitere Konstanten eingelesen und verschiedene Stack Parameter festgelegt
+
+        #Anschließend wird die Funktion Def Kontrolle ausgeführt
+
+
+
+        #def kontrolle
+
+        #Diese Funktion ist für die KOntrolle der eingangsparameter vorgesehen.
+
+        #Da das Modell mit den Einheiten Minute und KW rechnet müssen die Eingaben umgerechnet werden.
+        #Des Weiteren wird kontrolliert ob die Eingabe eine Zhal oder Kommazahl ist falls nicht wird ein Fehler ausgegeben
+        #Da die Stack größe auf 500KW festegelegt ist, wird noch kontrolliert ob der EIngebene Leistungswert ein Vielfaches der Stackgröße ist
+
+
+        #Der Compressionsdruck und die Wasserstoffproduktion sind nur Ausgabeparamter die Variable sind. Falls keine eingaben gegeben sind wird die berechnung nicht durchgeführt
+
+        #def status_codes
+
+        #Der Elektrolyseur besteht aus 5 verschiedenen Betriebsmodie:
+
+        #Cold standby: ab 60min
+        #Hot Standby zwischen 5 und 60 min
+        #Hot: unter 5min
+        #Booting: beim hochfahren des Elektrolyseurs
+        #Production: Produktion
+
+        #Hier wird jedem Eingangswert und Zeitschritt ein Betriebsmodus zugeteilt
+
+        #def calc_cell_voltage
+
+        #In dieser Funktion wird die Zell spannung mithilfe des resultierenden Strom und der festgelbten Temperatur von 50 Grad
+
+        #def create_polarization
+
+        #Erstellung einer Polarisationkurve für die Ermittlung des benötigten Stroms	
+        #def plot_polarization
+
+        #Plot polarisation
+
+        #def stack_nominal
+
+        #Stack größe auf 500kw festgelegt
+        #Ausgabe: Stack leistung
+
+        #def calculate_cell_current
+
+        #Berechnung des Zellstroms mithilfe der Polarisationskurve
+        #Ausgabe: Zellstrom
+
+        #def calc_faradaic_efficiency
+
+        #Berechnung des farradaischem wirkungsgrad
+
+        #def power_electronics
+
+        #Berechnung der verluste der Leistungselektronik
+
+        #Ausgabe: Prozentuale Verluste der Leistung und Leistung
+
+        #def power_dc
+
+        #Bei der Umwandlung von Wechselstrom zu Gleichstrom fallen verluste an. Diese werden in dieser Funktion berechnet
+        #def run
+        #Berechnung der Wasserstoff menge mithilfe der Spannungs,Stromwerte und Farradaischem Wirkungsgrad
+
+        #Ausgabe in Kg/Zeitschritt
+
+        #def calc_O_mfr
+
+        #Berechnung der Sauerstoffproduktion mithilfe der Wasserstoffmenge
+
+        #Ausgabe in Kg/dt
+
+        #def calc_H2O_mfr
+
+        #Berechnung der Wassermenge für die Elektrolyse. Eingabeparameter Wasserstoffmenge
+
+        #Ausgabe in Kg/dt
+
+        #def gas_drying
+
+        #Berechnung des Energiebedarfs für die Gastrocknung
+        #Eingabeparameter: Wasserstoffbedarf
+        #Ausgabe: Prozentuale Verluste der Leistung und Leistung 
+
+        #def compression
+
+        #Diese Funktion ist nicht notwendig. Hier wird nur der Energiebedarf berechnet wenn der Wasserstoff verdichet werden soll
+        #Eingabe: H2 menge
+        #Ausgabe: Prozentuale Verluste der Leistung und Leistung
+
+        #def heat_cell
+
+        #Hier wird berechent wie viel Leistung die Heiz Zelle benötigt
+        #Einagbe: Strom, Spannung, Eingangsleistung
+        #Ausgabe: Leistung 
+
+        #def heat_sys
+
+        #Eingabe: Heat Cell, H20 bedarf
+        #Ausgabe: Leistung 
+
+        #def calc_mfr_cool
+
+        #Kühlwasserberechnung
+        #Eingabe:Heat Cell
+        #Ausgabe: kg/Zeitschritt
+
+        #def calc_pump
+
+        #Leistungsbedarf Pumpe
+        #Eingabe: Wasserbedarf, Eingangsleistung
+        #Ausgabe:Prozentuale Verluste der Leistung und Leistung
+
+        #def h2_production_calc
+
+        #Hier wird die Zeit berechnet in der die Eingegebene Wasserstoffmenge produziert wird
+        #Eingabe; timeseries
+        #Ausgabe; S,M,H,D je nach eingabe des Zeitschrittes
+
+        #def prepare_timeseries
+
+        #In dieser Fuktion werden alle Funktionen ausgeführt
+        #Zunächst werden noch Spalten der timeseries Hinzugefügt:
+
+        #ts['P_in without losses [KW]']       	# Eingansleistung minus der DC verluste
+        #ts['P_in [KW]']                      	#Eingansleistung minus der DC verluste minus der Verluste ( Pumpe, Compression, gastrocknung) des vorherigen Zeitschritt
+        #ts['hydrogen production [Kg/dt]'] 	# Wasserstoff menge [Kg/dt]
+        #ts['surplus electricity [kW]']   	#Überschuss Leistung. kW
+        #ts['status']                  		#Status des Elektolyseurs
+        #ts['status codes']           		#Status des Elektolyseurs in zahlen
+        #ts['H20 [kg/dt]']           		#Wasserbedarf Elektrolyse
+        #ts['Oxygen [kg/dt]']         		# Produzierte Wasserstoffmenge
+        #ts['cooling Water [kg/dt]'] 		#Benötigtes Kühlwasser kg/dt
+        #ts['Heat Cell [%]']        		#Prozentualer anteil Heatcell.
+        #ts['heat system [%]']      		#Prozentualer anteil Heatsystem.
+        #ts['electrolyzer {%]']    		#Prozentualer anteil electrolyzer. ca. 30%
+        #ts['gasdrying {%]']        		#Prozentualer anteilgasdrying.	ca. 1,8%
+        #ts['electronics [%]']     		#Prozentualer anteil electronics. ca. 2,5%
+        #ts['pump [%]'] = 0.0            	#Prozentualer anteil pump.	ca.0,2%
+        #ts['compression [%]']      		#Prozentualer anteil compression. 750bar 3,5%
+        #ts['efficiency [%]']      		#Effizenz ohne compression ca. 63-65%
+        #ts['efficency _c [%]']  		#Effizenz mit compression
+        #ts['Electrolyzer' ]   			#Leistungsbedarf Elektolyseur 
+
+
+
+
+
+        #def value_for_timestamp
+
+        #Der Leistung bedarf eines Zeitschrittes wird ausgeben
+
+        #def observations_for_timestamp
+
+        #Die 3 wichtigsten werte werden ausgeben
+
+        #Leistungsbedarf
+        #Wasserstoff menge
+        #Wirkungsgrad
+        return
 
 
 
