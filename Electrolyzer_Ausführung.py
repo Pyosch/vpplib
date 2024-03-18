@@ -8,7 +8,7 @@ from Electrolyzer import ElectrolysisMoritz
 
 #ts = pd.read_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_wind_energy_cologne.csv', sep=',', decimal='.',nrows=50)
 #ts = pd.read_csv(r"C:\Users\katri\vpplib\vpplib\a_wind_energy_cologne.csv", sep=',', decimal='.',nrows=100)
-ts = pd.read_csv('wind_energy_cologne.csv',sep=',', decimal='.',nrows=20)
+ts = pd.read_csv('Electrolyzer_wind_energy_cologne.csv',sep=',', decimal='.',nrows=20)
 
 #Leistungsanpassung
 ts['P_ac'] = round(ts['P_ac']/100,2)
@@ -22,7 +22,7 @@ print(ts)
 
 #CSV-Datei
 #ts.to_csv(r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_output.csv', index=False)
-ts.to_csv('a_output.csv', index=False)
+ts.to_csv('Electrolyzer_output.csv', index=False)
 #EXCEL-Datei
 # excel_file_path = r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_output.xlsx'
 # ts.to_excel(excel_file_path, index=False)
