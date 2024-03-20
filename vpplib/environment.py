@@ -40,8 +40,8 @@ class Environment(object):
         pv_data=[],
         wind_data=[],
         temp_data=[],
-        surpress_output_globally = False,
-        force_end_time = True,
+        surpress_output_globally = True,
+        force_end_time = False,
         use_timezone_aware_time_index = False,
         extended_solar_data = False,
     ):
@@ -267,7 +267,7 @@ class Environment(object):
         )
         return wd_time_result.now.replace(second=0,microsecond=0)
         
-    def __get_solar_parameter (self, date, ghi, lat, lon, height, temperature = None, pressure = None, drew_point = None, methode = 'disc', use_methode_name_in_columns = False):
+    def __get_solar_parameter (self, date, ghi, lat, lon, height, temperature = None, pressure = None, dew_point = None, methode = 'disc', use_methode_name_in_columns = False):
         """
             Calculates solar parameters based on the given method by using pvlib estimation modells.
 
@@ -360,7 +360,7 @@ class Environment(object):
                             solar_zenith = solpos.zenith, 
                             times        = date, 
                             pressure     = pressure,
-                            temp_dew     = drew_point
+                            temp_dew     = dew_point
                             )
         
             df_dirint = irradiance.complete_irradiance(
@@ -687,7 +687,7 @@ class Environment(object):
             pd_sorted_data_for_station : pandas.DataFrame
                 DataFrame containing weather data for a station in hourly resolution.
                 Input units:
-                solar: ghi [kJ/m^2], temperature [K], drew_point [K], pressure at sea level [hPa]
+                solar: ghi [kJ/m^2], temperature [K], dew_point [K], pressure at sea level [hPa]
                 air:   temperature [K]
                 wind:  wind_speed [m/s], pressure at sea level [hPa], temperature [K]
             dataset : str
@@ -736,7 +736,7 @@ class Environment(object):
                         ghi         = pd_sorted_data_for_station.ghi, 
                         temperature = pd_sorted_data_for_station.temperature - 273.15 if 'temperature' in pd_sorted_data_for_station.columns else None, 
                         pressure    = pd_sorted_data_for_station.pressure             if 'pressure'    in pd_sorted_data_for_station.columns else None, 
-                        drew_point  = pd_sorted_data_for_station.drew_point - 273.15  if 'drew_point'  in pd_sorted_data_for_station.columns else None,
+                        dew_point  = pd_sorted_data_for_station.dew_point - 273.15    if 'dew_point'   in pd_sorted_data_for_station.columns else None,
                         lat         = pd_station_metadata['latitude' ].values[0], 
                         lon         = pd_station_metadata['longitude'].values[0],
                         height      = pd_station_metadata['height'   ].values[0],
@@ -744,7 +744,7 @@ class Environment(object):
                         use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
                 pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
             if not self.__extended_solar_data:
-                for additional_parameter in ['temperature','drew_point','pressure']:
+                for additional_parameter in ['temperature','dew_point','pressure']:
                     if additional_parameter in pd_sorted_data_for_station.columns:
                         pd_sorted_data_for_station.drop(additional_parameter, axis = 1, inplace = True)
         elif dataset == 'air':
@@ -827,23 +827,23 @@ class Environment(object):
             'solar'       : ['ghi', 'dhi' ],
             'air'         : ['temperature'],
             'wind'        : ['wind_speed', 'pressure', 'temperature'],
-            'solar_est'   : ["pressure", "temperature", "drew_point"],
+            'solar_est'   : ["pressure", "temperature", "dew_point"],
             'wind_speed'  : ['wind_speed'],
             'pressure'    : ['pressure'],
             'temperature' : ['temperature']
             }
 
-        avalible_parameter_dict = {
+        available_parameter_dict = {
             "ghi"         : "radiation_global", 
             "dhi"         : "radiation_sky_short_wave_diffuse",
             "pressure"    : "pressure_air_site", 
             "temperature" : "temperature_air_mean_200",
             "wind_speed"  : "wind_speed", 
-            "drew_point"  : "temperature_dew_point_mean_200",
+            "dew_point"  : "temperature_dew_point_mean_200",
             }
         
         #Create a dictionsry with the parameters to query
-        req_parameter_dict = {param: avalible_parameter_dict[param] for param in dataset_dict[dataset]}
+        req_parameter_dict = {param: available_parameter_dict[param] for param in dataset_dict[dataset]}
         
         time_now = self.get_time_from_dwd()
         settings = Settings.default()
@@ -867,7 +867,7 @@ class Environment(object):
                 parameter  = list(req_parameter_dict.values()),
                 resolution = DwdObservationResolution.MINUTE_10,
                 start_date = self.__start_dt_utc,
-                end_date   = self.__end_dt_utc,
+                end_date   = self.__end_dt_utc if self.__end_dt_utc.minute % 10 == 0 else self.__end_dt_utc + datetime.timedelta(minutes = 5),
                 settings   = settings,
             )
         else:
@@ -1070,7 +1070,7 @@ class Environment(object):
         return station_metadata
 
     def get_dwd_wind_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, station_splitting = True
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, station_splitting = False
         ):
         """
         Retrieves wind weather data from the DWD database and processes it.
@@ -1104,9 +1104,7 @@ class Environment(object):
             - The query result is saved in class variable wind_data  
             - Station meta data is not saved in class      
         """
-        #station_id = '01078'
-        #lat = None
-        #lon = None
+
         dataset = 'wind'
         if not station_splitting:
             raw_dwd_data, station_metadata = self.__get_dwd_data(
