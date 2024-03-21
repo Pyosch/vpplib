@@ -611,7 +611,7 @@ class Environment(object):
                 solar: ghi, dhi [J/cm^2]
                 air:   temperature [C]
                 wind:  wind_speed [m/s], pressure [hPa], temperature [C]
-            pd_station_metadata : pandas.DataFrame, optional for wind and temperature dataset
+            pd_station_metadata : pandas.DataFrame, optional for wind and temperature dataset, necessary for solar dataset
                 DataFrame containing station metadata.
                 lat, lon
                 height [m]
@@ -692,7 +692,7 @@ class Environment(object):
                 wind:  wind_speed [m/s], pressure at sea level [hPa], temperature [K]
             dataset : str
                 Type of weather dataset, either 'solar', 'air', or 'wind'.
-            pd_station_metadata : pandas.DataFrame, optional for temperature dataset
+            pd_station_metadata : pandas.DataFrame, optional for temperature dataset, necessary for solar and wind dataset
                 DataFrame containing station metadata.
                 lat, lon
                 height [m]
@@ -827,7 +827,7 @@ class Environment(object):
             'solar'       : ['ghi', 'dhi' ],
             'air'         : ['temperature'],
             'wind'        : ['wind_speed', 'pressure', 'temperature'],
-            'solar_est'   : ["pressure", "temperature", "dew_point"],
+            'solar_est'   : ['pressure', 'temperature', 'dew_point'],
             'wind_speed'  : ['wind_speed'],
             'pressure'    : ['pressure'],
             'temperature' : ['temperature']
@@ -839,7 +839,7 @@ class Environment(object):
             "pressure"    : "pressure_air_site", 
             "temperature" : "temperature_air_mean_200",
             "wind_speed"  : "wind_speed", 
-            "dew_point"  : "temperature_dew_point_mean_200",
+            "dew_point"   : "temperature_dew_point_mean_200",
             }
         
         #Create a dictionsry with the parameters to query
@@ -847,7 +847,6 @@ class Environment(object):
         
         time_now = self.get_time_from_dwd()
         settings = Settings.default()
-        Settings.cache_disable = True
         settings.ts_si_units = False
         
         #observation database is updated every full hour
@@ -882,7 +881,7 @@ class Environment(object):
                     minute = 0, 
                     second = 0, 
                     microsecond = 0
-                    )+ datetime.timedelta(hours = 240)
+                    ) + datetime.timedelta(hours = 240)
             if activate_output:  
                 print("Using momsix database.")
             if dataset == 'solar':
