@@ -43,7 +43,6 @@ class Environment(object):
         surpress_output_globally = True,
         force_end_time = False,
         use_timezone_aware_time_index = False,
-        extended_solar_data = False,
     ):
 
         """
@@ -93,7 +92,6 @@ class Environment(object):
         self.__surpress_output_globally = surpress_output_globally
         self.__force_end_time = force_end_time
         self.__use_timezone_aware_time_index = use_timezone_aware_time_index
-        self.__extended_solar_data = extended_solar_data
         if not start is None and not end is None:
             self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
                 self.start, '%Y-%m-%d %H:%M:%S'
@@ -267,7 +265,7 @@ class Environment(object):
         )
         return wd_time_result.now.replace(second=0,microsecond=0)
         
-    def __get_solar_parameter (self, date, ghi, lat, lon, height, temperature = None, pressure = None, dew_point = None, methode = 'disc', use_methode_name_in_columns = False):
+    def __get_solar_parameter (self, date, ghi, lat, lon, height, temperature = None, pressure = None, dew_point = None, methode = 'disc', use_methode_name_in_columns = False, extended_solar_data = False,):
         """
             Calculates solar parameters based on the given method by using pvlib estimation modells.
 
@@ -294,6 +292,8 @@ class Environment(object):
                 Options: 'disc', 'erbs', 'dirint', 'boland'.
             use_method_name_in_columns : bool, optional
                 If True, method name is included in the column names of the output DataFrame (default is False).
+            extended_solar_data : bool
+                If True, additional solar parameters are included in the output DataFrame (default is False).
 
             Returns
             -------
@@ -386,7 +386,7 @@ class Environment(object):
                             )
             out_df = out_boland.drop(['kt'], axis = 1)
 
-        if self.__extended_solar_data:
+        if extended_solar_data:
             out_df['bh'] = ghi - out_df['dhi']
             out_df['zenith'] = solpos.zenith
             if temperature is not None:
@@ -599,7 +599,7 @@ class Environment(object):
         return df.columns
     
     
-    def __process_observation_parameter (self, pd_sorted_data_for_station, dataset, pd_station_metadata = None):
+    def __process_observation_parameter (self, pd_sorted_data_for_station, dataset, pd_station_metadata = None, extended_solar_data = False):
         """
             Processes observation parameters based on the dataset.
 
@@ -617,6 +617,8 @@ class Environment(object):
                 height [m]
             dataset : str
                 Type of weather dataset, either 'solar', 'air' or 'wind'.
+            extended_solar_data : bool, optional
+                If True, additional solar parameters are included in the output DataFrame (default is False).
 
             Returns
             -------
@@ -663,7 +665,7 @@ class Environment(object):
             #Remove sign error for -0.0 values
             pd_sorted_data_for_station['dni'] = pd_sorted_data_for_station['dni'].replace(-0.0, 0.0)
             
-            if not self.__extended_solar_data:
+            if extended_solar_data:
                 pd_sorted_data_for_station.drop(['zenith', 'bh'], axis = 1, inplace = True)
         
         elif dataset == 'wind':
@@ -677,7 +679,7 @@ class Environment(object):
         
         
     def __process_mosmix_parameter (
-            self, pd_sorted_data_for_station, dataset, estimation_methode_lst = ['disc'], pd_station_metadata = None
+            self, pd_sorted_data_for_station, dataset, estimation_methode_lst = ['disc'], pd_station_metadata = None, extended_solar_data = False
             ):
         """
             Processes MOSMIX parameters based on the dataset.
@@ -698,6 +700,8 @@ class Environment(object):
                 height [m]
             estimation_methode_lst : list, optional
                 List of estimation methode names, which where used for calculating missing parameters such as dhi dni, by default ['disc'].
+            extended_solar_data : bool, optional
+                If True, additional solar parameters are included in the output DataFrame (default is False).
             Returns
             -------
             resampled_data : pandas.DataFrame
@@ -741,9 +745,10 @@ class Environment(object):
                         lon         = pd_station_metadata['longitude'].values[0],
                         height      = pd_station_metadata['height'   ].values[0],
                         methode     = methode,
-                        use_methode_name_in_columns = (len(estimation_methode_lst) > 1))
+                        use_methode_name_in_columns = (len(estimation_methode_lst) > 1),
+                        extended_solar_data = extended_solar_data)
                 pd_sorted_data_for_station = pd_sorted_data_for_station.merge(right = calculated_solar_parameter, left_index = True, right_index = True)
-            if not self.__extended_solar_data:
+            if not extended_solar_data:
                 for additional_parameter in ['temperature','dew_point','pressure']:
                     if additional_parameter in pd_sorted_data_for_station.columns:
                         pd_sorted_data_for_station.drop(additional_parameter, axis = 1, inplace = True)
@@ -1001,7 +1006,7 @@ class Environment(object):
             station_metadata)
        
     def get_dwd_pv_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, estimation_methode_lst = ['disc']
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, estimation_methode_lst = ['disc'], extended_solar_data = False
         ):
         """
         Retrieves solar weather data from the DWD database and processes it.
@@ -1022,6 +1027,10 @@ class Environment(object):
             Search radius [m] for stations, by default 30.
         min_quality_per_parameter : int, optional
             Minimum percentage of valid data required for each parameter, by default 80.
+        estimation_methode_lst : list, optional
+            List of estimation methode names, which where used for calculating missing parameters such as dhi dni, by default ['disc'].
+        extended_solar_data : bool, optional
+            If True, additional solar parameters are included in the output DataFrame (default is False).
         
         Returns
         -------
@@ -1045,7 +1054,8 @@ class Environment(object):
             self.pv_data = self.__process_observation_parameter(
                  pd_sorted_data_for_station = raw_dwd_data, 
                  pd_station_metadata = station_metadata,
-                 dataset = dataset
+                 dataset = dataset,
+                extended_solar_data = extended_solar_data
                  )
         elif station_metadata.station_type.iloc[0] == 'MOSMIX':
             if 'disc' in estimation_methode_lst or 'dirint' in estimation_methode_lst:
@@ -1063,7 +1073,8 @@ class Environment(object):
                  pd_sorted_data_for_station = raw_dwd_data, 
                  pd_station_metadata = station_metadata,
                  dataset = dataset,
-                 estimation_methode_lst = estimation_methode_lst
+                 estimation_methode_lst = estimation_methode_lst,
+                 extended_solar_data = extended_solar_data
                  )
             
         return station_metadata
