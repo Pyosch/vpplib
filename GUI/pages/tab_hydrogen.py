@@ -88,14 +88,14 @@ dbc.Row([
                             ],style={'margin-bottom': '20px'}),
                 dbc.Row([
                     dcc.Dropdown(id='dropdown_power_hydrogen',multi=True, 
-                                 options=[{'label':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[6], 
-                                           'value':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[6]},
-                                           {'label':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[7], 
-                                            'value':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[7]},
-                                           {'label':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[8], 
-                                            'value':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[8]},
-                                           {'label':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[10], 
-                                            'value':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[10]},
+                                 options=[{'label':'P_ac', 
+                                           'value':'P_ac'},
+                                           {'label':'P_in without losses [KW]', 
+                                            'value':'P_in without losses [KW]'},
+                                           {'label':'surplus electricity [kW]', 
+                                            'value':'surplus electricity [kW]'},
+                                           {'label':'P_in [KW]', 
+                                            'value':'P_in [KW]'}
                                  ],
                                 style={'width': '100%',
                                        'color':'black'},
@@ -115,14 +115,14 @@ dbc.Row([
 
                 dbc.Row([
                     dcc.Dropdown(id='dropdown_quantities_hydrogen',multi=True, 
-                                 options=[{'label':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[9], 
-                                           'value':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[9]},
-                                           {'label':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[13], 
-                                            'value':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[13]},
-                                           {'label':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[14], 
-                                            'value':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[14]},
-                                           {'label':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[15], 
-                                            'value':pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0).columns[15]},
+                                 options=[{'label':'hydrogen production [Kg/dt]', 
+                                           'value':'hydrogen production [Kg/dt]'},
+                                           {'label':'H20 [kg/dt]', 
+                                            'value':'H20 [kg/dt]'},
+                                           {'label':'Oxygen [kg/dt]', 
+                                            'value':'Oxygen [kg/dt]'},
+                                           {'label':'cooling Water [kg/dt]', 
+                                            'value':'cooling Water [kg/dt]'}
                                  ],
                                 style={'width': '100%',
                                        'color':'black'},
@@ -189,7 +189,7 @@ def update_hydrogen_settings(n_clicks, power, pressure):
     Raises:
     - PreventUpdate: If the submit button is not clicked.
     """
-    if 'submit_hydrogen_settings' ==ctx.triggered_id and n_clicks is not None:
+    if 'submit_hydrogen_settings' ==ctx.triggered_id:
         data_hydrogen_settings={'Power_Electrolyzer': power,
                             'Pressure_Hydrogen': pressure,}
         return data_hydrogen_settings
@@ -302,12 +302,14 @@ def build_graph(dropdown_power_hydrogen):
     """
     if dropdown_power_hydrogen is None:
         raise PreventUpdate
-    df=pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0)
+    df=pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col='time')
     df_selected=df[dropdown_power_hydrogen]
     fig = px.line(df_selected, y=dropdown_power_hydrogen)
     fig.update_layout(xaxis={'title': 'Time'}, yaxis={'title': 'Power [kW]'},
                       title={'text': 'Power profile'},
-                      legend={'title': 'Component'})
+                      legend={'title': 'Component'},
+                    
+    )
     return fig
 
 
@@ -329,7 +331,7 @@ def build_graph(dropdown_quantities_hydrogen):
 
     if dropdown_quantities_hydrogen is None:
         raise PreventUpdate
-    df=pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0)
+    df=pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col='time')
     df_selected=df[dropdown_quantities_hydrogen]
     fig = px.line(df_selected)
     fig.update_layout(xaxis={'title': 'Time'}, yaxis={'title': 'Quantity [kg]'}, title={'text': 'Production profile'}, legend={'title': 'Component'})
@@ -356,12 +358,15 @@ def build_graph(n_clicks):
     """
     if n_clicks is not None:
         time.sleep(5)
-        df = pd.read_csv('GUI/csv-files/hydrogen_time_series.csv', index_col=0)
+        df = pd.read_csv('GUI/csv-files/hydrogen_time_series.csv')
         sum_H2 = df['hydrogen production [Kg/dt]'].sum()
         sum_O2 = df['Oxygen [kg/dt]'].sum()
         sum_H2O = df['H20 [kg/dt]'].sum()
         df_pie = pd.DataFrame({'H2': sum_H2, 'O2': sum_O2, 'H2O': sum_H2O}, index=[0])
         fig = px.pie(df_pie, values=[sum_H2, sum_O2, sum_H2O], names=['H2', 'O2', 'H2O'], color_discrete_sequence=['darkblue', 'lightcyan','cyan'], title='Quantities produced')
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)',
+                      plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='white'))
     else:
         raise PreventUpdate
     return fig
