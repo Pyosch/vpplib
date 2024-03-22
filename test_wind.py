@@ -22,12 +22,12 @@ data = wt.get_turbine_types(print_out=False)
 # import logging
 # logging.getLogger().setLevel(logging.DEBUG)
 
-latitude = 51.024104
-longitude = 7.649794
+latitude = 51.200001
+longitude = 6.433333
 #timezone = "Europe/Berlin"
 timestamp_int = 12
 
-# create environment and load wind data
+
 """CSV
 timestamp_str = "2015-11-09 12:00:00"
 environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
@@ -38,11 +38,8 @@ environment.get_wind_data(
 
 """OBSERVATION """
 timestamp_str = "2015-01-09 12:00:00"
-environment = Environment(start="2021-01-01 00:00:00", end="2021-12-31 23:45:00",time_freq="1H")
-#environment.get_dwd_wind_data(lat=latitude, lon=longitude)
-environment.get_dwd_temp_data(lat=latitude, lon=longitude)
-
-a = environment.temp_data
+environment = Environment(start="2021-01-01 00:00:00", end="2021-12-31 23:45:00")
+environment.get_dwd_wind_data(lat=latitude, lon=longitude)
 
 """MOSMIX:
 time_now = Environment().get_time_from_dwd().replace(tzinfo=None)
