@@ -183,7 +183,7 @@ def update_environment_settings(n_clicks, start_date, end_date,
     - PreventUpdate: If the button was not clicked.
 
     """
-    if 'submit_environment_settings' == ctx.triggered_id:
+    if 'submit_environment_settings' == ctx.triggered_id and n_clicks is not None:
         data_environment={'Start Date': start_date + ' 00:00:00',
                             'End Date': end_date + ' 00:00:00',
                             'Time Zone': timezone,

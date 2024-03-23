@@ -618,11 +618,11 @@ class ElectrolysisMoritz:
                 # Numerische Berechnung des Volumens
                 V_solution_2 = round(fsolve(van_der_waals_equation_2, V_ideal_2)[0]/1000,2)
             
-                print("Die Produktion von {} {} Wasserstoff dauert {} {} und hat nach der Kompression auf {} Bar ein Volumen von {} m^2! Dadurch reduziert sich ca. das Volumen um das {}-Fache".format(self.production_H2_,self.unit_H2,(round(count_additions*self.dt_1,2)),self.dt_2,self.p2,V_solution,(round(V_ideal_2/V_ideal))))
+                # print("Die Produktion von {} {} Wasserstoff dauert {} {} und hat nach der Kompression auf {} Bar ein Volumen von {} m^2! Dadurch reduziert sich ca. das Volumen um das {}-Fache".format(self.production_H2_,self.unit_H2,(round(count_additions*self.dt_1,2)),self.dt_2,self.p2,V_solution,(round(V_ideal_2/V_ideal))))
 
 
 
-        print("Diese Werte gelten für einen Elektrolyseur mit einer Leistung von {} {} und einem Zeitschritt von {} {}!".format(self.P_elektrolyseur_, self.unit_P_2, self.dt_1, self.dt_2))
+        # print("Diese Werte gelten für einen Elektrolyseur mit einer Leistung von {} {} und einem Zeitschritt von {} {}!".format(self.P_elektrolyseur_, self.unit_P_2, self.dt_1, self.dt_2))
 
     def prepare_timeseries(self, ts):
         ts['P_in without losses [KW]'] = 0.0

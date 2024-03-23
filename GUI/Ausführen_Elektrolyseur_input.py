@@ -65,10 +65,10 @@ def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_setting
     # x=pd.read_csv(r'GUI/csv-files/df_timeseries.csv', sep=',', decimal='.',nrows=Zeitschritte, index_col=0).sum(axis=1)
     # print(x)
     ts=pd.read_csv(r'GUI/csv-files/df_timeseries.csv', sep=',', decimal='.',nrows=Zeitschritte)
-    print(ts[:5])
+    # print(ts[:5])
     ts['P_ac']=ts.iloc[:, 1:].sum(axis=1)
     ts.set_index('time')
-    print(ts[:5])
+    # print(ts[:5])
     #ts = pd.read_csv(r"C:\Users\katri\vpplib\vpplib\a_wind_energy_cologne.csv", sep=',', decimal='.',nrows=100)
 
 
@@ -79,7 +79,7 @@ def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_setting
 
     electrolyzer.prepare_timeseries(ts)
     #CSV-Datei
-    print(ts[:5])
+    # print(ts[:5])
     ts.to_csv(r'GUI/csv-files/hydrogen_time_series.csv', index=False)
     # ts.to_csv('electrolyzer_timeseries.csv', index=True)
     #EXCEL-Datei

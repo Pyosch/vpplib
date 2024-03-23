@@ -15,13 +15,10 @@ The submitted data is stored in store_user_profile.
 @author: sharth1
 """
 
-from dash import dcc, html, callback, Input, Output, State, dash_table, callback_context as ctx
+from dash import dcc, html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
-import pandas as pd
 from dash.exceptions import PreventUpdate
-import base64
-import io
-import datetime
+
 
 #Layout Section_________________________________________________________________________________________
 layout=dbc.Container([
