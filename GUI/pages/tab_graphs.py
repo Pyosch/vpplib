@@ -98,7 +98,8 @@ layout=dbc.Container([
                                     'displaylogo': False,
                                     'toImageButtonOptions': {'format': 'png', 'filename': 'custom_image', 'height': 1080, 'width': 1920, 'scale': 1}})
                 ], style={'margin-bottom': '20px'}),
-# TODO: # Graph not visible until availability resolved
+
+# TODO: # Graph not visible until resolved
                 # dbc.Row([
                 #     dcc.Graph(id='graph_quantities_hydrogen_pie', figure = {}, clickData=None, hoverData=None, 
                 #             config={'staticPlot': False,

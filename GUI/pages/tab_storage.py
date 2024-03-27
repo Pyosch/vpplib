@@ -17,7 +17,6 @@ The submitted data is stored in store_storage.
 
 from dash import html, callback, Input, Output, State, callback_context as ctx
 import dash_bootstrap_components as dbc
-import pandas as pd
 from dash.exceptions import PreventUpdate
 
 #Layout Section_________________________________________________________________________________________
