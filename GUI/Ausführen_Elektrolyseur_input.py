@@ -57,27 +57,13 @@ def simulate_electrolyzer(store_hydrogen, store_environment, store_basic_setting
     electrolyzer = ElectrolysisMoritz(a,b,c,d,e,f,g)
     #--------------------------------------------------------------------------------------------------------------------------
 
-
-
-
     #Import der Eingangsleistung
-    # ts = pd.read_csv(r'GUI/a_wind_energy_cologne.csv', sep=',', decimal='.',nrows=Zeitschritte)
-    ts = pd.read_csv(r'GUI/csv-files/df_timeseries.csv', sep=',', decimal='.',nrows=Zeitschritte)
-    #ts = pd.read_csv(r"C:\Users\katri\vpplib\vpplib\a_wind_energy_cologne.csv", sep=',', decimal='.',nrows=100)
 
-
-
-    #Leistungsanpassung
-    ts['P_ac'] = round(ts['Wind_0']*store_basic_settings['wind_number'],2)
-
+    ts=pd.read_csv(r'GUI/csv-files/df_timeseries.csv', sep=',', decimal='.',nrows=Zeitschritte)
+    ts['P_ac']=ts.iloc[:, 1:].sum(axis=1)
+    ts.set_index('time')
     electrolyzer.prepare_timeseries(ts)
-    # print(ts)
 
     #CSV-Datei
     ts.to_csv(r'GUI/csv-files/hydrogen_time_series.csv', index=False)
-    # ts.to_csv('electrolyzer_timeseries.csv', index=True)
-    #EXCEL-Datei
-    # excel_file_path = r'C:\Users\Anwender\Documents\Masterprojekt\12345\vpplib\vpplib\a_output.xlsx'
-    # ts.to_excel(excel_file_path, index=False)
-
-
+  

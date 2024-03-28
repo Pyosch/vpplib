@@ -16,11 +16,12 @@ The results of the simulation are stored in the df_timeseries.csv file.
 @author: sharth1
 """
 
-from dash import  dcc, html, callback, Input, Output, State, callback_context as ctx
+from dash import  dcc, html, callback, Input, Output, callback_context as ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash.exceptions import PreventUpdate
 from basic_simulation import simulation
+from Ausführen_Elektrolyseur_input import simulate_electrolyzer
 import os
 import time
 import zipfile
@@ -62,11 +63,12 @@ layout=dbc.Container([
      Input('store_pv', 'data'),
      Input('store_wind', 'data'),
      Input('store_heatpump', 'data'),
-     Input('store_storage', 'data')],
+     Input('store_storage', 'data'),
+     Input('store_hydrogen', 'data')],
 
 )
 def simulate(n_clicks, store_basic_settings, store_environment, store_user_profile, store_bev,
-               store_pv, store_wind, store_heatpump, store_storage):
+               store_pv, store_wind, store_heatpump, store_storage, store_hydrogen):
     """
     Simulates the scenario based on the provided settings and data.
 
@@ -88,10 +90,13 @@ def simulate(n_clicks, store_basic_settings, store_environment, store_user_profi
     - None
     """
     if 'simulate_button' == ctx.triggered_id and n_clicks is not None:
-        print('simulating')
+        print('simulating vpp')
         simulation(store_basic_settings, store_environment, store_user_profile, store_bev,
                store_pv, store_wind, store_heatpump, store_storage)
-        print('done')
+        print('done vpp')
+        print('simulating electrolyzer')
+        simulate_electrolyzer(store_hydrogen, store_environment, store_basic_settings)
+        print('done electrolyzer')
         time.sleep(1)
     else:
         raise PreventUpdate
@@ -110,11 +115,9 @@ def simulate(n_clicks, store_basic_settings, store_environment, store_user_profi
     Input('store_wind', 'data'),
     Input('store_heatpump', 'data'),
     Input('store_storage', 'data'),
-
-
-
+    Input('store_hydrogen', 'data')
 )
-def download(n_clicks, value, store_basic_settings, store_environment, store_user_profile, store_bev, store_pv, store_wind, store_heatpump, store_storage):
+def download(n_clicks, value, store_basic_settings, store_environment, store_user_profile, store_bev, store_pv, store_wind, store_heatpump, store_storage, store_hydrogen):
     """
     Downloads the dataframes as CSV files and creates a zip file containing them.
 
@@ -139,7 +142,8 @@ def download(n_clicks, value, store_basic_settings, store_environment, store_use
     if 'download_button' == ctx.triggered_id and n_clicks is not None:
         print('downloading')
         new_project_name = value
-        new_project_df = pd.read_csv('GUI/df_timeseries.csv')
+        new_project_df = pd.read_csv('GUI/csv-files/df_timeseries.csv')
+        new_project_df_hydrogen = pd.read_csv('GUI/csv-files/hydrogen_time_series.csv')
         df_basic_settings = pd.DataFrame([store_basic_settings])
         df_environment = pd.DataFrame([store_environment]) 
         df_user_profile = pd.DataFrame([store_user_profile])
@@ -148,6 +152,9 @@ def download(n_clicks, value, store_basic_settings, store_environment, store_use
         df_wind = pd.DataFrame([store_wind])
         df_heatpump = pd.DataFrame([store_heatpump])
         df_storage = pd.DataFrame([store_storage])
+        df_hydrogen_settings_hydrogen = pd.DataFrame([store_hydrogen])
+        df_hydrogen_settings_hydrogen = pd.DataFrame([store_hydrogen])
+
 
         # Create a temporary directory to store the dataframes
         temp_dir = 'temp'
@@ -163,10 +170,12 @@ def download(n_clicks, value, store_basic_settings, store_environment, store_use
         df_wind.to_csv(os.path.join(temp_dir, new_project_name+'_wind.csv'), index=False)
         df_heatpump.to_csv(os.path.join(temp_dir, new_project_name+'_heatpump.csv'), index=False)
         df_storage.to_csv(os.path.join(temp_dir, new_project_name+'_storage.csv'), index=False)
-
+        new_project_df_hydrogen.to_csv(os.path.join(temp_dir, new_project_name+'_timeseries.csv'))
+        df_hydrogen_settings_hydrogen.to_csv(os.path.join(temp_dir, new_project_name+'_hydrogen_settings.csv'))
         
         # Create a zip file
         zip_file_name = new_project_name + '_data.zip'
+
         with zipfile.ZipFile(zip_file_name, 'w') as zipf:
             # Add the CSV files to the zip file
             zipf.write(os.path.join(temp_dir, new_project_name+'_timeseries.csv'), arcname=new_project_name+'_timeseries.csv')
@@ -178,7 +187,9 @@ def download(n_clicks, value, store_basic_settings, store_environment, store_use
             zipf.write(os.path.join(temp_dir, new_project_name+'_wind.csv'), arcname=new_project_name+'_wind.csv')
             zipf.write(os.path.join(temp_dir, new_project_name+'_heatpump.csv'), arcname=new_project_name+'_heatpump.csv')
             zipf.write(os.path.join(temp_dir, new_project_name+'_storage.csv'), arcname=new_project_name+'_storage.csv')
-            
+            zipf.write(os.path.join(temp_dir, new_project_name+'_timeseries.csv'), arcname=new_project_name+'_timeseries.csv')
+            zipf.write(os.path.join(temp_dir, new_project_name+'_hydrogen_settings.csv'), arcname=new_project_name+'_hydrogen_settings.csv')
+
         
         # Remove the temporary directory
         shutil.rmtree(temp_dir)

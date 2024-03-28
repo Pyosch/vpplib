@@ -42,9 +42,9 @@ app.layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             html.H1('VPPlib Simulation')
-        ],align='middle')
+        ], width=4)
     ],style={'margin-top': '20px', 
-             'margin-bottom': '20px'}),
+             'margin-bottom': '20px'},justify='center'),
     dbc.Tabs(id='tabs', children=[
         dbc.Tab(label='Basic Settings', 
                 tab_id='tab_basic_settings',
@@ -96,7 +96,7 @@ app.layout = dbc.Container([
     dcc.Store(id='store_results', data={}, storage_type='session'),
     dcc.Store(id='store_simulation', data={}, storage_type='session'),
     dcc.Store(id='store_hydrogen', data={}, storage_type='session'),
-])
+], fluid=True)
 
 #Callback Section_______________________________________________________________________________________
 #Callback Structure:
