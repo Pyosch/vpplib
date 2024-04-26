@@ -93,12 +93,21 @@ class Environment(object):
         self.__force_end_time = force_end_time
         self.__use_timezone_aware_time_index = use_timezone_aware_time_index
         if not start is None and not end is None:
-            self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
-                self.start, '%Y-%m-%d %H:%M:%S'
-                ).replace(tzinfo = self.timezone)
-            self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(
-                self.end  , '%Y-%m-%d %H:%M:%S'
-                ).replace(tzinfo = self.timezone)
+            
+            if type(self.start) == str:
+                self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
+                    self.start, '%Y-%m-%d %H:%M:%S'
+                    ).replace(tzinfo = self.timezone)
+            else:
+                self.__internal_start_datetime_with_class_timezone    =   self.start.astimezone(self.timezone)
+
+            if type(self.end) == str:
+                self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(
+                    self.end  , '%Y-%m-%d %H:%M:%S'
+                    ).replace(tzinfo = self.timezone)
+            else:
+                self.__internal_end_datetime_with_class_timezone      =   self.end.astimezone(self.timezone)
+
             self.__internal_start_datetime_utc = (
                 self.__internal_start_datetime_with_class_timezone - self.__internal_start_datetime_with_class_timezone.utcoffset()
                 ).replace(tzinfo = zoneinfo.ZoneInfo(key='UTC'), microsecond = 0)
@@ -110,7 +119,7 @@ class Environment(object):
             if self.__internal_start_datetime_utc > self.__internal_end_datetime_utc:
                 raise ValueError("End date must be greater than start date")
             if self.__internal_start_datetime_utc + datetime.timedelta(hours=1) > self.__internal_end_datetime_utc:
-                raise ValueError("End date must be at least one hour bigger than the start date")
+                raise ValueError("End date must be at least one hour later than the start date")
 
     @property
     def __start_dt_utc(self):

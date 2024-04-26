@@ -36,23 +36,38 @@ environment.get_wind_data(
 )
 """
 
-"""OBSERVATION """
+"""OBSERVATION 
+Using dwd observation (weather recording) database for weather data
+use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
+
 timestamp_str = "2015-01-09 12:00:00"
-environment = Environment(start="2021-01-01 00:00:00", end="2021-12-31 23:45:00")
+environment = Environment(
+    start = "2015-01-01 00:00:00", 
+    end = "2015-12-31 23:45:00", 
+    use_timezone_aware_time_index = True, 
+    surpress_output_globally = False)
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
+"""
 
 """MOSMIX:
-time_now = Environment().get_time_from_dwd().replace(tzinfo=None)
-#timestamp_str = "2023-12-07 12:00:00"
+Using dwd mosmix (weather forecast) database for weather data
+The forecast is queried for the next 10 days automatically.
+force_end_time is set to True to get a resulting dataframe from the start time to the end time even if there is no forecast data for the last hours of the time period --> Missing data is filled with NaN values.
+
+time_now = Environment().get_time_from_dwd()
 timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
-environment = Environment(start=str(time_now), end=str(time_now + datetime.timedelta(hours = 240)))
+environment = Environment(
+    start = time_now, 
+    end = time_now + datetime.timedelta(hours = 240), 
+    force_end_time = True, 
+    use_timezone_aware_time_index = True, 
+    surpress_output_globally = False)
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
 """
 
 
 # WindTurbine data
-#turbine_type = "E-126/4200"
-turbine_type = "GE158/4800"
+turbine_type = "E-126/4200"
 hub_height = 135
 rotor_diameter = 127
 fetch_curve = "power_curve"

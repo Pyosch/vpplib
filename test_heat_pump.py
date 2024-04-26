@@ -15,12 +15,12 @@ from vpplib.heat_pump import HeatPump
 import matplotlib.pyplot as plt
 
 # Values for environment
-start = "2022-01-01 00:00:00"
-end = "2022-12-31 23:45:00"
-year = "2023"
+start = "2015-01-01 00:00:00"
+end = "2015-12-31 23:45:00"
+year = "2015"
 time_freq = "15 min"
 timestamp_int = 48
-timestamp_str = "2022-12-07 12:00:00"
+timestamp_str = "2015-12-07 12:00:00"
 timebase = 15
 latitude = 50.941357
 longitude = 6.958307
@@ -41,7 +41,12 @@ min_runtime = 1  # timesteps
 min_stop_time = 2  # timesteps
 
 environment = Environment(
-    timebase=timebase, start=start, end=end, year=year, time_freq=time_freq
+    timebase=timebase, 
+    start=start, 
+    end=end, 
+    year=year, 
+    time_freq=time_freq, 
+    surpress_output_globally=False
 )
 environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
 environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)
