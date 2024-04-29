@@ -1,29 +1,26 @@
+import os
 import pandas as pd
-from Electrolyzer import ElectrolysisMoritz 
+from vpplib.hydrogen import ElectrolysisPEM 
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+#Read generation data
+ts = pd.read_csv(f'{dir_path}/input/hydrogen/Electrolyzer_wind_energy_cologne.csv',sep=',', decimal='.',nrows=20)
 
-
-
-#Import der Eingangsleistung
-
-
-ts = pd.read_csv('Electrolyzer_wind_energy_cologne.csv',sep=',', decimal='.',nrows=20)
-
-#Leistungsanpassung
+#Power adjustment
 ts['P_ac'] = round(ts['P_ac']/100,2)
 
+electrolyzer = ElectrolysisPEM(
+                P_elektrolyseur_="1.5",
+                unit_P="mw",
+                dt_1="15",
+                unit_dt="m",
+                p2="750",
+                production_H2_="0",
+                unit_production_H2="kg")
 
-electrolyzer = ElectrolysisMoritz("1.5","mw","15","m","750","0","kg")  #Elektrolyseur-Größe,Einheit Elektrolyseur,  dt, Einheit zeit, Druck in bar, benötigte Wasserstoffmenge, Einheit Wasserstoffmenge
-
-#Auführen des Elektrolyseurs
+#Execute electrolyzer
 electrolyzer.prepare_timeseries(ts)
 print(ts)
-
-#CSV-Datei
-
-ts.to_csv('Electrolyzer_output.csv', index=False)
-#EXCEL-Datei
-# ts.to_excel(excel_file_path, index=False)
 
 timestamp_int=10
 timestamp_str="2015-01-01 02:30:00+00:00"
@@ -39,8 +36,6 @@ def test_observations_for_timestamp(electrolyzer, timestamp):
     
     observation = electrolyzer.observations_for_timestamp(timestamp)
     print(observation, "\n")
-
-
 
 test_value_for_timestamp(electrolyzer, timestamp_int)
 test_value_for_timestamp(electrolyzer, timestamp_str)
