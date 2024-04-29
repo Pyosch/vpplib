@@ -39,7 +39,7 @@ environment.get_wind_data(
 """OBSERVATION 
 Using dwd observation (weather recording) database for weather data
 use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
-
+"""
 timestamp_str = "2015-01-09 12:00:00"
 environment = Environment(
     start = "2015-01-01 00:00:00", 
@@ -47,7 +47,7 @@ environment = Environment(
     use_timezone_aware_time_index = True, 
     surpress_output_globally = False)
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
-"""
+
 
 """MOSMIX:
 Using dwd mosmix (weather forecast) database for weather data

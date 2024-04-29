@@ -99,8 +99,8 @@ class ThermalEnergyStorage(Component):
         else:
             thermal_energy_generator.ramp_down(timestamp)
 
-        thermal_energy_demand = self.user_profile.thermal_energy_demand.thermal_energy_demand.loc[
-            timestamp
+        thermal_energy_demand = self.user_profile.thermal_energy_demand.loc[
+            timestamp, "thermal_energy_demand"
         ]
         observation = thermal_energy_generator.observations_for_timestamp(
             timestamp
@@ -126,7 +126,7 @@ class ThermalEnergyStorage(Component):
         else:
             el_load = 0
 
-        self.timeseries.temperature[timestamp] = self.current_temperature
+        self.timeseries.loc[timestamp, "temperature"] = self.current_temperature
 
         # log timeseries of thermal_energy_generator_class:
         thermal_energy_generator.log_observation(observation, timestamp)

@@ -779,7 +779,7 @@ class VirtualPowerPlant(object):
                               +"VALUES (?, ?, ?)",
                               (str(idx),
                                component,
-                               float(self.components[component].timeseries["at_home"][str(idx)])
+                               float(self.components[component].timeseries.iloc[str(idx), "at_home"])
                                )
                               )
 

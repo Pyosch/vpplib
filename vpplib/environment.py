@@ -658,12 +658,12 @@ class Environment(object):
             #Zenith angle is calculatet for the middle of the time intervall
             #Shift back after calculation to align with observation data
             pd_sorted_data_for_station['zenith'] = get_solarposition(
-                        list(pd_sorted_data_for_station.index.shift(freq = '-5T')), 
+                        list(pd_sorted_data_for_station.index.shift(freq = '-5min')), 
                         latitude    = pd_station_metadata['latitude' ].values[0],
                         longitude   = pd_station_metadata['longitude'].values[0], 
                         altitude    = pd_station_metadata['height'   ].values[0],
                         temperature = 0
-                        ).zenith.shift(freq = '5T')
+                        ).zenith.shift(freq = '5min')
             
             #Calculate Direct Normal Irradiance (DNI) from GHI and DHI
             pd_sorted_data_for_station['dni'] = irradiance.dni(

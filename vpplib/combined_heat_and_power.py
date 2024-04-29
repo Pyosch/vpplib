@@ -421,10 +421,10 @@ class CombinedHeatAndPower(Component):
 
         """
 
-        self.timeseries.thermal_energy_output.loc[timestamp] = observation[
+        self.timeseries.loc[timestamp, "thermal_energy_output"] = observation[
             "thermal_energy_output"
         ]
-        self.timeseries.el_demand.loc[timestamp] = observation["el_demand"]
+        self.timeseries.loc[timestamp, "el_demand"] = observation["el_demand"]
 
         return self.timeseries
 

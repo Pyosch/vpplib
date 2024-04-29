@@ -364,11 +364,11 @@ class ElectricalEnergyStorage(Component):
 
         if type(timestamp) == int:
 
-            return self.timeseries["residual_load"].iloc[timestamp]
+            return self.timeseries.iloc[timestamp]["residual_load"]
 
         elif type(timestamp) == str:
 
-            return self.timeseries["residual_load"].loc[timestamp]
+            return self.timeseries.loc[timestamp, "residual_load"]
 
         else:
             raise ValueError(
@@ -587,11 +587,11 @@ class ElectricalEnergyStorageSimses(Component):
 
         if type(timestamp) == int:
 
-            return self.timeseries["ac_power"].iloc[timestamp]
+            return self.timeseries.iloc[timestamp]["ac_power"]
 
         elif type(timestamp) == str:
 
-            return self.timeseries["ac_power"].loc[timestamp]
+            return self.timeseries.loc[timestamp, "ac_power"]
 
         else:
             raise ValueError(
@@ -939,11 +939,11 @@ class PySAMBatteryStateful(Component):
 
         if type(timestamp) == int:
 
-            return self.timeseries["ac_power"].iloc[timestamp]
+            return self.timeseries.iloc[timestamp]["ac_power"]
 
         elif type(timestamp) == str:
 
-            return self.timeseries["ac_power"].loc[timestamp]
+            return self.timeseries.loc[timestamp, "ac_power"]
 
         else:
             raise ValueError(
