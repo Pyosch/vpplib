@@ -199,8 +199,8 @@ df_component_values["pv_kWp"] = (
     pv.module.Impo
     * pv.module.Vmpo
     / 1000
-    * pv.system.modules_per_string
-    * pv.system.strings_per_inverter
+    * pv.modules_per_string
+    * pv.strings_per_inverter
 )
 df_timeseries.pv.plot(figsize=figsize, label="pv [kW]")
 
