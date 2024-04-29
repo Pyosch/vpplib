@@ -146,7 +146,7 @@ Results/
 vpplib/__pycache__/
 input/input_vise/
 dwd_results/
-
+GUI/csv-files/*
 #To prevent timeout merge conflicts
 .csv
 
