@@ -488,7 +488,7 @@ class HeatPump(Component):
 
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
             if (
-                self.last_ramp_down + self.min_stop_time * timestamp.freq
+                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
                 < timestamp
             ):
                 self.is_running = True
@@ -511,7 +511,7 @@ class HeatPump(Component):
 
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
             if (
-                self.last_ramp_up + self.min_runtime * timestamp.freq
+                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
                 < timestamp
             ):
                 self.is_running = False
