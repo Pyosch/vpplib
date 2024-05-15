@@ -139,11 +139,19 @@ class Photovoltaic(Component):
         if len(self.environment.pv_data) == 0:
             raise ValueError("self.environment.pv_data is empty.")
 
-        self.modelchain.run_model(
-            weather=self.environment.pv_data.loc[
-                self.environment.start: self.environment.end
-            ],
-        )
+        if 'poa_global' in self.environment.pv_data.columns:
+            
+            self.modelchain.run_model_from_poa(
+                data=self.environment.pv_data.loc[
+                    self.environment.start: self.environment.end
+                ],
+            )
+        else:
+            self.modelchain.run_model(
+                weather=self.environment.pv_data.loc[
+                    self.environment.start: self.environment.end
+                ],
+            )
 
         timeseries = pd.DataFrame(
             self.modelchain.results.ac / 1000)  # convert to kW
