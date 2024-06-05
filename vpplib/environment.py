@@ -327,7 +327,7 @@ class Environment(object):
         #Shift by -30 min to get the solar position for the middle of the time intervall
         #The index has to be converted to a list, to aviod index alignment of the series pressure and temperature with the shifted date index
         solpos = get_solarposition(
-                    list(date.shift(freq = '-30T')), 
+                    list(date.shift(freq = '-30min')), 
                     latitude    = lat,
                     longitude   = lon, 
                     altitude    = height,
