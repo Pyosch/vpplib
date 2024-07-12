@@ -179,11 +179,11 @@ class HeatingRod(Component):
 
         if type(timestamp) == int:
             
-            return self.timeseries.el_demand.iloc[timestamp] * self.limit
+            return self.timeseries.iloc[timestamp]["el_demand"] * self.limit
         
         elif type(timestamp) == str:
             
-            return self.timeseries.el_demand.loc[timestamp] * self.limit
+            return self.timeseries.loc[timestamp, "el_demand"] * self.limit
         
         else:
             raise ValueError("timestamp needs to be of type int or string. " +
@@ -251,8 +251,8 @@ class HeatingRod(Component):
 
     def log_observation(self, observation, timestamp):
         
-        self.timeseries.heat_output.loc[timestamp] = observation["heat_output"]
-        self.timeseries.el_demand.loc[timestamp] = observation["el_demand"]
+        self.timeseries.loc[timestamp, "heat_output"] = observation["heat_output"]
+        self.timeseries.loc[timestamp, "el_demand"] = observation["el_demand"]
         
         return self.timeseries
     #%% ramping functions

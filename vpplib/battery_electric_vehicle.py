@@ -427,11 +427,11 @@ class BatteryElectricVehicle(Component):
 
         if type(timestamp) == int:
 
-            return self.timeseries["car_charger"].iloc[timestamp] * self.limit
+            return self.timeseries.iloc[timestamp]["car_charger"] * self.limit
 
         elif type(timestamp) == str:
 
-            return self.timeseries["car_charger"].loc[timestamp] * self.limit
+            return self.timeseries.loc[timestamp, "car_charger"] * self.limit
 
         else:
             raise ValueError(

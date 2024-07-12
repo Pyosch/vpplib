@@ -14,18 +14,51 @@ import matplotlib.pyplot as plt
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
+import datetime # for Mosmix test
 
-
-latitude = 50.941357
-longitude = 6.958307
+latitude = 51.4
+longitude = 6.97
 identifier = "Cologne"
-start = "2015-06-01 00:00:00"
-end = "2015-06-07 23:45:00"
 timestamp_int = 48
-timestamp_str = "2015-06-05 12:00:00"
 
-environment = Environment(start=start, end=end)
+"""
+Read weather data vom .csv file:
+
+timestamp_str = "2015-11-09 12:00:00"
+environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
 environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
+"""
+
+"""
+Using dwd observation (weather recording) database for weather data
+use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
+"""
+timestamp_str = "2015-11-09 12:00:00"
+environment = Environment(
+    start = "2015-01-01 00:00:00", 
+    end = "2015-12-31 23:45:00", 
+    use_timezone_aware_time_index = True, 
+    surpress_output_globally = False)
+environment.get_dwd_pv_data(lat=latitude, lon=longitude)
+
+
+
+"""
+Using dwd mosmix (weather forecast) database for weather data
+The forecast is queried for the next 10 days automatically.
+force_end_time is set to True to get a resulting dataframe from the start time to the end time even if there is no forecast data for the last hours of the time period --> Missing data is filled with NaN values.
+
+time_now = Environment().get_time_from_dwd()
+timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
+environment = Environment(
+    start = time_now, 
+    end = time_now + datetime.timedelta(hours = 240), 
+    force_end_time = True, 
+    use_timezone_aware_time_index = True,
+    surpress_output_globally = False)
+environment.get_dwd_pv_data(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+"""
+
 
 user_profile = UserProfile(
     identifier=identifier, latitude=latitude, longitude=longitude

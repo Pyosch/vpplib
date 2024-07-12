@@ -70,7 +70,7 @@ pv = Photovoltaic(module_lib="SandiaMod",
 pv.prepare_time_series()
 
 print("PV module: ")
-print(pv.peak_power)
+print(pv.module)
 print("PV inverter: ")
 print(pv.inverter)
 print("PV peak power: ", pv.peak_power)

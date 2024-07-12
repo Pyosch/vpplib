@@ -114,6 +114,9 @@ venv.bak/
 .spyderproject
 .spyproject
 
+# VS Code settings
+.vs
+
 # Rope project settings
 .ropeproject
 
@@ -142,6 +145,12 @@ dmypy.json
 Results/
 vpplib/__pycache__/
 input/input_vise/
+dwd_results/
+GUI/csv-files/*
+#To prevent timeout merge conflicts
+.csv
+
+
 
 # Icon must end with two \r
 Icon

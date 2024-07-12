@@ -5,3 +5,4 @@ pandapower
 numba
 matplotlib
 NREL-PySAM
+wetterdienst

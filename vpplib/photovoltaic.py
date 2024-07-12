@@ -160,6 +160,7 @@ class Photovoltaic(Component):
         timeseries.index = pd.to_datetime(timeseries.index)
 
         self.timeseries = timeseries
+        self.timeseries = self.timeseries.fillna(0)
 
         return timeseries
 
@@ -350,8 +351,8 @@ class Photovoltaic(Component):
             self.module.Impo
             * self.module.Vmpo
             / 1000
-            * self.system.modules_per_string
-            * self.system.strings_per_inverter
+            * self.modules_per_string
+            * self.strings_per_inverter
         )
 
         # calculate area of pv modules

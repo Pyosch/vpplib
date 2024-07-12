@@ -8,11 +8,16 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 
 from .component import Component
 import pandas as pd
+import numpy as np
+import math
 import datetime as dt
 import time
 from configparser import ConfigParser
 from simses.main import SimSES
 
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from scipy.optimize import fsolve
 
 class ElectrolysisSimses(Component):
     """.
@@ -293,11 +298,11 @@ class ElectrolysisSimses(Component):
 
         if type(timestamp) == int:
 
-            return self.timeseries["ac_power"].iloc[timestamp]
+            return self.timeseries.iloc[timestamp]["ac_power"]
 
         elif type(timestamp) == str:
 
-            return self.timeseries["ac_power"].loc[timestamp]
+            return self.timeseries.loc[timestamp, "ac_power"]
 
         else:
             raise ValueError(

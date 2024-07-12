@@ -10,28 +10,61 @@ changed.
 """
 
 import matplotlib.pyplot as plt
-
+import datetime
 from vpplib.environment import Environment
 from vpplib.wind_power import WindPower
+
+from windpowerlib import data as wt
+
+data = wt.get_turbine_types(print_out=False)
 
 # For Debugging uncomment:
 # import logging
 # logging.getLogger().setLevel(logging.DEBUG)
 
-
-start = "2015-01-01 00:00:00"
-end = "2015-01-31 23:45:00"
-timezone = "Europe/Berlin"
+latitude = 51.200001
+longitude = 6.433333
+#timezone = "Europe/Berlin"
 timestamp_int = 12
-timestamp_str = "2015-01-01 12:00:00"
 
-# create environment and load wind data
-environment = Environment(start=start, end=end, timezone=timezone)
 
-# to use custom wind data:
+"""CSV
+timestamp_str = "2015-11-09 12:00:00"
+environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
 environment.get_wind_data(
     file="./input/wind/dwd_wind_data_2015.csv", utc=False
 )
+"""
+
+"""OBSERVATION 
+Using dwd observation (weather recording) database for weather data
+use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
+"""
+timestamp_str = "2015-01-09 12:00:00"
+environment = Environment(
+    start = "2015-01-01 00:00:00", 
+    end = "2015-12-31 23:45:00", 
+    use_timezone_aware_time_index = True, 
+    surpress_output_globally = False)
+environment.get_dwd_wind_data(lat=latitude, lon=longitude)
+
+
+"""MOSMIX:
+Using dwd mosmix (weather forecast) database for weather data
+The forecast is queried for the next 10 days automatically.
+force_end_time is set to True to get a resulting dataframe from the start time to the end time even if there is no forecast data for the last hours of the time period --> Missing data is filled with NaN values.
+
+time_now = Environment().get_time_from_dwd()
+timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
+environment = Environment(
+    start = time_now, 
+    end = time_now + datetime.timedelta(hours = 240), 
+    force_end_time = True, 
+    use_timezone_aware_time_index = True, 
+    surpress_output_globally = False)
+environment.get_dwd_wind_data(lat=latitude, lon=longitude)
+"""
+
 
 # WindTurbine data
 turbine_type = "E-126/4200"
