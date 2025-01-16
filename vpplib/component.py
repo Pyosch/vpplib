@@ -13,7 +13,6 @@ class Component(object):
     def __init__(self,
                  unit=None,
                  environment=None,
-                 cost=None,
                  identifier=None):
         """
 
@@ -50,7 +49,6 @@ class Component(object):
         self.unit = unit  # e.g. "kW"
         self.identifier = identifier
         self.environment = environment
-        self.cost = cost  # e.g. Euro/kWh
 
     def value_for_timestamp(self, timestamp):
         """
