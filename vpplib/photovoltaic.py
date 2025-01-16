@@ -6,7 +6,7 @@ This file contains the basic functionalities of the Photovoltaic class.
 
 """
 
-from .component import Component
+from vpplib.component import Component
 
 import pandas as pd
 import random
@@ -24,6 +24,8 @@ class Photovoltaic(Component):
     def __init__(
         self,
         unit,
+        latitude,
+        longitude,
         module_lib,
         inverter_lib,
         surface_tilt,
@@ -36,8 +38,6 @@ class Photovoltaic(Component):
         temp_model=None,
         identifier=None,
         environment=None,
-        user_profile=None,
-        cost=None,
     ):
         """
         Info
@@ -73,7 +73,7 @@ class Photovoltaic(Component):
 
         # Call to super class
         super(Photovoltaic, self).__init__(
-            unit, environment, user_profile, cost
+            unit, environment
         )
 
         # Configure attributes
@@ -94,8 +94,8 @@ class Photovoltaic(Component):
             self.inverter = self.inverter_lib[inverter]
 
         self.location = Location(
-            latitude=self.user_profile.latitude,
-            longitude=self.user_profile.longitude,
+            latitude=latitude,
+            longitude=longitude,
         )
 
         self.surface_azimuth = surface_azimuth

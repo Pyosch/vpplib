@@ -12,7 +12,6 @@ parameters in an existing function are changed.
 import matplotlib.pyplot as plt
 
 from vpplib.environment import Environment
-from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
 import datetime # for Mosmix test
 
@@ -59,16 +58,12 @@ environment = Environment(
 environment.get_dwd_pv_data(lat=latitude, lon=longitude, min_quality_per_parameter=10)
 """
 
-
-user_profile = UserProfile(
-    identifier=identifier, latitude=latitude, longitude=longitude
-)
-
 pv = Photovoltaic(
     unit="kW",
+    latitude=latitude,
+    longitude=longitude,
     identifier=identifier,
     environment=environment,
-    user_profile=user_profile,
     module_lib="SandiaMod",
     module="Canadian_Solar_CS5P_220M___2009_",
     inverter_lib="cecinverter",
