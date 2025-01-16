@@ -6,8 +6,6 @@ This file contains the basic functionalities of the Environment class.
 The object "Environment" defines external influences on the system to be simulated.
 In addition to weather and location, this also includes regulatory influences.
 
-TODO: Add regulatory influences e. g. photovoltaik maximum power at the grid connection point
-
 """
 
 import pandas as pd
