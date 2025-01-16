@@ -7,7 +7,7 @@ This file contains the basic functionalities of the ThermalEnergyStorage class.
 """
 
 import pandas as pd
-from .component import Component
+from vpplib.component import Component
 
 
 class ThermalEnergyStorage(Component):
@@ -22,8 +22,6 @@ class ThermalEnergyStorage(Component):
         unit,
         identifier=None,
         environment=None,
-        user_profile=None,
-        cost=None,
     ):
 
         """
@@ -62,7 +60,7 @@ class ThermalEnergyStorage(Component):
 
         # Call to super class
         super(ThermalEnergyStorage, self).__init__(
-            unit, environment, user_profile, cost
+            unit, environment
         )
 
         # Configure attributes
@@ -99,7 +97,7 @@ class ThermalEnergyStorage(Component):
         else:
             thermal_energy_generator.ramp_down(timestamp)
 
-        thermal_energy_demand = self.user_profile.thermal_energy_demand.loc[
+        thermal_energy_demand = thermal_energy_generator.thermal_energy_demand.loc[
             timestamp, "thermal_energy_demand"
         ]
         observation = thermal_energy_generator.observations_for_timestamp(
@@ -331,3 +329,38 @@ class ThermalEnergyStorage(Component):
         )
 
         return self.timeseries
+
+    def get_energy_loss(self):
+        """
+        Info
+        ----
+        Calculate the energy loss of the thermal energy storage.
+        
+        Parameters
+        ----------
+        
+        ...
+        	
+        Attributes
+        ----------
+        
+        ...
+        
+        Notes
+        -----
+        
+        ...
+        
+        References
+        ----------
+        
+        ...
+        
+        Returns
+        -------
+        
+        ...
+        
+        """
+        energy_loss = self.mass * self.cp * (self.target_temperature - self.current_temperature) * self.thermal_energy_loss_per_day
+        return energy_loss
