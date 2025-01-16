@@ -13,6 +13,7 @@ from .component import Component
 class HeatPump(Component):
     def __init__(
         self,
+        thermal_energy_demand,
         heat_pump_type,
         heat_sys_temp,
         el_power,
@@ -24,8 +25,6 @@ class HeatPump(Component):
         unit,
         identifier=None,
         environment=None,
-        user_profile=None,
-        cost=None,
     ):
 
         """
@@ -61,7 +60,9 @@ class HeatPump(Component):
         """
 
         # Call to super class
-        super(HeatPump, self).__init__(unit, environment, user_profile, cost)
+        super(HeatPump, self).__init__(
+            unit, environment
+            )
 
         # Configure attributes
         self.identifier = identifier
@@ -71,6 +72,7 @@ class HeatPump(Component):
         self.heat_pump_type = heat_pump_type
         self.el_power = el_power
         self.th_power = th_power
+        self.thermal_energy_demand = thermal_energy_demand
         self.limit = 1
 
         # Ramp parameters
@@ -78,12 +80,12 @@ class HeatPump(Component):
         self.ramp_down_time = ramp_down_time
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
-        self.last_ramp_up = self.user_profile.thermal_energy_demand.index[0]
-        self.last_ramp_down = self.user_profile.thermal_energy_demand.index[0]
+        self.last_ramp_up = self.thermal_energy_demand.index[0]
+        self.last_ramp_down = self.thermal_energy_demand.index[0]
 
         self.timeseries_year = pd.DataFrame(
             columns=["thermal_energy_output", "cop", "el_demand"],
-            index=self.user_profile.thermal_energy_demand.index,
+            index=self.thermal_energy_demand.index,
         )
         self.timeseries = pd.DataFrame(
             columns=["thermal_energy_output", "cop", "el_demand"],
@@ -230,13 +232,13 @@ class HeatPump(Component):
             pd.isna(
                 next(
                     iter(
-                        self.user_profile.thermal_energy_demand.thermal_energy_demand
+                        self.thermal_energy_demand.thermal_energy_demand
                     )
                 )
             )
             == True
         ):
-            self.user_profile.get_thermal_energy_demand()
+            raise ValueError("No thermal energy demand available")
 
         if (
             pd.isna(next(iter(self.timeseries_year.thermal_energy_output)))
@@ -254,7 +256,7 @@ class HeatPump(Component):
 
         self.timeseries_year[
             "thermal_energy_output"
-        ] = self.user_profile.thermal_energy_demand
+        ] = self.thermal_energy_demand
         self.timeseries_year["cop"] = self.cop
         self.timeseries_year["cop"] = self.timeseries_year["cop"].interpolate()
         self.timeseries_year["el_demand"] = (
@@ -401,7 +403,7 @@ class HeatPump(Component):
 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.iloc[
+                    temp = self.thermal_energy_demand.iloc[
                         timestamp
                     ]["temperature"]
                     cop = self.get_current_cop(temp)
@@ -420,7 +422,7 @@ class HeatPump(Component):
 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[
+                    temp = self.thermal_energy_demand.loc[
                         timestamp
                     ]
                     cop = self.get_current_cop(temp)
@@ -443,7 +445,7 @@ class HeatPump(Component):
 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[
+                    temp = self.thermal_energy_demand.loc[
                         str(timestamp)
                     ]
                     cop = self.get_current_cop(temp)
