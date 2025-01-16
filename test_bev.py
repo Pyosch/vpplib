@@ -9,7 +9,6 @@ Adjust if a new function is added or
 parameters in an existing function are changed.
 
 """
-from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.battery_electric_vehicle import BatteryElectricVehicle
 import matplotlib.pyplot as plt
@@ -30,14 +29,11 @@ load_degradiation_begin = 0.8
 
 environment = Environment(start=start, end=end, timebase=timebase)
 
-user_profile = UserProfile(identifier=identifier)
-
 
 bev = BatteryElectricVehicle(
     unit="kW",
-    identifier=None,
+    identifier=identifier,
     environment=environment,
-    user_profile=user_profile,
     battery_max=battery_max,
     battery_min=battery_min,
     battery_usage=battery_usage,
