@@ -35,6 +35,7 @@ class Environment(object):
         time_freq="15 min",
         mean_temp_days=[],
         mean_temp_hours=[],
+        mean_temp_quarter_hours = [],
         pv_data=[],
         wind_data=[],
         temp_data=[],
@@ -84,6 +85,7 @@ class Environment(object):
         self.time_freq = time_freq
         self.mean_temp_days = mean_temp_days
         self.mean_temp_hours = mean_temp_hours
+        self.mean_temp_quarter_hours = mean_temp_quarter_hours
         self.pv_data = pv_data
         self.wind_data = wind_data
         self.temp_data = temp_data
@@ -1193,7 +1195,8 @@ class Environment(object):
         Notes
             -----
             - The query result is saved in class variable temp_data  
-            - Station meta data is saved in class variable __temp_station_metadata for usage in get_dwd_mean_temp_hours / get_dwd_mean_temp_days
+            - Station meta data is saved in class variable __temp_station_metadata 
+            for usage in get_dwd_mean_temp_hours / get_dwd_mean_temp_days / get_dwd_mean_quarter_hours
         """
         dataset = 'air'
         raw_dwd_data, station_metadata = self.__get_dwd_data(
@@ -1294,4 +1297,44 @@ class Environment(object):
                 min_quality_per_parameter = min_quality_per_parameter
                 )
         self.mean_temp_days = self.__resample_data(self.temp_data,'1440 min')
+        return self.__temp_station_metadata
+    
+    def get_dwd_mean_quarter_hours(
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80
+        ):
+        """
+        Resamples temperature data to quarter hour resulution. 
+        If there are no temperature data in temp_data, it retrieves temperature weather data from the DWD database and processes it.
+
+        Parameters
+        ----------
+        lat : float, optional
+            Latitude, by default None.
+        lon : float, optional
+            Longitude, by default None.
+        station_id : str, optional
+            Station ID specified by the user, by default None.
+        distance : int, optional
+            Search radius [m] for stations, by default 30.
+        min_quality_per_parameter : int, optional
+            Minimum percentage of valid data required for each parameter, by default 80.
+       
+        Returns
+        -------
+        station_metadata : pandas.DataFrame
+            Metadata of the selected weather station.
+        Notes
+            -----
+            - The query result is saved in class variable mean_temp_hours  
+            - Station meta data is not saved in class      
+        """
+        if len(self.temp_data) == 0:
+            self.get_dwd_temp_data(
+                lat = lat,
+                lon = lon,
+                station_id = station_id,
+                distance = distance, 
+                min_quality_per_parameter = min_quality_per_parameter
+                )
+        self.mean_temp_quarter_hours = self.__resample_data(self.temp_data,'15 min')
         return self.__temp_station_metadata
