@@ -10,15 +10,21 @@ from .component import Component
 
 class HeatingRod(Component):
     
-    def __init__(self, unit="kW", identifier=None,
-                 environment=None, user_profile=None,
-                 cost = None, el_power=None,
-                 rampUpTime=0, rampDownTime=0,
-                 min_runtime=0, min_stop_time=0, efficiency=0.95):
+    def __init__(self, 
+                 thermal_energy_demand,
+                 unit="kW", 
+                 identifier=None,
+                 environment=None,
+                 el_power=None,
+                 rampUpTime=0, 
+                 rampDownTime=0,
+                 min_runtime=0, 
+                 min_stop_time=0, 
+                 efficiency=0.95):
 
         
         # Call to super class
-        super(HeatingRod, self).__init__(unit, environment, user_profile, cost)
+        super(HeatingRod, self).__init__(unit, environment)
         
         # Configure attributes
         self.identifier = identifier
@@ -27,18 +33,19 @@ class HeatingRod(Component):
         self.efficiency = efficiency
         self.el_power = el_power
         self.limit = 1
+        self.thermal_energy_demand = thermal_energy_demand
         
         #Ramp parameters
         self.rampUpTime = rampUpTime
         self.rampDownTime = rampDownTime
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
-        self.lastRampUp = self.user_profile.thermal_energy_demand.index[0]
-        self.lastRampDown = self.user_profile.thermal_energy_demand.index[0]
+        self.lastRampUp = self.thermal_energy_demand.index[0]
+        self.lastRampDown = self.thermal_energy_demand.index[0]
 
         self.timeseries_year = pd.DataFrame(
                 columns=["heat_output", "efficiency", "el_demand"], 
-                index=self.user_profile.thermal_energy_demand.index)
+                index=self.thermal_energy_demand.index)
         self.timeseries = pd.DataFrame(
                 columns=["heat_output", "efficiency", "el_demand"], 
                 index=pd.date_range(start=self.environment.start, 
@@ -135,8 +142,8 @@ class HeatingRod(Component):
     #from VPPComponents
     def prepareTimeSeries(self):
             
-        if pd.isna(next(iter(self.user_profile.thermal_energy_demand.thermal_energy_demand))) == True:
-            self.user_profile.get_thermal_energy_demand()
+        if pd.isna(next(iter(self.thermal_energy_demand.thermal_energy_demand))) == True:
+            raise ValueError("No thermal energy demand available.")
           
         if pd.isna(next(iter(self.timeseries_year.heat_output))) == True:
             self.get_timeseries_year()
@@ -147,7 +154,7 @@ class HeatingRod(Component):
     
     def get_timeseries_year(self):
         
-        self.timeseries_year["heat_output"] = self.user_profile.thermal_energy_demand
+        self.timeseries_year["heat_output"] = self.thermal_energy_demand
         self.timeseries_year["el_demand"] = (self.timeseries_year.heat_output / 
                             self.efficiency)
         
@@ -202,7 +209,7 @@ class HeatingRod(Component):
                 
                 if self.isRunning: 
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.iloc[timestamp]
+                    temp = self.environment.mean_temp_quarter_hours.temperature.iloc[timestamp]
                     efficiency = self.efficiency                   
                     heat_output = el_demand * efficiency
                 else: 
@@ -217,7 +224,7 @@ class HeatingRod(Component):
                 
                 if self.isRunning: 
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[timestamp]
+                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
                     efficiency = self.efficiency                  
                     heat_output = el_demand * efficiency
                 else: 
@@ -233,7 +240,7 @@ class HeatingRod(Component):
                 
                 if self.isRunning: 
                     el_demand = self.el_power
-                    temp = self.user_profile.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
+                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
                     efficiency = self.efficiency                  
                     heat_output = el_demand * efficiency
                 else: 

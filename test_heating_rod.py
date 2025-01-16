@@ -57,8 +57,10 @@ def test_get_thermal_energy_demand(user_profile):
 test_get_thermal_energy_demand(user_profile)
 
 hr = HeatingRod(identifier='hp1',
-                environment=environment, user_profile=user_profile,
-                el_power=el_power, rampUpTime=rampUpTime,
+                environment=environment, 
+                thermal_energy_demand=user_profile.thermal_energy_demand,
+                el_power=el_power, 
+                rampUpTime=rampUpTime,
                 rampDownTime=rampDownTime,
                 min_runtime=min_runtime,
                 min_stop_time=min_stop_time)
