@@ -403,7 +403,7 @@ class HeatPump(Component):
 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.iloc[
+                    temp = self.environment.mean_temp_quarter_hours.temperature.iloc[
                         timestamp
                     ]["temperature"]
                     cop = self.get_current_cop(temp)
@@ -422,7 +422,7 @@ class HeatPump(Component):
 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.loc[
+                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[
                         timestamp
                     ]
                     cop = self.get_current_cop(temp)
@@ -445,7 +445,7 @@ class HeatPump(Component):
 
                 if self.is_running:
                     el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.loc[
+                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[
                         str(timestamp)
                     ]
                     cop = self.get_current_cop(temp)
