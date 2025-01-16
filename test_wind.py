@@ -24,7 +24,6 @@ data = wt.get_turbine_types(print_out=False)
 
 latitude = 51.200001
 longitude = 6.433333
-#timezone = "Europe/Berlin"
 timestamp_int = 12
 
 
@@ -88,7 +87,6 @@ wind = WindPower(
     unit="kW",
     identifier=None,
     environment=environment,
-    user_profile=None,
     turbine_type=turbine_type,
     hub_height=hub_height,
     rotor_diameter=rotor_diameter,
