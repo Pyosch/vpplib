@@ -6,7 +6,7 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 
 """
 
-from .component import Component
+from vpplib.component import Component
 import pandas as pd
 import numpy as np
 import math
@@ -54,7 +54,6 @@ class ElectrolysisSimses(Component):
     environment: class,
         Instance fo the Environment class containing information about
         time dependent variables.
-    user_profile : TYPE, optional
         DESCRIPTION. The default is None.
     unit : TYPE, optional
         DESCRIPTION. The default is None.
@@ -78,16 +77,12 @@ class ElectrolysisSimses(Component):
                  identifier=None,
                  result_path: str = None,
                  environment=None,
-                 user_profile=None,
                  unit=None,
-                 cost=None
                  ):
-
-        # self.max_power = max_power
 
         # Call to super class
         super().__init__(
-            unit, environment, user_profile, cost
+            unit, environment
         )
 
         if soc_max < soc_min:

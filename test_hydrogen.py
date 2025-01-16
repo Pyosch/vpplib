@@ -60,9 +60,10 @@ user_profile = UserProfile(
 # create pv object and timeseries
 pv = Photovoltaic(
     unit=unit,
+    latitude=latitude,
+    longitude=longitude,
     identifier=(name + "_pv"),
     environment=environment,
-    user_profile=user_profile,
     module_lib=module_lib,
     module=module,
     inverter_lib=inverter_lib,
@@ -88,9 +89,7 @@ hydrogen = ElectrolysisSimses(electrolyzer_power=electrolyzer_power,
                               identifier="SimSES",
                               result_path="./Results/SimSES/hydrogen",
                               environment=environment,
-                              user_profile=user_profile,
                               unit=unit,
-                              cost=None
                               )
 
 # %%
