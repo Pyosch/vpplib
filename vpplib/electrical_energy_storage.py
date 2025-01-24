@@ -12,11 +12,7 @@ import datetime as dt
 import time
 from configparser import ConfigParser
 
-try:
-    import pysam.BatteryStateful as battery
-except:
-    import PySAM.BatteryStateful as battery
-# from simses.config.simulation.storage_system_config import StorageSystemConfig
+import PySAM.BatteryStateful as battery
 
 
 class ElectricalEnergyStorage(Component):
