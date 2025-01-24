@@ -26,7 +26,6 @@ class ElectricalEnergyStorage(Component):
         unit,
         identifier=None,
         environment=None,
-        user_profile=None,
         cost=None,
     ):
         """
@@ -69,7 +68,7 @@ class ElectricalEnergyStorage(Component):
 
         # Call to super class
         super(ElectricalEnergyStorage, self).__init__(
-            unit, environment, user_profile, cost
+            unit, environment
         )
 
         # Setup attributes
@@ -402,8 +401,6 @@ class PySAMBatteryStateful(Component):
     environment: class,
         Instance fo the Environment class containing information about
         time dependent variables.
-    user_profile : TYPE, optional
-        DESCRIPTION. The default is None.
     unit : TYPE, optional
         DESCRIPTION. The default is None.
     cost : TYPE, optional
@@ -419,14 +416,12 @@ class PySAMBatteryStateful(Component):
                  identifier=None,
                  result_path: str = None,
                  environment=None,
-                 user_profile=None,
                  unit=None,
-                 cost=None
                  ):
 
         # Call to super class
         super().__init__(
-            unit, environment, user_profile, cost
+            unit, environment
         )
         
     def init_battery_stateful(self, nominal_energy,
