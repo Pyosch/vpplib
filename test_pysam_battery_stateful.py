@@ -1,5 +1,4 @@
 from vpplib.environment import Environment
-from vpplib.user_profile import UserProfile
 from vpplib.electrical_energy_storage import PySAMBatteryStateful
 from vpplib.photovoltaic import Photovoltaic
 
@@ -41,16 +40,13 @@ timestamp_str = "2015-06-01 12:00:00"
 environment = Environment(timebase=timebase, start=start, end=end, year=year)
 environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
 
-user_profile = UserProfile(
-    identifier=name, latitude=latitude, longitude=longitude
-)
-
 # create pv object and timeseries
 pv = Photovoltaic(
     unit=unit,
+    latitude=latitude,
+    longitude=longitude,
     identifier=(name + "_pv"),
     environment=environment,
-    user_profile=user_profile,
     module_lib=module_lib,
     module=module,
     inverter_lib=inverter_lib,
@@ -80,9 +76,7 @@ house_loadshape["residual_load"] = (
 storage = PySAMBatteryStateful(
     identifier=(name + "_storage"),
     environment=environment,
-    user_profile=user_profile,
-    unit=None,
-    cost=None
+    unit=None
 )
 
 storage.init_battery_stateful(nominal_energy=nominal_energy,

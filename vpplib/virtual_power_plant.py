@@ -12,6 +12,14 @@ import pandas as pd
 import sqlite3
 from tqdm import tqdm
 
+from vpplib.photovoltaic import Photovoltaic
+from vpplib.battery_electric_vehicle import BatteryElectricVehicle
+from vpplib.heat_pump import HeatPump
+from vpplib.electrical_energy_storage import ElectricalEnergyStorage
+from vpplib.wind_power import WindPower
+from vpplib.combined_heat_and_power import CombinedHeatAndPower
+from vpplib.thermal_energy_storage import ThermalEnergyStorage
+
 class VirtualPowerPlant(object):
     def __init__(self, name):
 
@@ -263,7 +271,7 @@ class VirtualPowerPlant(object):
 
                     df_timeseries[
                         self.components[component].identifier + "_thermal_energy_demand"
-                        ] = self.components[component].user_profile.thermal_energy_demand
+                        ] = self.components[component].thermal_energy_demand
 
                     df_timeseries[
                         self.components[component].identifier
@@ -293,7 +301,7 @@ class VirtualPowerPlant(object):
                 else:
                     df_timeseries[
                         self.components[component].identifier + "_thermal_energy_demand"
-                        ] = self.components[component].user_profile.thermal_energy_demand
+                        ] = self.components[component].thermal_energy_demand
 
                     df_component_values[self.components[component].identifier
                                         + "_power_therm"] = self.components[
@@ -365,7 +373,7 @@ class VirtualPowerPlant(object):
                 df_component_values = df_component_values.append(
                     {"name": component,
                      "technology": "pv",
-                     "bus": self.components[component].user_profile.bus,
+                     "bus": self.components[component].bus,
                      "power_kW": (self.components[component].module.Impo
                      * self.components[component].module.Vmpo
                      / 1000
@@ -377,7 +385,7 @@ class VirtualPowerPlant(object):
                 df_component_values = df_component_values.append(
                     {"name": component,
                      "technology": "ees",
-                     "bus": self.components[component].user_profile.bus,
+                     "bus": self.components[component].bus,
                      "capacity_kWh": self.components[component].capacity,
                      "power_kW": self.components[component].max_power,
                      "efficiency_el": self.components[component].charge_efficiency},
@@ -388,7 +396,7 @@ class VirtualPowerPlant(object):
                 df_component_values = df_component_values.append(
                     {"name": component,
                      "technology": "wea",
-                     "bus": self.components[component].user_profile.bus,
+                     "bus": self.components[component].bus,
                      "power_kW": self.components[component].ModelChain.power_plant.nominal_power
                     / 1000},
                     ignore_index=True)
@@ -398,7 +406,7 @@ class VirtualPowerPlant(object):
                 df_component_values = df_component_values.append(
                     {"name": component,
                      "technology": "bev",
-                     "bus": self.components[component].user_profile.bus,
+                     "bus": self.components[component].bus,
                      "arrival_soc": random.uniform(
                          self.components[component].battery_min,
                          self.components[component].battery_max
@@ -412,7 +420,7 @@ class VirtualPowerPlant(object):
                 df_component_values = df_component_values.append(
                     {"name": component,
                      "technology": "hp",
-                     "bus": self.components[component].user_profile.bus,
+                     "bus": self.components[component].bus,
                      "power_kW": self.components[component].el_power},
                     ignore_index=True)
 
@@ -421,7 +429,7 @@ class VirtualPowerPlant(object):
                 df_component_values = df_component_values.append(
                     {"name": component,
                      "technology": "tes",
-                     "bus": self.components[component].user_profile.bus,
+                     "bus": self.components[component].bus,
                      "capacity_kWh": (self.components[component].mass
                             * self.components[component].cp
                             * (self.components[component].hysteresis * 2)  #dT
@@ -433,7 +441,7 @@ class VirtualPowerPlant(object):
                 df_component_values = df_component_values.append(
                     {"name": component,
                      "technology": "chp",
-                     "bus": self.components[component].user_profile.bus,
+                     "bus": self.components[component].bus,
                      "power_kW": self.components[component].el_power,
                      "th_power_kW": self.components[component].th_power,
                      "efficiency_el": self.components[component].efficiency_el,
@@ -444,7 +452,7 @@ class VirtualPowerPlant(object):
                 df_component_values = df_component_values.append(
                     {"name": component,
                      "technology": "hr",
-                     "bus": self.components[component].user_profile.bus,
+                     "bus": self.components[component].bus,
                      "th_power_kW": self.components[component].el_power, #TODO: change to power_kW after the Project
                      "efficiency_th": self.components[component].efficiency}, #TODO: Change to el_efficiency after the Project
                     ignore_index=True)
@@ -454,98 +462,47 @@ class VirtualPowerPlant(object):
 
     def export_component_timeseries(self):
 
-        df_timeseries = pd.DataFrame(
-            columns=("time",
-                     "name",
-                     "cop",
-                     "feed_in",
-                     "th_energy")
-        )
-        
-        rows_list = list()
+        ts_dict = dict()
 
         #List to catch components without timeseries. Usually only tes
         no_timeseries_lst = list()
 
         print("Export component timeseries:")
-        for idx in tqdm(self.components[next(iter(self.components.keys()))].timeseries.index):
-            for component in self.components.keys():
+        for component in self.components:
 
-                if '_pv' in component:
+            if isinstance(self.components[component], (Photovoltaic)):
 
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                    {"time": str(idx),
-                     "name": component,
-                     "feed_in": (self.components[component].value_for_timestamp(str(idx)) * -1)
-                     })#,
-                     #ignore_index=True)
+                ts_dict[component] = self.components[component].timeseries.loc[:, component]
+                
+            elif isinstance(self.components[component], (WindPower)):
 
-                elif '_wea' in component:
+                ts_dict[component] = self.components[component].timeseries
 
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                    {"time": str(idx),
-                     "name": component,
-                     "feed_in": (self.components[component].value_for_timestamp(str(idx)) * -1)
-                     })#,
-                     #ignore_index=True
-                     #)
 
-                elif '_bev' in component:
+            elif isinstance(self.components[component], BatteryElectricVehicle):
 
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                        {"time": str(idx),
-                         "name": component,
-                         "feed_in": float(self.components[component].timeseries["at_home"][str(idx)])
-                         })#,
-                     #ignore_index=True
-                     #)
+                ts_dict[component] = self.components[component].timeseries.loc[:,'car_charger']
 
-                elif '_hp' in component:
+            elif isinstance(self.components[component], HeatPump):
+                    
+                ts_dict[component] = self.components[component].timeseries.loc[:,'el_demand']
 
-                    # Check if the variable cop exists.
-                    # COP is the same for all heat pumps!
-                    if 'cop' not in locals():
-                        cop = pd.DataFrame(
-                            index = self.components[
-                                next(iter(self.components.keys()))
-                                ].timeseries.index,
-                            columns=["cop"])
-
-                        cop.cop = self.components[component].get_cop().cop
-                        cop.interpolate(inplace=True)
+            elif isinstance(self.components[component], CombinedHeatAndPower):
+                    
+                ts_dict[component] = self.components[component].timeseries.loc[:,'el_demand']
+                
+            elif isinstance(self.components[component], ElectricalEnergyStorage):
                         
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                        {"time": str(idx),
-                         "name": component,
-                         "cop": cop.cop[str(idx)],
-                         "th_energy": self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
-                         })#,
-                     #ignore_index=True
-                     #)
+                    ts_dict[component] = self.components[component].timeseries.loc[:,'residual_load']
 
-                elif '_chp' in component:
+            elif isinstance(self.components[component], ThermalEnergyStorage):
+                # Thermal energy storage has no timeseries
+                no_timeseries_lst.append(component)
 
-                    #df_timeseries = df_timeseries
-                    rows_list.append(
-                        {"time": str(idx),
-                         "name": component,
-                         "th_energy": self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
-                         })#,
-                     #ignore_index=True
-                     #)
+            else:
+                no_timeseries_lst.append(component)
 
-                elif '_tes' in component:
-                    # Thermal energy storage has no timeseries
-                    no_timeseries_lst.append(component)
-
-                else:
-                    no_timeseries_lst.append(component)
-
-        df_timeseries = pd.DataFrame(rows_list)
+        df_timeseries = pd.DataFrame(ts_dict)
 
         return df_timeseries, no_timeseries_lst
 
@@ -624,7 +581,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?)",
                           (component,
                            "pv",
-                           self.components[component].user_profile.bus,
+                           self.components[component].bus,
                            (self.components[component].module.Impo
                             * self.components[component].module.Vmpo
                             / 1000
@@ -647,7 +604,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?, ?)",
                           (component,
                            "ees",
-                           self.components[component].user_profile.bus,
+                           self.components[component].bus,
                            self.components[component].capacity,
                            self.components[component].max_power,
                            self.components[component].charge_efficiency)
@@ -664,7 +621,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?)",
                           (component,
                            "wea",
-                           self.components[component].user_profile.bus, # used to be: component[:-4],
+                           self.components[component].bus, # used to be: component[:-4],
                            (self.components[
                                component].ModelChain.power_plant.nominal_power
                                / 1000)
@@ -685,7 +642,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?, ?, ?)",
                           (component,
                            "bev",
-                           self.components[component].user_profile.bus,
+                           self.components[component].bus,
                            self.components[component].charging_power,
                            self.components[component].battery_max,
                            self.components[component].charge_efficiency,
@@ -705,7 +662,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?)",
                           (component,
                            "hp",
-                           self.components[component].user_profile.bus,
+                           self.components[component].bus,
                            self.components[component].el_power
                            )
                           )
@@ -724,7 +681,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?, ?, ?)",
                           (component,
                            "chp",
-                           self.components[component].user_profile.bus,
+                           self.components[component].bus,
                            self.components[component].el_power,
                            self.components[component].th_power,
                            self.components[component].efficiency_el,
@@ -744,7 +701,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?)",
                           (component,
                            "hr",
-                           self.components[component].user_profile.bus,
+                           self.components[component].bus,
                            self.components[component].el_power,
                            self.components[component].efficiency
                            )
@@ -763,7 +720,7 @@ class VirtualPowerPlant(object):
                           +"VALUES (?, ?, ?, ?, ?)",
                           (component,
                            "tes",
-                           self.components[component].user_profile.bus,
+                           self.components[component].bus,
                            (self.components[component].mass
                             * self.components[component].cp
                             * (self.components[component].hysteresis * 2)  #dT
@@ -822,7 +779,7 @@ class VirtualPowerPlant(object):
                               +"VALUES (?, ?, ?)",
                               (str(idx),
                                component,
-                               float(self.components[component].timeseries["at_home"][str(idx)])
+                               float(self.components[component].timeseries.iloc[str(idx), "at_home"])
                                )
                               )
 
@@ -852,7 +809,7 @@ class VirtualPowerPlant(object):
                               (str(idx),
                                component,
                                cop.cop[str(idx)],
-                               self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
+                               self.components[component].thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
                                )
                               )
 
@@ -866,7 +823,7 @@ class VirtualPowerPlant(object):
                               +"VALUES (?, ?, ?)",
                               (str(idx),
                                component,
-                               self.components[component].user_profile.thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
+                               self.components[component].thermal_energy_demand.Heat_load_kWh.loc[str(idx)].item() #TODO: used to be HeatDemand
                                )
                               )
 

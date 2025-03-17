@@ -6,13 +6,14 @@ This file contains the basic functionalities of the CombinedHeatAndPower class.
 
 """
 
-from .component import Component
+from vpplib.component import Component
 import pandas as pd
 
 
 class CombinedHeatAndPower(Component):
     def __init__(
         self,
+        thermal_energy_demand,
         el_power,
         th_power,
         ramp_up_time,
@@ -25,8 +26,6 @@ class CombinedHeatAndPower(Component):
         efficiency_th=None,
         identifier=None,
         environment=None,
-        user_profile=None,
-        cost=None,
     ):
 
         """
@@ -74,9 +73,6 @@ class CombinedHeatAndPower(Component):
         environment: vpplib.environment.Environment
             object containing time and weather related data
 
-        user_profile: vpplib.user_profile.UserProfile
-            object containing user specific data like heat demand
-
         cost: float
             financial cost of one unit of the component
 
@@ -102,11 +98,12 @@ class CombinedHeatAndPower(Component):
 
         # Call to super class
         super(CombinedHeatAndPower, self).__init__(
-            unit, environment, user_profile, cost
+            unit, environment
         )
 
         # Configure attributes
         self.identifier = identifier
+        self.thermal_energy_demand = thermal_energy_demand
         self.el_power = el_power
         self.th_power = th_power
         self.efficiency_el = efficiency_el
@@ -127,8 +124,8 @@ class CombinedHeatAndPower(Component):
             ),
         )
 
-        self.last_ramp_up = self.user_profile.thermal_energy_demand.index[0]
-        self.last_ramp_down = self.user_profile.thermal_energy_demand.index[0]
+        self.last_ramp_up = self.thermal_energy_demand.index[0]
+        self.last_ramp_down = self.thermal_energy_demand.index[0]
         self.limit = 1.0
 
     def prepare_time_series(self):
@@ -148,7 +145,7 @@ class CombinedHeatAndPower(Component):
 
         self.timeseries = pd.DataFrame(
             columns=["thermal_energy_output", "el_demand"],
-            index=self.user_profile.thermal_energy_demand.index,
+            index=self.thermal_energy_demand.index,
         )
 
         return self.timeseries
@@ -226,7 +223,7 @@ class CombinedHeatAndPower(Component):
 
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
             if (
-                self.last_ramp_down + self.min_stop_time * timestamp.freq
+                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
                 < timestamp
             ):
                 self.is_running = True
@@ -270,7 +267,7 @@ class CombinedHeatAndPower(Component):
 
         elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
             if (
-                self.last_ramp_up + self.min_runtime * timestamp.freq
+                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
                 < timestamp
             ):
                 self.is_running = False
@@ -421,10 +418,10 @@ class CombinedHeatAndPower(Component):
 
         """
 
-        self.timeseries.thermal_energy_output.loc[timestamp] = observation[
+        self.timeseries.loc[timestamp, "thermal_energy_output"] = observation[
             "thermal_energy_output"
         ]
-        self.timeseries.el_demand.loc[timestamp] = observation["el_demand"]
+        self.timeseries.loc[timestamp, "el_demand"] = observation["el_demand"]
 
         return self.timeseries
 

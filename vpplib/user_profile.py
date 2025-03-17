@@ -19,15 +19,13 @@ class UserProfile(object):
         latitude=None,
         longitude=None,
         thermal_energy_demand_yearly=None,
+        mean_temp_days=None,
+        mean_temp_hours=None,
+        mean_temp_quarter_hours=None,
         building_type=None,  #'DE_HEF33'
         max_connection_power=None,
         comfort_factor=None,
         t_0=40,
-        daily_vehicle_usage=None,
-        week_trip_start=[],
-        week_trip_end=[],
-        weekend_trip_start=[],
-        weekend_trip_end=[],
     ):
         """
         Info
@@ -67,23 +65,21 @@ class UserProfile(object):
         self.latitude = latitude
         self.longitude = longitude
 
-        self.daily_vehicle_usage = daily_vehicle_usage  # km
-        self.week_trip_start = week_trip_start
-        self.week_trip_end = week_trip_end
-        self.weekend_trip_start = weekend_trip_start
-        self.weekend_trip_end = weekend_trip_end
-
         # For people that likes to have their homes quite warm
         self.comfort_factor = comfort_factor
 
         # Define the maximal connection power for a certain user
         self.max_connection_power = max_connection_power
 
-        self.mean_temp_days = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                                       'input/thermal/dwd_temp_days_2015.csv').replace('\\', '/'),
-                                          index_col='time')
+        if mean_temp_days is None:
+            self.mean_temp_days = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                                        'input/thermal/dwd_temp_days_2015.csv').replace('\\', '/'),
+                                            index_col='time')
+            self.mean_temp_days.index = pd.to_datetime(self.mean_temp_days.index)
+        else:
+            self.mean_temp_days = mean_temp_days
 
-        self.mean_temp_days.index = pd.to_datetime(self.mean_temp_days.index)
+        
         self.year = str(next(iter(self.mean_temp_days.index)))[:4]
 
         self.thermal_energy_demand = None
@@ -91,17 +87,25 @@ class UserProfile(object):
         # 'DE_HEF33', 'DE_HEF34', 'DE_HMF33', 'DE_HMF34', 'DE_GKO34'
         self.building_type = building_type
         # for cop
-        self.mean_temp_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
-            "input/thermal/dwd_temp_hours_2015.csv"), index_col="time"
-        )
-        self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
+        if mean_temp_hours is None:
+            self.mean_temp_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
+                "input/thermal/dwd_temp_hours_2015.csv"), index_col="time"
+            )
+            self.mean_temp_hours.index = pd.to_datetime(self.mean_temp_hours.index)
+            
+        else:
+            self.mean_temp_hours = mean_temp_hours
 
-        self.mean_temp_quarter_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
-            "input/thermal/dwd_temp_15min_2015.csv"), index_col="time"
-        )
-        self.mean_temp_quarter_hours.index = pd.to_datetime(
-            self.mean_temp_quarter_hours.index
-        )
+        if mean_temp_quarter_hours is None:
+            self.mean_temp_quarter_hours = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
+                "input/thermal/dwd_temp_15min_2015.csv"), index_col="time"
+            )
+            self.mean_temp_quarter_hours.index = pd.to_datetime(
+                self.mean_temp_quarter_hours.index
+            )
+        else:
+            self.mean_temp_quarter_hours = mean_temp_quarter_hours
+            
 
         self.demand_daily = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(__file__)).replace('\\', '/'),
                                                      "input/thermal/demand_daily.csv"))
@@ -117,138 +121,6 @@ class UserProfile(object):
         self.thermal_energy_demand_daily = None
         self.consumerfactor = None
 
-    def get_trip_times(self):
-
-        """
-        Info
-        ----
-        ...
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
-        """
-
-        self.week_trip_start = [
-            "07:00:00",
-            "07:15:00",
-            "07:30:00",
-            "07:45:00",
-            "08:00:00",
-            "08:15:00",
-            "08:30:00",
-            "08:45:00",
-            "09:00:00",
-        ]
-
-        self.week_trip_end = [
-            "16:00:00",
-            "16:15:00",
-            "16:30:00",
-            "16:45:00",
-            "17:00:00",
-            "17:15:00",
-            "17:30:00",
-            "17:45:00",
-            "18:00:00",
-            "18:15:00",
-            "18:30:00",
-            "18:45:00",
-            "19:00:00",
-            "19:15:00",
-            "19:30:00",
-            "19:45:00",
-            "20:00:00",
-            "20:15:00",
-            "20:30:00",
-            "20:45:00",
-            "21:00:00",
-            "21:15:00",
-            "21:30:00",
-            "21:45:00",
-            "22:00:00",
-        ]
-
-        self.weekend_trip_start = [
-            "08:00:00",
-            "08:15:00",
-            "08:30:00",
-            "08:45:00",
-            "09:00:00",
-            "09:15:00",
-            "09:30:00",
-            "09:45:00",
-            "10:00:00",
-            "10:15:00",
-            "10:30:00",
-            "10:45:00",
-            "11:00:00",
-            "11:15:00",
-            "11:30:00",
-            "11:45:00",
-            "12:00:00",
-            "12:15:00",
-            "12:30:00",
-            "12:45:00",
-            "13:00:00",
-        ]
-
-        self.weekend_trip_end = [
-            "17:00:00",
-            "17:15:00",
-            "17:30:00",
-            "17:45:00",
-            "18:00:00",
-            "18:15:00",
-            "18:30:00",
-            "18:45:00",
-            "19:00:00",
-            "19:15:00",
-            "19:30:00",
-            "19:45:00",
-            "20:00:00",
-            "20:15:00",
-            "20:30:00",
-            "20:45:00",
-            "21:00:00",
-            "21:15:00",
-            "21:30:00",
-            "21:45:00",
-            "22:00:00",
-            "22:15:00",
-            "22:30:00",
-            "22:45:00",
-            "23:00:00",
-        ]
-
-        return (
-            self.week_trip_start,
-            self.week_trip_end,
-            self.weekend_trip_start,
-            self.weekend_trip_end,
-        )
 
     def get_thermal_energy_demand(self):
 
@@ -515,9 +387,7 @@ class UserProfile(object):
 
         self.thermal_energy_demand_daily = pd.DataFrame(
             demand_daily_lst,
-            index=pd.date_range(
-                self.year, periods=8760, freq="H", name="time"
-            ),
+            index=self.mean_temp_hours.index
         )
 
         return self.thermal_energy_demand_daily
@@ -643,9 +513,7 @@ class UserProfile(object):
         """
 
         self.thermal_energy_demand = pd.DataFrame(
-            index=pd.date_range(
-                self.year, periods=35040, freq="15min", name="time"
-            )
+            index=self.mean_temp_quarter_hours.index
         )
         self.thermal_energy_demand[
             "thermal_energy_demand"

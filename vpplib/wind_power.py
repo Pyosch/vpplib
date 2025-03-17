@@ -32,8 +32,6 @@ class WindPower(Component):
         unit,
         identifier=None,
         environment=None,
-        user_profile=None,
-        cost=None,
     ):
         """
         Info
@@ -68,7 +66,7 @@ class WindPower(Component):
         """
 
         # Call to super class
-        super(WindPower, self).__init__(unit, environment, user_profile, cost)
+        super(WindPower, self).__init__(unit, environment)
 
         # Configure attributes
         self.identifier = identifier

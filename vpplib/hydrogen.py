@@ -6,13 +6,18 @@ This file contains the basic functionalities of the ElectricalEnergyStorage clas
 
 """
 
-from .component import Component
+from vpplib.component import Component
 import pandas as pd
+import numpy as np
+import math
 import datetime as dt
 import time
 from configparser import ConfigParser
 from simses.main import SimSES
 
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from scipy.optimize import fsolve
 
 class ElectrolysisSimses(Component):
     """.
@@ -49,7 +54,6 @@ class ElectrolysisSimses(Component):
     environment: class,
         Instance fo the Environment class containing information about
         time dependent variables.
-    user_profile : TYPE, optional
         DESCRIPTION. The default is None.
     unit : TYPE, optional
         DESCRIPTION. The default is None.
@@ -73,16 +77,12 @@ class ElectrolysisSimses(Component):
                  identifier=None,
                  result_path: str = None,
                  environment=None,
-                 user_profile=None,
                  unit=None,
-                 cost=None
                  ):
-
-        # self.max_power = max_power
 
         # Call to super class
         super().__init__(
-            unit, environment, user_profile, cost
+            unit, environment
         )
 
         if soc_max < soc_min:
@@ -293,11 +293,11 @@ class ElectrolysisSimses(Component):
 
         if type(timestamp) == int:
 
-            return self.timeseries["ac_power"].iloc[timestamp]
+            return self.timeseries.iloc[timestamp]["ac_power"]
 
         elif type(timestamp) == str:
 
-            return self.timeseries["ac_power"].loc[timestamp]
+            return self.timeseries.loc[timestamp, "ac_power"]
 
         else:
             raise ValueError(

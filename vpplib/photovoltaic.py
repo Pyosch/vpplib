@@ -6,7 +6,7 @@ This file contains the basic functionalities of the Photovoltaic class.
 
 """
 
-from .component import Component
+from vpplib.component import Component
 
 import pandas as pd
 import random
@@ -24,6 +24,8 @@ class Photovoltaic(Component):
     def __init__(
         self,
         unit,
+        latitude,
+        longitude,
         module_lib,
         inverter_lib,
         surface_tilt,
@@ -36,8 +38,6 @@ class Photovoltaic(Component):
         temp_model=None,
         identifier=None,
         environment=None,
-        user_profile=None,
-        cost=None,
     ):
         """
         Info
@@ -73,7 +73,7 @@ class Photovoltaic(Component):
 
         # Call to super class
         super(Photovoltaic, self).__init__(
-            unit, environment, user_profile, cost
+            unit, environment
         )
 
         # Configure attributes
@@ -94,8 +94,8 @@ class Photovoltaic(Component):
             self.inverter = self.inverter_lib[inverter]
 
         self.location = Location(
-            latitude=self.user_profile.latitude,
-            longitude=self.user_profile.longitude,
+            latitude=latitude,
+            longitude=longitude,
         )
 
         self.surface_azimuth = surface_azimuth
@@ -139,11 +139,19 @@ class Photovoltaic(Component):
         if len(self.environment.pv_data) == 0:
             raise ValueError("self.environment.pv_data is empty.")
 
-        self.modelchain.run_model(
-            weather=self.environment.pv_data.loc[
-                self.environment.start: self.environment.end
-            ],
-        )
+        if 'poa_global' in self.environment.pv_data.columns:
+            
+            self.modelchain.run_model_from_poa(
+                data=self.environment.pv_data.loc[
+                    self.environment.start: self.environment.end
+                ],
+            )
+        else:
+            self.modelchain.run_model(
+                weather=self.environment.pv_data.loc[
+                    self.environment.start: self.environment.end
+                ],
+            )
 
         timeseries = pd.DataFrame(
             self.modelchain.results.ac / 1000)  # convert to kW
@@ -152,6 +160,7 @@ class Photovoltaic(Component):
         timeseries.index = pd.to_datetime(timeseries.index)
 
         self.timeseries = timeseries
+        self.timeseries = self.timeseries.fillna(0)
 
         return timeseries
 
@@ -342,8 +351,8 @@ class Photovoltaic(Component):
             self.module.Impo
             * self.module.Vmpo
             / 1000
-            * self.system.modules_per_string
-            * self.system.strings_per_inverter
+            * self.modules_per_string
+            * self.strings_per_inverter
         )
 
         # calculate area of pv modules

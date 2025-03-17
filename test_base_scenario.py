@@ -36,14 +36,8 @@ identifier = "bus_1"
 latitude = 50.941357
 longitude = 6.958307
 yearly_thermal_energy_demand = 12500
-comfort_factor = None
-daily_vehicle_usage = None
 building_type = "DE_HEF33"
 t_0 = 40
-week_trip_start = []
-week_trip_end = []
-weekend_trip_start = []
-weekend_trip_end = []
 
 baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
@@ -128,11 +122,17 @@ environment = Environment(
     year=year,
     time_freq=time_freq,
 )
-
+#%%
+"""
 environment.get_wind_data(file=wind_file, utc=False)
 environment.get_pv_data(file=pv_file)
 environment.get_mean_temp_days(file=temp_days_file)
 environment.get_mean_temp_hours(file=temp_hours_file)
+"""
+environment.get_dwd_wind_data(lat=latitude,lon=longitude)
+environment.get_dwd_pv_data(lat=latitude,lon=longitude)
+environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
+environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)
 
 # %% user profile
 
@@ -142,16 +142,11 @@ user_profile = UserProfile(
     longitude=longitude,
     thermal_energy_demand_yearly=yearly_thermal_energy_demand,
     building_type=building_type,
-    comfort_factor=comfort_factor,
     t_0=t_0,
-    daily_vehicle_usage=daily_vehicle_usage,
-    week_trip_start=week_trip_start,
-    week_trip_end=week_trip_end,
-    weekend_trip_start=weekend_trip_start,
-    weekend_trip_end=weekend_trip_end,
-)
+    )
 
 user_profile.get_thermal_energy_demand()
+user_profile.thermal_energy_demand.head()
 
 # %% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
@@ -161,8 +156,8 @@ net = pn.panda_four_load_branch()
 # %% assign names and types to baseloads for later p and q assignment
 for bus in net.bus.index:
 
-    net.load.name[net.load.bus == bus] = net.bus.name[bus] + "_baseload"
-    net.load.type[net.load.bus == bus] = "baseload"
+    net.load.loc[net.load.bus == bus, 'name'] = net.bus.loc[bus, 'name'] + "_baseload"
+    net.load.loc[net.load.bus == bus, 'type'] = "baseload"
 
 # %% assign components to random bus names
 
@@ -241,9 +236,10 @@ for bus in vpp.buses_with_pv:
     vpp.add_component(
         Photovoltaic(
             unit=unit,
+            latitude=latitude,
+            longitude=longitude,
             identifier=(bus + "_PV"),
             environment=environment,
-            user_profile=user_profile,
             module_lib=module_lib,
             module=module,
             inverter_lib=inverter_lib,
@@ -257,6 +253,7 @@ for bus in vpp.buses_with_pv:
         )
     )
 
+    vpp.components[list(vpp.components.keys())[-1]].bus = bus
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
@@ -267,7 +264,6 @@ for bus in vpp.buses_with_storage:
             unit=unit,
             identifier=(bus + "_storage"),
             environment=environment,
-            user_profile=user_profile,
             capacity=capacity,
             charge_efficiency=charge_efficiency_storage,
             discharge_efficiency=discharge_efficiency_storage,
@@ -276,6 +272,7 @@ for bus in vpp.buses_with_storage:
         )
     )
 
+    vpp.components[list(vpp.components.keys())[-1]].bus = bus
     vpp.components[list(vpp.components.keys())[-1]].timeseries = pd.DataFrame(
         columns=["state_of_charge", "residual_load"],
         index=pd.date_range(start=start, end=end, freq=time_freq),
@@ -289,7 +286,6 @@ for bus in vpp.buses_with_bev:
             unit=unit,
             identifier=(bus + "_BEV"),
             environment=environment,
-            user_profile=user_profile,
             battery_max=battery_max,
             battery_min=battery_min,
             battery_usage=battery_usage,
@@ -299,6 +295,7 @@ for bus in vpp.buses_with_bev:
         )
     )
 
+    vpp.components[list(vpp.components.keys())[-1]].bus = bus
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 
@@ -309,7 +306,7 @@ for bus in vpp.buses_with_hp:
             unit=unit,
             identifier=(bus + "_HP"),
             environment=environment,
-            user_profile=user_profile,
+            thermal_energy_demand=user_profile.thermal_energy_demand,
             heat_pump_type=heatpump_type,
             heat_sys_temp=heat_sys_temp,
             el_power=el_power,
@@ -321,6 +318,7 @@ for bus in vpp.buses_with_hp:
         )
     )
 
+    vpp.components[list(vpp.components.keys())[-1]].bus = bus
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 for bus in vpp.buses_with_wind:
@@ -330,7 +328,6 @@ for bus in vpp.buses_with_wind:
             unit=unit,
             identifier=(bus + "_Wind"),
             environment=environment,
-            user_profile=user_profile,
             turbine_type=turbine_type,
             hub_height=hub_height,
             rotor_diameter=rotor_diameter,
@@ -346,6 +343,7 @@ for bus in vpp.buses_with_wind:
         )
     )
 
+    vpp.components[list(vpp.components.keys())[-1]].bus = bus
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
 
 # %% create elements in the pandapower.net

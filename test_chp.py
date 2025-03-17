@@ -4,12 +4,13 @@ Created on Thu Aug 22 15:33:53 2019
 
 @author: patri, pyosch
 """
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.thermal_energy_storage import ThermalEnergyStorage
 from vpplib.combined_heat_and_power import CombinedHeatAndPower
-import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 figsize = (10, 6)
 
@@ -69,7 +70,6 @@ test_get_thermal_energy_demand(user_profile)
 
 tes = ThermalEnergyStorage(
     environment=environment,
-    user_profile=user_profile,
     unit="kWh",
     mass=mass_of_storage,
     hysteresis=hysteresis,
@@ -83,7 +83,7 @@ chp = CombinedHeatAndPower(
     unit="kW",
     identifier="chp1",
     environment=environment,
-    user_profile=user_profile,
+    thermal_energy_demand=user_profile.thermal_energy_demand,
     el_power=el_power,
     th_power=th_power,
     overall_efficiency=overall_efficiency,
@@ -94,7 +94,7 @@ chp = CombinedHeatAndPower(
 )
 
 
-for i in tqdm(tes.user_profile.thermal_energy_demand.loc[start:end].index):
+for i in tqdm(chp.timeseries.index):
     tes.operate_storage(i, chp)
 
 

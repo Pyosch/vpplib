@@ -4,11 +4,13 @@ Created on Thu Aug 22 15:33:53 2019
 
 @author: patri, pyosch
 """
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.thermal_energy_storage import ThermalEnergyStorage
 from vpplib.heat_pump import HeatPump
-import matplotlib.pyplot as plt
 
 figsize = (10, 6)
 # Values for environment
@@ -16,6 +18,8 @@ start = "2015-01-01 00:00:00"
 end = "2015-01-31 23:45:00"
 year = "2015"
 timebase = 15
+latitude = 51.200001
+longitude = 6.433333
 
 # Values for user_profile
 yearly_thermal_energy_demand = 12500  # kWh
@@ -41,6 +45,9 @@ heat_pump_type = "Air"
 heat_sys_temp = 60
 
 environment = Environment(timebase=timebase, start=start, end=end, year=year)
+environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude)
+environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude)
+environment.get_dwd_mean_quarter_hours(lat=latitude, lon=longitude)
 
 user_profile = UserProfile(
     identifier=None,
@@ -64,7 +71,6 @@ test_get_thermal_energy_demand(user_profile)
 
 tes = ThermalEnergyStorage(
     environment=environment,
-    user_profile=user_profile,
     unit="kWh",
     cp=cp,
     mass=mass_of_storage,
@@ -78,7 +84,7 @@ hp = HeatPump(
     identifier="hp1",
     unit="kW",
     environment=environment,
-    user_profile=user_profile,
+    thermal_energy_demand = user_profile.thermal_energy_demand,
     el_power=el_power,
     th_power=th_power,
     ramp_up_time=ramp_up_time,
@@ -90,7 +96,7 @@ hp = HeatPump(
 )
 
 
-for i in tes.user_profile.thermal_energy_demand.loc[start:end].index:
+for i in tqdm(hp.timeseries.index):
     tes.operate_storage(i, hp)
 
 

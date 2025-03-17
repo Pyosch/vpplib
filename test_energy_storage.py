@@ -4,26 +4,20 @@ Created on Mon Jul 29 13:25:23 2019
 
 @author: Sascha Birk
 """
-
-from vpplib.environment import Environment
-from vpplib.user_profile import UserProfile
-from vpplib.electrical_energy_storage import ElectricalEnergyStorage
-from vpplib.photovoltaic import Photovoltaic
-
 import pandas as pd
 import matplotlib.pyplot as plt
+
+from vpplib import Environment, ElectricalEnergyStorage, Photovoltaic
 
 # environment
 start = "2015-06-01 00:00:00"
 end = "2015-06-07 23:45:00"
 year = "2015"
 
-# user_profile
-latitude = 50.941357
-longitude = 6.958307
-
 # PV
 unit = "kW"
+latitude = 50.941357
+longitude = 6.958307
 name = "bus"
 module_lib = "SandiaMod"
 module = "Canadian_Solar_CS5P_220M___2009_"
@@ -51,16 +45,13 @@ timestamp_str = "2015-06-01 12:00:00"
 environment = Environment(timebase=timebase, start=start, end=end, year=year)
 environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
 
-user_profile = UserProfile(
-    identifier=name, latitude=latitude, longitude=longitude
-)
-
 # create pv object and timeseries
 pv = Photovoltaic(
     unit=unit,
+    latitude=latitude,
+    longitude=longitude,
     identifier=(name + "_pv"),
     environment=environment,
-    user_profile=user_profile,
     module_lib=module_lib,
     module=module,
     inverter_lib=inverter_lib,
@@ -80,7 +71,6 @@ storage = ElectricalEnergyStorage(
     unit=unit,
     identifier=(name + "_storage"),
     environment=environment,
-    user_profile=user_profile,
     capacity=capacity,
     charge_efficiency=charge_efficiency,
     discharge_efficiency=discharge_efficiency,

@@ -244,12 +244,12 @@ class Operator(object):
 
                 if component in list(self.net.sgen.name):
 
-                    self.net.sgen.p_mw[self.net.sgen.name == component] = (
+                    self.net.sgen.loc[self.net.sgen.name == component, 'p_mw'] = (
                         value_for_timestamp / -1000
                     )  # kW to MW; negative due to generation
 
                     if math.isnan(
-                        self.net.sgen.p_mw[self.net.sgen.name == component]
+                        self.net.sgen.loc[self.net.sgen.name == component, 'p_mw'].iloc[0]
                     ):
                         raise ValueError(
                             (
@@ -263,28 +263,28 @@ class Operator(object):
 
                 if component in list(self.net.load.name):
 
-                    self.net.load.p_mw[self.net.load.name == component] = (
+                    self.net.load.loc[self.net.load.name == component, 'p_mw'] = (
                         value_for_timestamp / 1000
                     )  # kW to MW
 
             for name in self.net.load.name:
 
                 if (
-                    self.net.load.type[self.net.load.name == name].item()
+                    self.net.load.loc[self.net.load.name == name, 'type'].item()
                     == "baseload"
                 ):
 
-                    self.net.load.p_mw[self.net.load.name == name] = (
+                    self.net.load.loc[self.net.load.name == name, 'p_mw'] = (
                         baseload[
                             str(
-                                self.net.load.bus[
-                                    self.net.load.name == name
+                                self.net.load.loc[
+                                    self.net.load.name == name, 'bus'
                                 ].item()
                             )
                         ][str(idx)]
                         / 1000000
                     )
-                    self.net.load.q_mvar[self.net.load.name == name] = 0
+                    self.net.load.loc[self.net.load.name == name, 'q_mvar'] = 0
 
             if len(self.virtual_power_plant.buses_with_storage) > 0:
                 for bus in self.net.bus.index[self.net.bus.type == "b"]:
@@ -301,37 +301,29 @@ class Operator(object):
 
                     if len(storage_at_bus) > 0:
 
-                        res_loads.loc[idx][bus] = sum(
-                            [self.net.load.loc[load].p_mw for load in load_at_bus]
-                            )
-                        + sum([self.net.sgen.loc[sgen].p_mw for sgen in sgen_at_bus])
+                        res_loads.loc[(idx, bus)] = sum(
+                            [self.net.load.loc[load, 'p_mw'] for load in load_at_bus]
+                            ) + sum([self.net.sgen.loc[sgen, 'p_mw'] for sgen in sgen_at_bus])
 
                         # set loads and sgen to 0 since they are in res_loads now
                         # reassign values after operate_storage has been executed
                         for l in list(load_at_bus):
-                            self.net.load.p_mw[self.net.load.index == l] = 0
+                            self.net.load.loc[self.net.load.index == l, 'p_mw'] = 0
 
                         for l in list(sgen_at_bus):
-                            self.net.sgen.p_mw[self.net.sgen.index == l] = 0
+                            self.net.sgen.loc[self.net.sgen.index == l, 'p_mw'] = 0
 
                         # run storage operation with residual load
                         state_of_charge, res_load = self.virtual_power_plant.components[
-                            self.net.storage.loc[list(storage_at_bus)].name.item()
+                            self.net.storage.loc[list(storage_at_bus), 'name'].item()
                         ].operate_storage(
-                            res_loads.loc[idx][bus]
+                            res_loads.loc[(idx, bus)].item()
                         )
 
                         # save state of charge and residual load in timeseries
-                        self.virtual_power_plant.components[
-                            self.net.storage.loc[list(storage_at_bus)].name.item()
-                        ].timeseries["state_of_charge"][
-                            idx
-                        ] = (
-                            state_of_charge
-                        )  # state_of_charge_df[idx][bus] = state_of_charge
-                        self.virtual_power_plant.components[
-                            self.net.storage.loc[list(storage_at_bus)].name.item()
-                        ].timeseries["residual_load"][idx] = res_load
+                        component_name = self.net.storage.loc[list(storage_at_bus), 'name'].item()
+                        self.virtual_power_plant.components[component_name].timeseries.loc[idx, "state_of_charge"] = state_of_charge
+                        self.virtual_power_plant.components[component_name].timeseries.loc[idx, "residual_load"] = res_load
 
                         # assign new residual load to loads and sgen depending on positive/negative values
                         if res_load > 0:
@@ -339,15 +331,15 @@ class Operator(object):
                             if len(load_at_bus) > 0:
                                 # TODO: load according to origin of demand (baseload, hp or bev)
                                 load_bus = load_at_bus.pop()
-                                self.net.load.p_mw[
-                                    self.net.load.index == load_bus
+                                self.net.load.loc[
+                                    self.net.load.index == load_bus, 'p_mw'
                                 ] = res_load
 
                             else:
                                 # assign new residual load to storage
                                 storage_bus = storage_at_bus.pop()
-                                self.net.storage.p_mw[
-                                    self.net.storage.index == storage_bus
+                                self.net.storage.loc[
+                                    self.net.storage.index == storage_bus, 'p_mw'
                                 ] = res_load
 
                         else:
@@ -355,15 +347,15 @@ class Operator(object):
                             if len(sgen_at_bus) > 0:
                                 # TODO: assign generation according to origin of energy (PV, wind oder CHP)
                                 gen_bus = sgen_at_bus.pop()
-                                self.net.sgen.p_mw[
-                                    self.net.sgen.index == gen_bus
+                                self.net.sgen.loc[
+                                    self.net.sgen.index == gen_bus, 'p_mw'
                                 ] = res_load
 
                             else:
                                 # assign new residual load to storage
                                 storage_bus = storage_at_bus.pop()
-                                self.net.storage.p_mw[
-                                    self.net.storage.index == storage_bus
+                                self.net.storage.loc[
+                                    self.net.storage.index == storage_bus, 'p_mw'
                                 ] = res_load
 
             pp.runpp(self.net)
@@ -479,14 +471,14 @@ class Operator(object):
 
                 if component in list(self.net.sgen.name):
 
-                    self.net.sgen.p_mw[self.net.sgen.name == component] = (
+                    self.net.sgen.loc[self.net.sgen.name == component, 'p_mw'] = (
                         value_for_timestamp / -1000
                     )  # kW to MW; negative due to generation
 
-                    self.net.sgen.q_mvar[self.net.sgen.name == component] = 0
+                    self.net.sgen.loc[self.net.sgen.name == component, 'q_mvar'] = 0
 
                     if math.isnan(
-                        self.net.sgen.p_mw[self.net.sgen.name == component]
+                        self.net.sgen.loc[self.net.sgen.name == component, 'p_mw']
                     ):
                         raise ValueError(
                             (
@@ -500,11 +492,11 @@ class Operator(object):
 
                 if component in list(self.net.load.name):
 
-                    self.net.load.p_mw[self.net.load.name == component] = (
+                    self.net.load.loc[self.net.load.name == component, 'p_mw'] = (
                         value_for_timestamp / 1000
                     )  # kW to MW
 
-                    self.net.load.q_mvar[self.net.load.name == component] = 0
+                    self.net.load.loc[self.net.load.name == component, 'q_mvar'] = 0
 
             if len(self.virtual_power_plant.buses_with_storage) > 0:
                 for bus in self.net.bus.index[self.net.bus.type == "b"]:
@@ -521,35 +513,35 @@ class Operator(object):
 
                     if len(storage_at_bus) > 0:
 
-                        res_loads.loc[idx][bus] = sum(
+                        res_loads.loc[(idx, bus)] = sum(
                             self.net.load.loc[load_at_bus].p_mw
                         ) + sum(self.net.sgen.loc[sgen_at_bus].p_mw)
 
                         # set loads and sgen to 0 since they are in res_loads now
                         # reassign values after operate_storage has been executed
                         for l in list(load_at_bus):
-                            self.net.load.p_mw[self.net.load.index == l] = 0
+                            self.net.load.loc[self.net.load.index == l, 'p_mw'] = 0
 
                         for l in list(sgen_at_bus):
-                            self.net.sgen.p_mw[self.net.sgen.index == l] = 0
+                            self.net.sgen.loc[self.net.sgen.index == l, 'p_mw'] = 0
 
                         # run storage operation with residual load
                         state_of_charge, res_load = self.virtual_power_plant.components[
-                            self.net.storage.loc[storage_at_bus].name.item()
+                            self.net.storage.loc[storage_at_bus, 'name'].item()
                         ].operate_storage(
-                            res_loads.loc[idx][bus]
+                            res_loads.loc[(idx, bus)]
                         )
 
                         # save state of charge and residual load in timeseries
                         self.virtual_power_plant.components[
-                            self.net.storage.loc[storage_at_bus].name.item()
+                            self.net.storage.loc[storage_at_bus, 'name'].item()
                         ].timeseries["state_of_charge"][
                             idx
                         ] = (
                             state_of_charge
                         )  # state_of_charge_df[idx][bus] = state_of_charge
                         self.virtual_power_plant.components[
-                            self.net.storage.loc[storage_at_bus].name.item()
+                            self.net.storage.loc[storage_at_bus, 'name'].item()
                         ].timeseries["residual_load"][idx] = res_load
 
                         # assign new residual load to loads and sgen depending on positive/negative values
@@ -558,15 +550,15 @@ class Operator(object):
                             if len(load_at_bus) > 0:
                                 # TODO: load according to origin of demand (baseload, hp or bev)
                                 load_bus = load_at_bus.pop()
-                                self.net.load.p_mw[
-                                    self.net.load.index == load_bus
+                                self.net.load.loc[
+                                    self.net.load.index == load_bus, 'p_mw'
                                 ] = res_load
 
                             else:
                                 # assign new residual load to storage
                                 storage_bus = storage_at_bus.pop()
-                                self.net.storage.p_mw[
-                                    self.net.storage.index == storage_bus
+                                self.net.storage.loc[
+                                    self.net.storage.index == storage_bus, 'p_mw'
                                 ] = res_load
 
                         else:
@@ -574,15 +566,15 @@ class Operator(object):
                             if len(sgen_at_bus) > 0:
                                 # TODO: assign generation according to origin of energy (PV, wind oder CHP)
                                 gen_bus = sgen_at_bus.pop()
-                                self.net.sgen.p_mw[
-                                    self.net.sgen.index == gen_bus
+                                self.net.sgen.loc[
+                                    self.net.sgen.index == gen_bus, 'p_mw'
                                 ] = res_load
 
                             else:
                                 # assign new residual load to storage
                                 storage_bus = storage_at_bus.pop()
-                                self.net.storage.p_mw[
-                                    self.net.storage.index == storage_bus
+                                self.net.storage.loc[
+                                    self.net.storage.index == storage_bus, 'p_mw'
                                 ] = res_load
 
             pp.runpp(self.net)
@@ -675,7 +667,7 @@ class Operator(object):
         if len(line_loading_percent.columns) > 0:
             line_loading_percent = line_loading_percent.T
             line_loading_percent.rename(
-                self.net["line"].name, axis="columns", inplace=True
+                self.net.line.name, axis="columns", inplace=True
             )
             line_loading_percent.index = pd.to_datetime(
                 line_loading_percent.index
