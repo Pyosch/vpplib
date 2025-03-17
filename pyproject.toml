@@ -1,6 +1,5 @@
 [project]
 name = "vpplib"
-version = "0.0.4"
 description = "simulating distributed energy appliances in a virtual power plant"
 readme = "README.md"
 keywords = ["virtual power plant", "energy system"]
@@ -21,6 +20,7 @@ classifiers = [
 dynamic = ["dependencies"]
 
 [tool.setuptools.dynamic]
+version = {attr = "vpplib.__version__"}
 dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]
