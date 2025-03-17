@@ -31,4 +31,4 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project.urls]
-"Homepage" = "https://github.com/Pyosch/vpplib"
+"GitHub" = "https://github.com/Pyosch/vpplib"
