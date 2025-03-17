@@ -44,10 +44,10 @@ class HeatingRod(Component):
         self.lastRampDown = self.thermal_energy_demand.index[0]
 
         self.timeseries_year = pd.DataFrame(
-                columns=["heat_output", "efficiency", "el_demand"], 
+                columns=["heat_output", "el_demand"], 
                 index=self.thermal_energy_demand.index)
         self.timeseries = pd.DataFrame(
-                columns=["heat_output", "efficiency", "el_demand"], 
+                columns=["heat_output", "el_demand"], 
                 index=pd.date_range(start=self.environment.start, 
                                     end=self.environment.end, 
                                     freq=self.environment.time_freq, 
@@ -203,7 +203,8 @@ class HeatingRod(Component):
             
             if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
                 
-                heat_output, efficiency , el_demand = self.timeseries.iloc[timestamp]
+                heat_output, el_demand = self.timeseries.iloc[timestamp]
+                efficiency = self.efficiency   
                 
             else:
                 
@@ -219,7 +220,9 @@ class HeatingRod(Component):
             
             if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
                 
-                heat_output, efficiency , el_demand = self.timeseries.loc[timestamp]
+                heat_output, el_demand = self.timeseries.loc[timestamp]
+                efficiency = self.efficiency   
+                
             else:
                 
                 if self.isRunning: 
@@ -234,7 +237,8 @@ class HeatingRod(Component):
             
             if pd.isna(next(iter(self.timeseries.loc[str(timestamp)]))) == False:
                 
-                 heat_output, efficiency , el_demand = self.timeseries.loc[str(timestamp)]
+                 heat_output, el_demand = self.timeseries.loc[str(timestamp)]
+                 efficiency = self.efficiency   
                  
             else:
                 
