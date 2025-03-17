@@ -17,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
-dynamic = ["dependencies"]
+dynamic = ["dependencies", "version"]
 
 [tool.setuptools.dynamic]
 version = {attr = "vpplib.__version__"}
