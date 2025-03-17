@@ -146,6 +146,7 @@ user_profile = UserProfile(
     )
 
 user_profile.get_thermal_energy_demand()
+user_profile.thermal_energy_demand.head()
 
 # %% create instance of VirtualPowerPlant and the designated grid
 vpp = VirtualPowerPlant("Master")
@@ -155,8 +156,8 @@ net = pn.panda_four_load_branch()
 # %% assign names and types to baseloads for later p and q assignment
 for bus in net.bus.index:
 
-    net.load.name[net.load.bus == bus] = net.bus.name[bus] + "_baseload"
-    net.load.type[net.load.bus == bus] = "baseload"
+    net.load.loc[net.load.bus == bus, 'name'] = net.bus.loc[bus, 'name'] + "_baseload"
+    net.load.loc[net.load.bus == bus, 'type'] = "baseload"
 
 # %% assign components to random bus names
 
