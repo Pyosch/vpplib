@@ -6,7 +6,6 @@ Created on Sat Feb 15 12:20:07 2020
 """
 
 from vpplib.environment import Environment
-from vpplib.user_profile import UserProfile
 from vpplib.photovoltaic import Photovoltaic
 
 # Values for environment
@@ -32,32 +31,18 @@ environment = Environment(
 
 environment.get_pv_data()
 
-user_profile = UserProfile(
-    identifier=identifier,
-    latitude=latitude,
-    longitude=longitude,
-    thermal_energy_demand_yearly=None,
-    building_type=None,
-    comfort_factor=None,
-    t_0=None,
-    daily_vehicle_usage=None,
-    week_trip_start=[],
-    week_trip_end=[],
-    weekend_trip_start=[],
-    weekend_trip_end=[],
-)
-
 pv = Photovoltaic(module_lib="SandiaMod",
                   inverter_lib="SandiaInverter",
                   surface_tilt=20,
                   surface_azimuth=200,
                   unit="kW",
+                  latitude=latitude,
+                  longitude=longitude,
                   identifier="PV-System",
                   environment=environment,
-                  user_profile=user_profile,
                   temp_lib='sapm',
-                  temp_model='open_rack_glass_glass',
-                  cost=None)
+                  temp_model='open_rack_glass_glass'
+                  )
 
 (modules_per_string,
  strings_per_inverter,
