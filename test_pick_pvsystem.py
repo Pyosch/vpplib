@@ -29,7 +29,7 @@ environment = Environment(
     time_freq=time_freq,
 )
 
-environment.get_pv_data()
+environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
 
 pv = Photovoltaic(module_lib="SandiaMod",
                   inverter_lib="SandiaInverter",
