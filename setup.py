@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="vpplib",
-    version="0.0.3",
+    version="0.0.4",
     author="Sascha Birk",
     author_email="pyosch@posteo.de",
     description="simulating distributed energy appliances in a virtual power plant",
@@ -20,14 +20,18 @@ setuptools.setup(
     install_requires=[
           'windpowerlib',
           'pvlib',
+          'pandas',
+          'numpy',
           'pandapower',
           'simbench',
           'simses',
           'tqdm',
-          'pandapower',
-          'numba',
           'matplotlib',
-          'NREL-PySAM'
+          'NREL-PySAM',
+          'polars',
+          'numba',
+          'wetterdienst==0.89.0',
+          'marshmallow==3.20.1'
           ],
     classifiers=[
         "Programming Language :: Python :: 3",
