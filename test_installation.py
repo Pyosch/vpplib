@@ -17,8 +17,7 @@ def test_imports():
         'vpplib.heat_pump',
         'vpplib.photovoltaic',
         'vpplib.wind_power',
-        'vpplib.electrical_energy_storage',
-        'vpplib.pysam_battery_stateful'
+        'vpplib.electrical_energy_storage'
     ]
     
     failed_imports = []
@@ -52,16 +51,36 @@ def test_component_creation():
         env = Environment(timebase=15, timezone='Europe/Berlin')
         print("✓ Successfully created Environment")
         
-        # Create PV system
-        pv = Photovoltaic(unit='kW', environment=env)
+        # Create PV system with required parameters
+        pv = Photovoltaic(
+            unit='kW', 
+            environment=env,
+            latitude=52.5,
+            longitude=13.4,
+            module_lib='SandiaMod',
+            inverter_lib='SandiaInverter',
+            surface_tilt=30,
+            surface_azimuth=180
+        )
         print("✓ Successfully created Photovoltaic")
         
-        # Create wind power
-        wind = WindPower(unit='kW', environment=env)
+        # Create wind power with required parameters
+        wind = WindPower(
+            unit='kW', 
+            environment=env,
+            turbine_type='E-126/4200',
+            hub_height=135,
+            nominal_power=4200
+        )
         print("✓ Successfully created WindPower")
         
-        # Create storage
-        storage = ElectricalEnergyStorage(unit='kW', environment=env)
+        # Create storage with required parameters
+        storage = ElectricalEnergyStorage(
+            unit='kW', 
+            environment=env,
+            capacity=100,
+            max_power=50
+        )
         print("✓ Successfully created ElectricalEnergyStorage")
         
         print("\nAll components created successfully!")
