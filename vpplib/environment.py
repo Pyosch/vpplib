@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-Info
-----
-This file contains the basic functionalities of the Environment class.
-The object "Environment" defines external influences on the system to be simulated.
-In addition to weather and location, this also includes regulatory influences.
+"""Environment Module.
 
+This module contains the Environment class, which defines external influences on the
+virtual power plant system to be simulated. The Environment class provides weather data,
+location information, and regulatory influences for the simulation.
+
+The Environment class handles time-related settings, weather data retrieval and processing,
+and provides this data to the components of the virtual power plant for simulation.
 """
 
 import pandas as pd
@@ -25,6 +26,45 @@ from pvlib.solarposition import get_solarposition
 import numpy as np
 
 class Environment(object):
+    """Environment class for providing external data to the virtual power plant simulation.
+    
+    This class handles time-related settings, weather data retrieval and processing,
+    and provides this data to the components of the virtual power plant for simulation.
+    
+    Attributes
+    ----------
+    timebase : str or None
+        The time base for the simulation.
+    timezone : str
+        The timezone for the simulation (default: 'Europe/Berlin').
+    start : datetime.datetime
+        Start time of the simulation.
+    end : datetime.datetime
+        End time of the simulation.
+    year : int or None
+        The year for the simulation.
+    time_freq : str
+        Time frequency for the simulation (default: '15 min').
+    mean_temp_days : list
+        List of mean temperatures by day.
+    mean_temp_hours : list
+        List of mean temperatures by hour.
+    mean_temp_quarter_hours : list
+        List of mean temperatures by quarter hour.
+    pv_data : pandas.DataFrame
+        Photovoltaic-related weather data.
+    wind_data : pandas.DataFrame
+        Wind-related weather data.
+    temp_data : pandas.DataFrame
+        Temperature data.
+    surpress_output_globally : bool
+        Whether to suppress output globally.
+    force_end_time : bool
+        Whether to force the end time.
+    use_timezone_aware_time_index : bool
+        Whether to use timezone-aware time index.
+    """
+    
     def __init__(
         self,
         timebase=None,
@@ -43,40 +83,41 @@ class Environment(object):
         force_end_time = False,
         use_timezone_aware_time_index = False,
     ):
-
-        """
-        Info
-        ----
-        ...
+        """Initialize an Environment object.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
+        timebase : str or None, optional
+            The time base for the simulation.
+        timezone : str, optional
+            The timezone for the simulation (default: 'Europe/Berlin').
+        start : datetime.datetime or str, optional
+            Start time of the simulation.
+        end : datetime.datetime or str, optional
+            End time of the simulation.
+        year : int, optional
+            The year for the simulation.
+        time_freq : str, optional
+            Time frequency for the simulation (default: '15 min').
+        mean_temp_days : list, optional
+            List of mean temperatures by day.
+        mean_temp_hours : list, optional
+            List of mean temperatures by hour.
+        mean_temp_quarter_hours : list, optional
+            List of mean temperatures by quarter hour.
+        pv_data : pandas.DataFrame or list, optional
+            Photovoltaic-related weather data.
+        wind_data : pandas.DataFrame or list, optional
+            Wind-related weather data.
+        temp_data : pandas.DataFrame or list, optional
+            Temperature data.
+        surpress_output_globally : bool, optional
+            Whether to suppress output globally (default: True).
+        force_end_time : bool, optional
+            Whether to force the end time (default: False).
+        use_timezone_aware_time_index : bool, optional
+            Whether to use timezone-aware time index (default: False).
         """
-
-        # Configure attributes
         self.timebase = timebase
         self.timezone = zoneinfo.ZoneInfo(timezone)
         self.start = start

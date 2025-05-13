@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-Info
-----
-This file contains the basic functionalities of the VirtualPowerPlant class.
-This is the overall aggregator of the technologies used.
+"""Virtual Power Plant Module.
 
+This module contains the VirtualPowerPlant class, which serves as the central
+aggregator for all components and technologies in a virtual power plant.
+
+The VirtualPowerPlant class manages the collection of components, provides methods
+for adding and removing components, and offers functionality for exporting component
+data and time series for analysis and visualization.
 """
 
 import random
@@ -21,38 +23,37 @@ from vpplib.combined_heat_and_power import CombinedHeatAndPower
 from vpplib.thermal_energy_storage import ThermalEnergyStorage
 
 class VirtualPowerPlant(object):
+    """Virtual Power Plant class for managing components and their interactions.
+    
+    This class serves as the central aggregator for all components in a virtual power plant.
+    It manages the collection of components, provides methods for adding and removing components,
+    and offers functionality for exporting component data and time series for analysis and visualization.
+    
+    Attributes
+    ----------
+    name : str
+        The name of the virtual power plant.
+    components : dict
+        Dictionary of components with their identifiers as keys.
+    buses_with_pv : list
+        List of buses with photovoltaic components.
+    buses_with_hp : list
+        List of buses with heat pump components.
+    buses_with_bev : list
+        List of buses with battery electric vehicle components.
+    buses_with_wind : list
+        List of buses with wind power components.
+    buses_with_storage : list
+        List of buses with storage components.
+    """
+    
     def __init__(self, name):
-
-        """
-        Info
-        ----
-        ...
+        """Initialize a VirtualPowerPlant object.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
+        name : str
+            The name of the virtual power plant.
         """
 
         # Configure attributes
@@ -67,40 +68,16 @@ class VirtualPowerPlant(object):
         self.buses_with_storage = []
 
     def add_component(self, component):
-
-        """
-        Info
-        ----
-        Component handling
+        """Add a component to the virtual power plant.
         
-        This function takes a component of type Component and appends it to the
-        components of the virtual power plant.
+        This method takes a component object and adds it to the components dictionary
+        of the virtual power plant, using the component's identifier as the key.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
+        component : Component
+            The component to add to the virtual power plant.
+            Must have an identifier attribute.
         """
 
         # Append component
@@ -108,76 +85,36 @@ class VirtualPowerPlant(object):
         self.components[component.identifier] = component
 
     def remove_component(self, component):
-
-        """
-        Info
-        ----
-        This function removes a component from the components of the virtual power
-        plant.
+        """Remove a component from the virtual power plant.
+        
+        This method removes a component from the components dictionary of the virtual power plant.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
+        component : str
+            The identifier of the component to remove.
         """
 
         # Remove component
         self.components.pop(component)
 
     def export_components(self, environment):
-
-        """
-        Info
-        ----
-        This function returns two DataFrames with the component values and
-        the timeseries of the components of the virtual power plant.
+        """Export component values and time series data.
+        
+        This method returns two DataFrames: one with component values and one with
+        the time series data of all components in the virtual power plant.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
+        environment : Environment
+            The environment object containing start and end times and time frequency.
+            
         Returns
         -------
-        
-        ...
-        
+        tuple of pandas.DataFrame
+            A tuple containing two DataFrames:
+            - df_component_values: DataFrame with component values
+            - df_timeseries: DataFrame with time series data for all components
         """
 
         # dataframes for exporting timeseries and component values
@@ -319,38 +256,18 @@ class VirtualPowerPlant(object):
 
 
     def export_component_values(self):
-
-        """
-        Info
-        ----
-        This function returns two DataFrames with the component values and
-        the timeseries of the components of the virtual power plant.
+        """Export component values as a DataFrame.
         
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
+        This method returns a DataFrame with detailed information about all components
+        in the virtual power plant, including technology type, bus, capacity, power,
+        and efficiency values.
         
         Returns
         -------
-        
-        ...
-        
+        pandas.DataFrame
+            DataFrame with component values and attributes.
+            Columns include: name, technology, bus, arrival_soc, capacity_kWh,
+            power_kW, th_power_kW, efficiency_el, efficiency_th
         """
 
         # dataframe for exporting component values
