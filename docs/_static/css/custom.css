@@ -1,0 +1,192 @@
+/* Custom styles for vpplib documentation */
+
+/* Improve code block styling */
+div.highlight {
+    background-color: #f8f8f8;
+    border-radius: 4px;
+}
+
+/* Improve table styling */
+table.docutils {
+    border: 1px solid #e1e4e5;
+    border-collapse: collapse;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+table.docutils td, table.docutils th {
+    border: 1px solid #e1e4e5;
+    padding: 8px 16px;
+}
+
+table.docutils tr:nth-child(odd) {
+    background-color: #f3f6f6;
+}
+
+/* Improve heading styling */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    margin-top: 1.5em;
+}
+
+/* Improve admonition styling */
+.admonition {
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Improve note admonition */
+.admonition.note {
+    background-color: #e7f2fa;
+}
+
+/* Improve warning admonition */
+.admonition.warning {
+    background-color: #ffedcc;
+}
+
+/* Improve tip admonition */
+.admonition.tip {
+    background-color: #dbfaf4;
+}
+
+/* Improve important admonition */
+.admonition.important {
+    background-color: #fedce5;
+}
+
+/* Improve code-block captions */
+.code-block-caption {
+    font-size: 90%;
+    font-style: italic;
+    color: #555;
+}
+
+/* Improve API documentation */
+dl.class, dl.function, dl.method, dl.attribute {
+    padding: 15px;
+    border-left: 3px solid #2980b9;
+    background-color: #f8f8f8;
+    margin-bottom: 20px;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Improve parameter lists */
+dl.field-list {
+    padding: 10px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+}
+
+/* Improve parameter names */
+dl.field-list dt {
+    font-weight: bold;
+    color: #2980b9;
+}
+
+/* Improve return value styling */
+dl.field-list dt.field-odd:nth-of-type(2) {
+    color: #e74c3c;
+}
+
+/* Improve navigation sidebar */
+.wy-menu-vertical li.current {
+    background-color: #f3f6f6;
+}
+
+.wy-menu-vertical li.current > a {
+    color: #2980b9;
+    font-weight: bold;
+}
+
+/* Improve search box */
+.wy-side-nav-search {
+    background-color: #2980b9;
+}
+
+.wy-side-nav-search input[type="text"] {
+    border-radius: 4px;
+    border: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Improve mobile navigation */
+@media screen and (max-width: 768px) {
+    .wy-nav-top {
+        background-color: #2980b9;
+    }
+}
+
+/* Improve code examples */
+.highlight {
+    background: #f8f8f8;
+    border-radius: 4px;
+}
+
+.highlight pre {
+    padding: 12px;
+    font-size: 90%;
+    line-height: 1.5;
+}
+
+/* Improve inline code */
+code.literal {
+    color: #e74c3c;
+    background-color: #f8f8f8;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 90%;
+}
+
+/* Improve links */
+a {
+    color: #2980b9;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #3091d1;
+    text-decoration: underline;
+}
+
+/* Improve footer */
+footer {
+    font-size: 90%;
+    color: #777;
+}
+
+/* Improve breadcrumbs */
+.wy-breadcrumbs {
+    font-size: 90%;
+    color: #777;
+}
+
+/* Improve version selector */
+.rst-versions {
+    border-top: solid 10px #2980b9;
+}
+
+/* Improve API documentation sections */
+.section {
+    margin-bottom: 2em;
+}
+
+/* Improve method signatures */
+dl.method > dt, dl.function > dt {
+    background-color: #e7f2fa;
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-family: monospace;
+    font-size: 90%;
+}
+
+/* Improve class signatures */
+dl.class > dt {
+    background-color: #dbfaf4;
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-family: monospace;
+    font-size: 90%;
+}
