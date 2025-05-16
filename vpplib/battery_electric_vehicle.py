@@ -492,32 +492,22 @@ class BatteryElectricVehicle(Component):
         """
         Info
         ----
-        ...
-        
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
+        This function returns predefined trip times for the battery electric vehicle.
+        The trip times are divided into weekday and weekend trip times.
+        The trip times are used to determine the times when the car is not at home 
+        and is therefore discharged.
         
         Returns
         -------
         
-        ...
+        self.week_trip_start: list
+            list of trip start times during the week
+        self.week_trip_end: list
+            list of trip end times during the week
+        self.weekend_trip_start: list
+            list of trip start times during the weekend
+        self.weekend_trip_end: list
+            list of trip end times during the weekend
         
         """
 

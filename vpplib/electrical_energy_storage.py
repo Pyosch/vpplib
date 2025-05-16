@@ -591,13 +591,15 @@ class PySAMBatteryStateful(Component):
 
         Parameters
         ----------
-        load : TYPE
-            DESCRIPTION.
+        load : float
+            The load that should be charged/discharged.            
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        SOC : float
+            The state of charge of the battery.
+        P : float
+            The power that is charged/discharged.
 
         """
         self.battery_stateful.Controls.input_power = load
@@ -608,11 +610,18 @@ class PySAMBatteryStateful(Component):
 
     def prepare_time_series(self):
         """.
+        Info
+        ----
+        This function prepares the time series for the battery by
+        iterating over the time steps and calling the operate_storage
+        function for each time step. It stores the state of charge and
+        the power of the battery in a dataframe.
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        timeseries : pd.DataFrame
+            A dataframe containing the state of charge and the power
+            of the battery for each timestep.
 
         """
         soc_lst = list()
@@ -677,23 +686,17 @@ class PySAMBatteryStateful(Component):
 
         Parameters
         ----------
-        ...
-
-        Attributes
-        ----------
-        ...
-
-        Notes
-        -----
-        ...
-
-        References
-        ----------
-        ...
+        timestamp : int or str
+            The timestamp for which the observations should be
+            returned. It can be either an integer (index) or a string
+            (date and time in the format YYYY-MM-DD hh:mm:ss).
 
         Returns
         -------
-        ...
+        observations : dict
+            A dictionary containing the observations for the given
+            timestamp. The keys are strings and the values can be of
+            any type.
 
         """
         if type(timestamp) == int:
