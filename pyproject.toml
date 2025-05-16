@@ -4,23 +4,25 @@ description = "simulating distributed energy appliances in a virtual power plant
 readme = "README.md"
 keywords = ["virtual power plant", "energy system"]
 requires-python = ">=3.9"
-license = { text = "GPL-3.0" }
 authors = [
-    { name = "Sascha Birk", email = "pyosch@posteo.de" }
+    { name = "Pyosch", email = "pyosch@posteo.de" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent"
 ]
 
-dynamic = ["dependencies", "version"]
+dynamic = ["dependencies", "version", "license"]
 
 [tool.setuptools.dynamic]
 version = {attr = "vpplib.__version__"}
+license = {attr = "vpplib.__license__"}
 dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]

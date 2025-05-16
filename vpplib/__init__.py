@@ -1,5 +1,5 @@
 __title__ = "vpplib"
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 __license__ = "GPL-3.0"
 
 from .battery_electric_vehicle import BatteryElectricVehicle
