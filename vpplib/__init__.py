@@ -1,6 +1,6 @@
 __title__ = "vpplib"
-__version__ = "0.0.4"
-__license__ = "GPL-3.0"
+__version__ = "0.0.5"
+__license__ = "GNU General Public License v3 (GPLv3)"
 
 from .battery_electric_vehicle import BatteryElectricVehicle
 from .combined_heat_and_power import CombinedHeatAndPower
