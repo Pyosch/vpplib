@@ -7,6 +7,7 @@ requires-python = ">=3.9"
 authors = [
     { name = "Pyosch", email = "pyosch@posteo.de" }
 ]
+license = {text = "GNU General Public License v3 (GPLv3)"}
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3.9",
@@ -18,11 +19,10 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
-dynamic = ["dependencies", "version", "license"]
+dynamic = ["dependencies", "version"]
 
 [tool.setuptools.dynamic]
 version = {attr = "vpplib.__version__"}
-license = {attr = "vpplib.__license__"}
 dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]
