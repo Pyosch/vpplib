@@ -30,32 +30,53 @@ class HeatPump(Component):
         """
         Info
         ----
-        ...
+        Initializes a HeatPump instance with specified parameters and configuration.
         
         Parameters
         ----------
+        thermal_energy_demand : pandas.Series or pandas.DataFrame
+            Time series of the required thermal energy demand.
+        heat_pump_type : str
+            Type or model of the heat pump (e.g., 'air-source', 'ground-source').
+        heat_sys_temp : float
+            Target temperature of the heating system (in °C).
+        el_power : float
+            Maximum electrical power input of the heat pump (in kW).
+        th_power : float
+            Maximum thermal power output of the heat pump (in kW).
+        ramp_up_time : float
+            Minimum time required for the heat pump to ramp up to full operation (in hours).
+        ramp_down_time : float
+            Minimum time required for the heat pump to ramp down to stop (in hours).
+        min_runtime : float
+            Minimum continuous runtime once the heat pump is started (in hours).
+        min_stop_time : float
+            Minimum time the heat pump must remain off after stopping (in hours).
+        unit : str
+            Unit identifier for the heat pump.
+        identifier : str, optional
+            Unique identifier for the heat pump instance (default is None).
+        environment : object, optional
+            Environment object containing simulation parameters such as start, end, and time frequency (default is None).
         
-        ...
-        	
         Attributes
         ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
+        cop : pandas.DataFrame
+            DataFrame to store coefficient of performance (COP) values.
+        limit : int
+            Operational limit flag (default is 1).
+        last_ramp_up : pandas.Timestamp
+            Timestamp of the last ramp-up event.
+        last_ramp_down : pandas.Timestamp
+            Timestamp of the last ramp-down event.
+        timeseries_year : pandas.DataFrame
+            DataFrame to store yearly time series results.
+        timeseries : pandas.DataFrame
+            DataFrame to store simulation time series results.
+        heat_sys_temp : float
+            Target heating system temperature.
+        is_running : bool
+            Operational status of the heat pump.
         
         """
 
@@ -106,32 +127,24 @@ class HeatPump(Component):
         """
         Info
         ----
-        Calculate COP of heatpump according to heatpump type
+        Calculate the Coefficient of Performance (COP) of the heat pump based on its type and environmental conditions.
+        This method computes the COP for each hour using empirical formulas specific to the heat pump type
+        ("Air" or "Ground"). The calculation uses the system's heat supply temperature and the mean hourly
+        environmental temperature.
         
-        Parameters
-        ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
+        The COP is calculated using the following formulas:
+            - For "Air" heat pumps:
+                COP = 6.81 - 0.121 * ΔT + 0.00063 * (ΔT)^2
+            - For "Ground" heat pumps:
+                COP = 8.77 - 0.15 * ΔT + 0.000734 * (ΔT)^2
+            where ΔT = heat_sys_temp - mean environmental temperature.
+        The method ensures that mean hourly temperatures are available by calling
+        `self.environment.get_mean_temp_hours()` if necessary.
         
         Returns
         -------
-        
-        ...
+        cop: pd.DataFrame
+            DataFrame containing the calculated COP values for each hour, indexed by the corresponding time.
         
         """
         if len(self.environment.mean_temp_hours) == 0:
@@ -169,37 +182,25 @@ class HeatPump(Component):
         return self.cop
 
     def get_current_cop(self, tmp):
-
         """
         Info
         ----
-        Calculate COP of heatpump according to heatpump type
-        
-        Parameters
+        Calculate the current coefficient of performance (COP) for the heat pump based on the input temperature.
+        The COP is determined using different empirical formulas depending on the type of heat pump:
+            - For "Air" heat pumps, a quadratic formula based on the temperature difference is used.
+            - For "Ground" heat pumps, a different quadratic formula is applied.
+        Arguments
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
+            tmp (float): The current temperature (°C) to use in the COP calculation.
+            
         Notes
         -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
+            - self.heat_pump_type (str): Type of the heat pump ("Air" or "Ground").
+            - self.heat_sys_temp (float): The system temperature (°C) of the heat pump.
+            
         Returns
         -------
-        
-        ...
-        
+            float: The calculated COP value. Returns -9999 if the heat pump type is not defined.
         """
 
         if self.heat_pump_type == "Air":
@@ -224,6 +225,24 @@ class HeatPump(Component):
 
     # from VPPComponents
     def prepare_time_series(self):
+        """
+        Info
+        ----
+        Prepares and returns the time series data for the heat pump operation.
+        This method ensures that the coefficient of performance (COP) and thermal energy demand
+        are available and valid. If the COP is not set, it is calculated. If the thermal energy
+        demand or the yearly time series output is missing or contains NaN values, appropriate
+        actions are taken or errors are raised. The method then extracts the relevant time series
+        data for the specified environment time range.
+        Returns
+        -------
+        pandas.DataFrame
+            The time series data for the heat pump operation within the specified environment time range.
+        Raises
+        ------
+        ValueError
+            If no thermal energy demand is available (i.e., contains NaN values).
+        """
 
         if len(self.cop) == 0:
             self.get_cop()
@@ -253,6 +272,20 @@ class HeatPump(Component):
         return self.timeseries
 
     def get_timeseries_year(self):
+        """
+        Info
+        ----
+        Generates and returns a DataFrame containing the yearly time series data for the heat pump.
+        This method populates the `timeseries_year` DataFrame with the following columns:
+            - "thermal_energy_output": Set equal to the heat pump's thermal energy demand.
+            - "cop": The coefficient of performance, interpolated to fill missing values.
+            - "el_demand": The calculated electrical demand, computed as the ratio of thermal energy output to COP.
+            
+        Returns
+        -------
+        pandas.DataFrame
+            The updated yearly time series DataFrame with thermal energy output, COP, and electrical demand.
+        """
 
         self.timeseries_year[
             "thermal_energy_output"
@@ -283,39 +316,23 @@ class HeatPump(Component):
     # Controlling functions
     # =========================================================================
     def limit_power_to(self, limit):
-
         """
         Info
         ----
-        This function limits the power of the heatpump to the given percentage.
-        It cuts the current power production down to the peak power multiplied 
-        by the limit (Float [0;1]).
+        Sets the power limit for the heat pump.
+        This method validates and sets the power limit as a fraction of the maximum power.
+        The limit must be a float between 0 and 1 (inclusive). If the provided value is
+        outside this range, a ValueError is raised.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
-        Returns
-        -------
-        
-        ...
-        
+        limit : float
+            The desired power limit as a fraction of maximum power (0 <= limit <= 1).
+            
+        Raises
+        ------
+        ValueError
+            If the limit is not within the valid range [0, 1].
         """
 
         # Validate input parameter
@@ -352,45 +369,41 @@ class HeatPump(Component):
             )
 
     def observations_for_timestamp(self, timestamp):
-
         """
         Info
         ----
-        This function takes a timestamp as the parameter and returns a 
-        dictionary with key (String) value (Any) pairs. 
-        Depending on the type of component, different status parameters of the 
-        respective component can be queried. 
-        
-        For example, a power store can report its "State of Charge".
-        Returns an empty dictionary since this function needs to be 
-        implemented by child classes.
+        Returns a dictionary of observations for a given timestamp, including thermal energy output, 
+        coefficient of performance (COP), and electrical demand.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
+        timestamp : int, str, or pandas._libs.tslibs.timestamps.Timestamp
+            The timestamp for which to retrieve observations. Can be an integer index, 
+            a string in the format 'YYYY-MM-DD hh:mm:ss', or a pandas Timestamp object.
+            
         Returns
         -------
-        
-        ...
-        
+        dict
+            A dictionary containing:
+                - 'thermal_energy_output': float
+                    The thermal energy output at the given timestamp.
+                - 'cop': float
+                    The coefficient of performance at the given timestamp.
+                - 'el_demand': float
+                    The electrical demand at the given timestamp.
+                    
+        Raises
+        ------
+        ValueError
+            If the timestamp is not of type int, str, or pandas Timestamp.
+            
+        Notes
+        -----
+        If the timeseries data at the given timestamp is missing (NaN), the method estimates the values 
+        based on the current running state and environmental temperature. If the heat pump is not running, 
+        all values are set to zero.
         """
+
         if type(timestamp) == int:
 
             if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
@@ -481,6 +494,35 @@ class HeatPump(Component):
     #%% ramping functions
 
     def is_valid_ramp_up(self, timestamp):
+        """
+        Info
+        ----
+        Determines whether the heat pump can validly ramp up at the given timestamp.
+        
+        Parameters
+        ----------
+        timestamp : int or pandas._libs.tslibs.timestamps.Timestamp
+            The current time at which to check if ramp up is allowed. Can be an integer (e.g., seconds since epoch)
+            or a pandas Timestamp.
+            
+        Returns
+        -------
+        None
+            Updates the `is_running` attribute of the instance based on whether the minimum stop time has elapsed
+            since the last ramp down.
+            
+        Raises
+        ------
+        ValueError
+            If `timestamp` is not of type int or pandas._libs.tslibs.timestamps.Timestamp.
+            
+        Notes
+        -----
+        - For integer timestamps, checks if the difference between the current timestamp and `last_ramp_down` 
+          exceeds `min_stop_time`.
+        - For pandas Timestamps, checks if the sum of `last_ramp_down` and the minimum stop time (scaled by the 
+          timeseries frequency) is less than the current timestamp.
+        """
 
         if type(timestamp) == int:
             if timestamp - self.last_ramp_down > self.min_stop_time:
@@ -504,6 +546,29 @@ class HeatPump(Component):
             )
 
     def is_valid_ramp_down(self, timestamp):
+        """
+        Info
+        ----
+        Determines whether the heat pump can validly ramp down at the given timestamp.
+        
+        Parameters
+        ----------
+        timestamp : int or pandas._libs.tslibs.timestamps.Timestamp
+            The current time, either as an integer (e.g., seconds since epoch) or as a pandas Timestamp.
+            
+        Returns
+        -------
+        None
+        
+        Raises
+        ------
+        ValueError
+            If `timestamp` is not of type int or pandas._libs.tslibs.timestamps.Timestamp.
+            
+        Notes
+        -----
+        This method updates the `is_running` attribute based on whether the minimum runtime has elapsed since the last ramp up.
+        """
 
         if type(timestamp) == int:
             if timestamp - self.last_ramp_up > self.min_runtime:
@@ -527,43 +592,30 @@ class HeatPump(Component):
             )
 
     def ramp_up(self, timestamp):
-
         """
         Info
         ----
-        This function ramps up the combined heat and power plant. The timestamp is neccessary to calculate
-        if the combined heat and power plant is running in later iterations of balancing. The possible
-        return values are:
-            - None:       Ramp up has no effect since the combined heat and power plant is already running
-            - True:       Ramp up was successful
-            - False:      Ramp up was not successful (due to constraints for minimum running and stop times)
+        Attempts to ramp up the heat pump at the specified timestamp.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
+        timestamp : Any
+            The timestamp at which to attempt ramping up the heat pump.
+            
         Returns
         -------
-        
-        ...
-        
+        bool or None
+            Returns True if the heat pump was successfully ramped up,
+            False if ramp up conditions are not met,
+            or None if the heat pump is already running.
+            
+        Notes
+        -----
+        This method checks if the heat pump is already running. If not, it validates
+        whether ramp up is allowed at the given timestamp using `is_valid_ramp_up`.
+        If successful, it sets the heat pump to running state.
         """
+
         if self.is_running:
             return None
         else:
@@ -574,43 +626,24 @@ class HeatPump(Component):
                 return False
 
     def ramp_down(self, timestamp):
-
         """
         Info
         ----
-        This function ramps down the combined heat and power plant. The timestamp is neccessary to calculate
-        if the combined heat and power plant is running in later iterations of balancing. The possible
-        return values are:
-            - None:       Ramp down has no effect since the combined heat and power plant is not running
-            - True:       Ramp down was successful
-            - False:      Ramp down was not successful (due to constraints for minimum running and stop times)
+        Attempts to ramp down (turn off) the heat pump at the specified timestamp.
         
         Parameters
         ----------
-        
-        ...
-        	
-        Attributes
-        ----------
-        
-        ...
-        
-        Notes
-        -----
-        
-        ...
-        
-        References
-        ----------
-        
-        ...
-        
+        timestamp : Any
+            The timestamp at which to attempt ramping down the heat pump.
+            
         Returns
         -------
-        
-        ...
-        
+        bool or None
+            Returns True if the heat pump was successfully ramped down,
+            False if ramp down is not valid at the given timestamp,
+            or None if the heat pump is not currently running.
         """
+
 
         if not self.is_running:
             return None

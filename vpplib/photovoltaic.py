@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-Info
-----
-This file contains the basic functionalities of the Photovoltaic class.
+"""Photovoltaic Module.
 
+This module contains the Photovoltaic class, which models a photovoltaic system
+using the pvlib library. It provides functionality for simulating power generation
+based on weather data and system specifications.
+
+The Photovoltaic class inherits from the Component class and implements methods
+for preparing time series data, limiting power output, and retrieving observations.
 """
 
 from vpplib.component import Component
@@ -21,6 +24,49 @@ from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 
 
 class Photovoltaic(Component):
+    """Photovoltaic system component for a virtual power plant.
+    
+    This class models a photovoltaic system using the pvlib library. It simulates
+    power generation based on weather data and system specifications.
+    
+    Attributes
+    ----------
+    identifier : str
+        Unique identifier for the photovoltaic system.
+    limit : float
+        Power limit factor (0.0 to 1.0) to curtail output.
+    module_lib : dict
+        Dictionary of available PV modules from SAM library.
+    inverter_lib : dict
+        Dictionary of available inverters from SAM library.
+    temperature_model_parameters : dict
+        Parameters for the temperature model.
+    module : pandas.Series
+        Selected module specifications.
+    inverter : pandas.Series
+        Selected inverter specifications.
+    location : pvlib.location.Location
+        Geographic location of the PV system.
+    surface_azimuth : float
+        Azimuth angle of the PV array surface.
+    surface_tilt : float
+        Tilt angle of the PV array surface.
+    modules_per_string : int
+        Number of modules per string.
+    strings_per_inverter : int
+        Number of strings per inverter.
+    system : pvlib.pvsystem.PVSystem
+        PV system object from pvlib.
+    modelchain : pvlib.modelchain.ModelChain
+        ModelChain object for simulating the PV system.
+    peak_power : float
+        Peak power of the PV system in kW.
+    modules_area : float
+        Total area of all PV modules in m².
+    timeseries : pandas.DataFrame
+        Time series of power generation.
+    """
+    
     def __init__(
         self,
         unit,
@@ -39,36 +85,40 @@ class Photovoltaic(Component):
         identifier=None,
         environment=None,
     ):
-        """
-        Info
-        ----
-        ...
-
+        """Initialize a Photovoltaic object.
+        
         Parameters
         ----------
-
-        ...
-
-        Attributes
-        ----------
-
-        ...
-
-        Notes
-        -----
-
-        ...
-
-        References
-        ----------
-
-        ...
-
-        Returns
-        -------
-
-        ...
-
+        unit : str
+            Unit of measurement for power output (typically 'kW').
+        latitude : float
+            Latitude of the PV system location.
+        longitude : float
+            Longitude of the PV system location.
+        module_lib : str
+            Name of the module library to use from SAM (e.g., 'SandiaMod').
+        inverter_lib : str
+            Name of the inverter library to use from SAM (e.g., 'SandiaInverter').
+        surface_tilt : float
+            Tilt angle of the PV array surface in degrees.
+        surface_azimuth : float
+            Azimuth angle of the PV array surface in degrees.
+        module : str, optional
+            Name of the specific module to use from the module library.
+        inverter : str, optional
+            Name of the specific inverter to use from the inverter library.
+        modules_per_string : int, optional
+            Number of modules per string.
+        strings_per_inverter : int, optional
+            Number of strings per inverter.
+        temp_lib : str, optional
+            Name of the temperature model library to use.
+        temp_model : str, optional
+            Name of the specific temperature model to use.
+        identifier : str, optional
+            Unique identifier for the PV system.
+        environment : Environment, optional
+            Environment object providing weather data.
         """
 
         # Call to super class
@@ -135,7 +185,23 @@ class Photovoltaic(Component):
         self.timeseries = None
 
     def prepare_time_series(self):
-
+        """Prepare time series data for the photovoltaic system.
+        
+        This method simulates the power generation of the PV system using the
+        weather data provided by the environment object. It uses either the
+        plane-of-array irradiance data or standard weather data depending on
+        what's available in the environment.
+        
+        Returns
+        -------
+        pandas.DataFrame
+            Time series of power generation in kW.
+            
+        Raises
+        ------
+        ValueError
+            If the environment's PV data is empty.
+        """
         if len(self.environment.pv_data) == 0:
             raise ValueError("self.environment.pv_data is empty.")
 
@@ -165,7 +231,15 @@ class Photovoltaic(Component):
         return timeseries
 
     def reset_time_series(self):
-
+        """Reset the time series data for the photovoltaic system.
+        
+        This method resets the timeseries attribute to None.
+        
+        Returns
+        -------
+        None
+            The reset timeseries value (None).
+        """
         self.timeseries = None
 
         return self.timeseries
@@ -174,40 +248,66 @@ class Photovoltaic(Component):
     # Controlling functions
     # ===================================================================================
 
-    # This function limits the power of the photovoltaic to the given percentage.
-    # It cuts the current power production down to the peak power multiplied by
-    # the limit (Float [0;1]).
     def limit_power_to(self, limit):
-
+        """Limit the power output of the photovoltaic system.
+        
+        This method limits the power output of the PV system to a given percentage
+        of its maximum capacity. It sets the limit attribute which is used in the
+        value_for_timestamp method to scale the power output.
+        
+        Parameters
+        ----------
+        limit : float
+            A value between 0 and 1 representing the percentage of maximum power.
+            0 means no power output, 1 means full power output.
+            
+        Raises
+        ------
+        ValueError
+            If the limit parameter is not between 0 and 1.
+        """
         # Validate input parameter
         if 0 <= limit <= 1:
-
             # Parameter is valid
             self.limit = limit
-
         else:
-
             # Parameter is invalid
-
             raise ValueError("Limit-parameter is not valid")
 
     # ===================================================================================
     # Balancing Functions
     # ===================================================================================
 
-    # Override balancing function from super class.
     def value_for_timestamp(self, timestamp):
-
+        """Get the power output value for a specific timestamp.
+        
+        This method overrides the value_for_timestamp method from the Component class.
+        It returns the power output of the PV system at the given timestamp, scaled
+        by the limit factor.
+        
+        Parameters
+        ----------
+        timestamp : int or str
+            The timestamp for which to retrieve the value.
+            If int, it's treated as an index in the timeseries.
+            If str, it's treated as a datetime string in format 'YYYY-MM-DD hh:mm:ss'.
+            
+        Returns
+        -------
+        float
+            The power output value at the given timestamp in kW.
+            
+        Raises
+        ------
+        ValueError
+            If the timestamp is not of type int or str.
+        """
         if type(timestamp) == int:
-
             return (
                 self.timeseries[self.identifier].iloc[timestamp] * self.limit
             )
-
         elif type(timestamp) == str:
-
             return self.timeseries[self.identifier].loc[timestamp] * self.limit
-
         else:
             raise ValueError(
                 "timestamp needs to be of type int or string. "
@@ -215,43 +315,27 @@ class Photovoltaic(Component):
             )
 
     def observations_for_timestamp(self, timestamp):
-        """
-        Info
-        ----
-        This function takes a timestamp as the parameter and returns a
-        dictionary with key (String) value (Any) pairs.
-        Depending on the type of component, different status parameters of the
-        respective component can be queried.
-
-        For example, a power store can report its "State of Charge".
-        Returns an empty dictionary since this function needs to be
-        implemented by child classes.
-
+        """Get observations for the photovoltaic system at a specific timestamp.
+        
+        This method overrides the observations_for_timestamp method from the Component class.
+        It returns a dictionary with the electrical generation value at the given timestamp.
+        
         Parameters
         ----------
-
-        ...
-
-        Attributes
-        ----------
-
-        ...
-
-        Notes
-        -----
-
-        ...
-
-        References
-        ----------
-
-        ...
-
+        timestamp : int or str
+            The timestamp for which to retrieve observations.
+            If int, it's treated as an index in the timeseries.
+            If str, it's treated as a datetime string in format 'YYYY-MM-DD hh:mm:ss'.
+            
         Returns
         -------
-
-        ...
-
+        dict
+            A dictionary with the key 'el_generation' and the corresponding power value.
+            
+        Raises
+        ------
+        ValueError
+            If the timestamp is not of type int or str.
         """
         if type(timestamp) == int:
 
@@ -275,7 +359,32 @@ class Photovoltaic(Component):
                       max_module_power,
                       pv_power,
                       inverter_power_range):
-
+        """Select appropriate PV modules and inverter for the system.
+        
+        This method selects appropriate PV modules and an inverter based on the
+        desired power output and module power range. It configures the PV system
+        with the selected components.
+        
+        Parameters
+        ----------
+        min_module_power : float
+            Minimum acceptable module power in W.
+        max_module_power : float
+            Maximum acceptable module power in W.
+        pv_power : float
+            Desired total PV system power in W.
+        inverter_power_range : float
+            Initial acceptable power range for inverter selection in W.
+            
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - modules_per_string (int): Number of modules per string
+            - strings_per_inverter (int): Number of strings per inverter
+            - module (pandas.Series): Selected module specifications
+            - inverter (pandas.Series): Selected inverter specifications
+        """
         power_lst = []
         # choose modules depending on module power
         for module in self.module_lib.columns:
