@@ -72,7 +72,7 @@ The repository has been updated to work with wetterdienst v0.109.0 (previously v
 
 4. **Parameter Changes**:
    - Created a dedicated MOSMIX parameter dictionary for cleaner code organization
-   - Added `use_mosmix` parameter to `get_dwd_pv_data` method to explicitly control data source
+   - Added `use_mosmix` parameter to `get_dwd_pv_data` and `get_dwd_wind_data` methods to explicitly control data source
    - Solar radiation data is available in 10_minutes resolution
 
 5. **PV Object Initialization**:
@@ -86,9 +86,38 @@ The repository has been updated to work with wetterdienst v0.109.0 (previously v
      ```
    - Inverter names have changed in newer pvlib versions (e.g., "ABB__MICRO_0_25_I_OUTD_US_208__208V_" instead of "ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_")
 
+6. **Wind Data Compatibility**:
+   - Wind data for windpowerlib requires a specific MultiIndex DataFrame format
+   - The MultiIndex must have two levels with names 'variable' and 'height'
+   - The first level contains parameter names ('wind_speed', 'temperature', 'pressure', 'roughness_length')
+   - The second level contains heights (10, 2, 0, 0)
+   - Example of creating a compatible wind data DataFrame:
+     ```python
+     # Create tuples for MultiIndex
+     tuples = [
+         ('wind_speed', 10),
+         ('temperature', 2),
+         ('pressure', 0),
+         ('roughness_length', 0)
+     ]
+     
+     # Create MultiIndex
+     columns = pd.MultiIndex.from_tuples(tuples, names=['variable', 'height'])
+     
+     # Create the DataFrame with MultiIndex columns
+     wind_data = pd.DataFrame(columns=columns, index=index)
+     wind_data[('wind_speed', 10)] = weather['wind_speed']
+     wind_data[('temperature', 2)] = weather['temperature']
+     wind_data[('pressure', 0)] = weather['pressure']
+     wind_data[('roughness_length', 0)] = weather['roughness_length']
+     ```
+   - Added automatic MultiIndex conversion in wind_power.py for compatibility with windpowerlib
+
 The main files affected by these changes are:
 - `vpplib/environment.py`: Weather data retrieval and processing
+- `vpplib/wind_power.py`: Wind power calculation and data handling
 - `test_pv.py`: Test file for Photovoltaic class
+- `test_wind.py`: Test file for WindPower class
 
 ## Installation
 The package can be installed via pip:

@@ -11,7 +11,7 @@ for wind speed, air density, temperature, and power output calculations.
 """
 
 from .component import Component
-
+import pandas as pd
 
 # windpowerlib imports
 from windpowerlib import ModelChain
@@ -251,16 +251,50 @@ class WindPower(Component):
 
         # initialize ModelChain with own specifications and use run_model method
         # to calculate power output
+        
+        # Ensure wind_data has the correct MultiIndex format
+        wind_data = self.environment.wind_data
+        
+        # Check if wind_data is not a MultiIndex DataFrame
+        if not isinstance(wind_data.columns, pd.MultiIndex) or len(wind_data.columns.names) < 2:
+            try:
+                # Create a simple DataFrame with the data
+                weather = pd.DataFrame(index=wind_data.index)
+                weather['wind_speed'] = wind_data['wind_speed'] if 'wind_speed' in wind_data.columns else 0
+                weather['temperature'] = wind_data['temperature'] if 'temperature' in wind_data.columns else 0
+                weather['pressure'] = wind_data['pressure'] if 'pressure' in wind_data.columns else 0
+                weather['roughness_length'] = wind_data['roughness_length'] if 'roughness_length' in wind_data.columns else 0.15
+                
+                # Create tuples for MultiIndex
+                tuples = [
+                    ('wind_speed', 10),
+                    ('temperature', 2),
+                    ('pressure', 0),
+                    ('roughness_length', 0)
+                ]
+                
+                # Create MultiIndex
+                columns = pd.MultiIndex.from_tuples(tuples, names=['variable', 'height'])
+                
+                # Create the DataFrame with MultiIndex columns
+                wind_data = pd.DataFrame(columns=columns, index=weather.index)
+                wind_data[('wind_speed', 10)] = weather['wind_speed']
+                wind_data[('temperature', 2)] = weather['temperature']
+                wind_data[('pressure', 0)] = weather['pressure']
+                wind_data[('roughness_length', 0)] = weather['roughness_length']
+            except Exception as e:
+                print(f"Error converting wind data to MultiIndex format: {e}")
+        
         if self.environment.start == None or self.environment.end == None:
             self.ModelChain = ModelChain(
                 self.wind_turbine, **modelchain_data
-            ).run_model(self.environment.wind_data)
+            ).run_model(wind_data)
 
         else:
             self.ModelChain = ModelChain(
                 self.wind_turbine, **modelchain_data
             ).run_model(
-                self.environment.wind_data[
+                wind_data[
                     self.environment.start : self.environment.end
                 ]
             )

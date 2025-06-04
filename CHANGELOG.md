@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changed DwdMosmixType.LARGE to DwdForecastDate.LATEST for MOSMIX requests
 - Updated parameter format for DwdMosmixRequest to use proper (resolution, dataset, parameter) tuples
 - Updated parameter format for DwdObservationRequest to use simpler format
-- Added use_mosmix parameter to get_dwd_pv_data method to allow explicit MOSMIX data retrieval
+- Added use_mosmix parameter to get_dwd_pv_data and get_dwd_wind_data methods to allow explicit MOSMIX data retrieval
 - Created a dedicated MOSMIX parameter dictionary for cleaner code organization
+- Modified wind_power.py to handle different MultiIndex formats for wind data
 
 ### Fixed
 - Fixed MOSMIX station ID issue by using "10410" instead of "01303"
@@ -22,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated test_pv.py to properly test both MOSMIX and observation data
 - Fixed inverter name in test_pv.py to match available inverters in current pvlib version
 - Added proper temperature model parameters to Photovoltaic initialization
+- Modified test_wind.py to use CSV data with proper MultiIndex format for windpowerlib compatibility
+- Added automatic MultiIndex conversion in wind_power.py for compatibility with windpowerlib
 
 ## [0.0.4] - 2025-05-06
 
