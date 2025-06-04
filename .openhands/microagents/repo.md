@@ -112,6 +112,28 @@ The repository has been updated to work with wetterdienst v0.109.0 (previously v
      wind_data[('roughness_length', 0)] = weather['roughness_length']
      ```
    - Added automatic MultiIndex conversion in wind_power.py for compatibility with windpowerlib
+   - When using ModelChain, ensure obstacle_height is set to 0 (not None) to prevent TypeError
+   - For testing, use CSV data with proper MultiIndex format instead of MOSMIX data
+
+7. **Timestamp Handling**:
+   - Enhanced value_for_timestamp and observations_for_timestamp methods to handle datetime objects
+   - Added automatic closest timestamp finding when exact timestamp is not found
+   - Added proper error handling for missing data and invalid timestamp formats
+   - Example usage:
+     ```python
+     # Using string timestamp
+     value = wind.value_for_timestamp("2015-01-01 00:00:00")
+     
+     # Using datetime object
+     import datetime
+     timestamp = datetime.datetime(2015, 1, 1, 0, 0, 0)
+     value = wind.value_for_timestamp(timestamp)
+     
+     # Using pandas Timestamp
+     import pandas as pd
+     timestamp = pd.Timestamp("2015-01-01 00:00:00")
+     value = wind.value_for_timestamp(timestamp)
+     ```
 
 The main files affected by these changes are:
 - `vpplib/environment.py`: Weather data retrieval and processing

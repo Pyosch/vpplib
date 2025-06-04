@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added proper temperature model parameters to Photovoltaic initialization
 - Modified test_wind.py to use CSV data with proper MultiIndex format for windpowerlib compatibility
 - Added automatic MultiIndex conversion in wind_power.py for compatibility with windpowerlib
+- Enhanced value_for_timestamp and observations_for_timestamp methods to handle datetime objects
+- Fixed obstacle_height parameter in ModelChain to prevent TypeError with None values
+- Added proper MultiIndex names (variable, height) to wind data for windpowerlib compatibility
 
 ## [0.0.4] - 2025-05-06
 

@@ -269,27 +269,61 @@ class Environment(object):
                 (e.g. 10, if it was measured at a height of 10 m).
     
         """
+        try:
+            # Try to read the file with MultiIndex columns
+            if utc == True:
+                df = pd.read_csv(
+                    file,
+                    index_col=0,
+                    header=[0, 1],
+                    date_parser=lambda idx: pd.to_datetime(idx, utc=True),
+                )
+                # change type of index to datetime and set time zone
+                df.index = pd.to_datetime(df.index).tz_convert(self.timezone)
+            else:
+                df = pd.read_csv(file, index_col=0, header=[0, 1])
+                df.index = pd.to_datetime(df.index)
 
-        if utc == True:
-            df = pd.read_csv(
-                file,
-                index_col=0,
-                header=[0, 1],
-                date_parser=lambda idx: pd.to_datetime(idx, utc=True),
-            )
-            # change type of index to datetime and set time zone
-            df.index = pd.to_datetime(df.index).tz_convert(self.timezone)
-
-        else:
-            df = pd.read_csv(file, index_col=0, header=[0, 1])
-            df.index = pd.to_datetime(df.index)
-
-        # change type of height from str to int by resetting columns
-        l0 = [_[0] for _ in df.columns]
-        l1 = [int(_[1]) for _ in df.columns]
-        df.columns = [l0, l1]
+            # change type of height from str to int by resetting columns
+            l0 = [_[0] for _ in df.columns]
+            l1 = [int(_[1]) for _ in df.columns]
+            df.columns = pd.MultiIndex.from_tuples(list(zip(l0, l1)), names=['variable', 'height'])
+        except Exception as e:
+            # If the file doesn't have MultiIndex columns, try to read it as a regular CSV
+            # and create the MultiIndex manually
+            try:
+                # Skip the first 2 rows which contain headers
+                df = pd.read_csv(file, skiprows=2)
+                
+                # Set the index to the Time column and convert to datetime
+                df.set_index('Time', inplace=True)
+                df.index = pd.to_datetime(df.index)
+                
+                # Rename the columns to match the expected names
+                df.columns = ['wind_speed', 'pressure', 'temperature', 'roughness_length']
+                
+                # Create a new DataFrame with MultiIndex columns
+                columns = pd.MultiIndex.from_tuples([
+                    ('wind_speed', 10),
+                    ('pressure', 0),
+                    ('temperature', 2),
+                    ('roughness_length', 0)
+                ], names=['variable', 'height'])
+                
+                # Create the new DataFrame with the MultiIndex columns
+                df = pd.DataFrame(
+                    df.values,
+                    index=df.index,
+                    columns=columns
+                )
+                
+                if utc == True:
+                    # Convert to timezone-aware datetime
+                    df.index = pd.to_datetime(df.index, utc=True).tz_convert(self.timezone)
+            except Exception as inner_e:
+                raise ValueError(f"Failed to read wind data file: {e}. Inner error: {inner_e}")
+                
         self.wind_data = df
-
         return self.wind_data
 
     def get_time_from_dwd(self):
@@ -1192,7 +1226,7 @@ class Environment(object):
         return station_metadata
 
     def get_dwd_wind_data(
-        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, station_splitting = False
+        self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, station_splitting = False, use_mosmix = False
         ):
         """
         Retrieves wind weather data from the DWD database and processes it.
@@ -1235,7 +1269,8 @@ class Environment(object):
                 lon = lon, 
                 user_station_id = station_id,
                 distance = distance, 
-                min_quality_per_parameter = min_quality_per_parameter
+                min_quality_per_parameter = min_quality_per_parameter,
+                use_mosmix = use_mosmix
                 )
         else:
             raw_dwd_data = pd.DataFrame()
@@ -1247,7 +1282,8 @@ class Environment(object):
                     lon = lon, 
                     user_station_id = station_id,
                     distance = distance, 
-                    min_quality_per_parameter = min_quality_per_parameter
+                    min_quality_per_parameter = min_quality_per_parameter,
+                    use_mosmix = use_mosmix
                     )
                 station_metadata = pd.concat([station_metadata,station_metadata_buf], axis = 0)
                 raw_dwd_data = pd.concat([raw_dwd_data,raw_dwd_data_buf], axis = 1)

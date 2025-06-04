@@ -12,6 +12,7 @@ for wind speed, air density, temperature, and power output calculations.
 
 from .component import Component
 import pandas as pd
+import datetime
 
 # windpowerlib imports
 from windpowerlib import ModelChain
@@ -253,10 +254,51 @@ class WindPower(Component):
         # to calculate power output
         
         # Ensure wind_data has the correct MultiIndex format
-        wind_data = self.environment.wind_data
+        wind_data = self.environment.wind_data.copy()
         
-        # Check if wind_data is not a MultiIndex DataFrame
-        if not isinstance(wind_data.columns, pd.MultiIndex) or len(wind_data.columns.names) < 2:
+        # Make sure the MultiIndex has the correct names
+        if isinstance(wind_data.columns, pd.MultiIndex):
+            # Set the names if they're not already set
+            if wind_data.columns.names != ['variable', 'height']:
+                wind_data.columns.names = ['variable', 'height']
+            
+            # Create a new DataFrame with the correct MultiIndex format
+            # This is a workaround for the windpowerlib issue
+            try:
+                # Extract the data
+                wind_speed = wind_data[('wind_speed', 10)] if ('wind_speed', 10) in wind_data.columns else wind_data.iloc[:, 0]
+                temperature = wind_data[('temperature', 2)] if ('temperature', 2) in wind_data.columns else wind_data.iloc[:, 2]
+                pressure = wind_data[('pressure', 0)] if ('pressure', 0) in wind_data.columns else wind_data.iloc[:, 1]
+                roughness_length = wind_data[('roughness_length', 0)] if ('roughness_length', 0) in wind_data.columns else pd.Series(0.15, index=wind_data.index)
+                
+                # Create a new DataFrame with the correct MultiIndex
+                tuples = [
+                    ('wind_speed', 10),
+                    ('temperature', 2),
+                    ('pressure', 0),
+                    ('roughness_length', 0)
+                ]
+                
+                # Create MultiIndex with explicit names
+                columns = pd.MultiIndex.from_tuples(tuples, names=['variable', 'height'])
+                
+                # Create the DataFrame with MultiIndex columns
+                new_wind_data = pd.DataFrame(index=wind_data.index)
+                new_wind_data[('wind_speed', 10)] = wind_speed
+                new_wind_data[('temperature', 2)] = temperature
+                new_wind_data[('pressure', 0)] = pressure
+                new_wind_data[('roughness_length', 0)] = roughness_length
+                
+                # Set the MultiIndex columns with names
+                new_wind_data.columns = columns
+                
+                # Use the new DataFrame
+                wind_data = new_wind_data
+                
+                print("Successfully converted wind data to proper MultiIndex format")
+            except Exception as e:
+                print(f"Error converting wind data to MultiIndex format: {e}")
+        else:
             try:
                 # Create a simple DataFrame with the data
                 weather = pd.DataFrame(index=wind_data.index)
@@ -273,15 +315,20 @@ class WindPower(Component):
                     ('roughness_length', 0)
                 ]
                 
-                # Create MultiIndex
+                # Create MultiIndex with explicit names
                 columns = pd.MultiIndex.from_tuples(tuples, names=['variable', 'height'])
                 
                 # Create the DataFrame with MultiIndex columns
-                wind_data = pd.DataFrame(columns=columns, index=weather.index)
+                wind_data = pd.DataFrame(index=weather.index)
                 wind_data[('wind_speed', 10)] = weather['wind_speed']
                 wind_data[('temperature', 2)] = weather['temperature']
                 wind_data[('pressure', 0)] = weather['pressure']
                 wind_data[('roughness_length', 0)] = weather['roughness_length']
+                
+                # Set the MultiIndex columns with names
+                wind_data.columns = columns
+                
+                print("Successfully created MultiIndex DataFrame from regular DataFrame")
             except Exception as e:
                 print(f"Error converting wind data to MultiIndex format: {e}")
         
@@ -418,9 +465,27 @@ class WindPower(Component):
             return self.timeseries.iloc[timestamp].item() * self.limit
         elif type(timestamp) == str:
             return self.timeseries.loc[timestamp].item() * self.limit
+        elif isinstance(timestamp, pd.Timestamp) or isinstance(timestamp, datetime.datetime):
+            # Convert to string format that matches the index
+            timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            try:
+                return self.timeseries.loc[timestamp_str].item() * self.limit
+            except KeyError:
+                # If the exact timestamp is not found, find the closest one
+                if len(self.timeseries) > 0:
+                    closest_timestamp = self.timeseries.index[0]
+                    min_diff = abs((timestamp - pd.to_datetime(closest_timestamp)).total_seconds())
+                    for ts in self.timeseries.index:
+                        diff = abs((timestamp - pd.to_datetime(ts)).total_seconds())
+                        if diff < min_diff:
+                            min_diff = diff
+                            closest_timestamp = ts
+                    return self.timeseries.loc[closest_timestamp].item() * self.limit
+                else:
+                    raise ValueError("No data available in timeseries")
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp needs to be of type int, string, or datetime. Stringformat: YYYY-MM-DD hh:mm:ss"
             )
 
     def observations_for_timestamp(self, timestamp):
@@ -454,16 +519,30 @@ class WindPower(Component):
         in the ModelChain results.
         """
         if type(timestamp) == int:
-
             wind_generation = self.timeseries.iloc[timestamp]
-
         elif type(timestamp) == str:
-
             wind_generation = self.timeseries.loc[timestamp]
-
+        elif isinstance(timestamp, pd.Timestamp) or isinstance(timestamp, datetime.datetime):
+            # Convert to string format that matches the index
+            timestamp_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            try:
+                wind_generation = self.timeseries.loc[timestamp_str]
+            except KeyError:
+                # If the exact timestamp is not found, find the closest one
+                if len(self.timeseries) > 0:
+                    closest_timestamp = self.timeseries.index[0]
+                    min_diff = abs((timestamp - pd.to_datetime(closest_timestamp)).total_seconds())
+                    for ts in self.timeseries.index:
+                        diff = abs((timestamp - pd.to_datetime(ts)).total_seconds())
+                        if diff < min_diff:
+                            min_diff = diff
+                            closest_timestamp = ts
+                    wind_generation = self.timeseries.loc[closest_timestamp]
+                else:
+                    raise ValueError("No data available in timeseries")
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. "
+                "timestamp needs to be of type int, string, or datetime. "
                 + "Stringformat: YYYY-MM-DD hh:mm:ss"
             )
 
