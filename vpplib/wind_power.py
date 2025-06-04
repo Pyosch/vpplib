@@ -13,6 +13,10 @@ for wind speed, air density, temperature, and power output calculations.
 from .component import Component
 import pandas as pd
 import datetime
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # windpowerlib imports
 from windpowerlib import ModelChain
@@ -254,83 +258,7 @@ class WindPower(Component):
         # to calculate power output
         
         # Ensure wind_data has the correct MultiIndex format
-        wind_data = self.environment.wind_data.copy()
-        
-        # Make sure the MultiIndex has the correct names
-        if isinstance(wind_data.columns, pd.MultiIndex):
-            # Set the names if they're not already set
-            if wind_data.columns.names != ['variable', 'height']:
-                wind_data.columns.names = ['variable', 'height']
-            
-            # Create a new DataFrame with the correct MultiIndex format
-            # This is a workaround for the windpowerlib issue
-            try:
-                # Extract the data
-                wind_speed = wind_data[('wind_speed', 10)] if ('wind_speed', 10) in wind_data.columns else wind_data.iloc[:, 0]
-                temperature = wind_data[('temperature', 2)] if ('temperature', 2) in wind_data.columns else wind_data.iloc[:, 2]
-                pressure = wind_data[('pressure', 0)] if ('pressure', 0) in wind_data.columns else wind_data.iloc[:, 1]
-                roughness_length = wind_data[('roughness_length', 0)] if ('roughness_length', 0) in wind_data.columns else pd.Series(0.15, index=wind_data.index)
-                
-                # Create a new DataFrame with the correct MultiIndex
-                tuples = [
-                    ('wind_speed', 10),
-                    ('temperature', 2),
-                    ('pressure', 0),
-                    ('roughness_length', 0)
-                ]
-                
-                # Create MultiIndex with explicit names
-                columns = pd.MultiIndex.from_tuples(tuples, names=['variable', 'height'])
-                
-                # Create the DataFrame with MultiIndex columns
-                new_wind_data = pd.DataFrame(index=wind_data.index)
-                new_wind_data[('wind_speed', 10)] = wind_speed
-                new_wind_data[('temperature', 2)] = temperature
-                new_wind_data[('pressure', 0)] = pressure
-                new_wind_data[('roughness_length', 0)] = roughness_length
-                
-                # Set the MultiIndex columns with names
-                new_wind_data.columns = columns
-                
-                # Use the new DataFrame
-                wind_data = new_wind_data
-                
-                print("Successfully converted wind data to proper MultiIndex format")
-            except Exception as e:
-                print(f"Error converting wind data to MultiIndex format: {e}")
-        else:
-            try:
-                # Create a simple DataFrame with the data
-                weather = pd.DataFrame(index=wind_data.index)
-                weather['wind_speed'] = wind_data['wind_speed'] if 'wind_speed' in wind_data.columns else 0
-                weather['temperature'] = wind_data['temperature'] if 'temperature' in wind_data.columns else 0
-                weather['pressure'] = wind_data['pressure'] if 'pressure' in wind_data.columns else 0
-                weather['roughness_length'] = wind_data['roughness_length'] if 'roughness_length' in wind_data.columns else 0.15
-                
-                # Create tuples for MultiIndex
-                tuples = [
-                    ('wind_speed', 10),
-                    ('temperature', 2),
-                    ('pressure', 0),
-                    ('roughness_length', 0)
-                ]
-                
-                # Create MultiIndex with explicit names
-                columns = pd.MultiIndex.from_tuples(tuples, names=['variable', 'height'])
-                
-                # Create the DataFrame with MultiIndex columns
-                wind_data = pd.DataFrame(index=weather.index)
-                wind_data[('wind_speed', 10)] = weather['wind_speed']
-                wind_data[('temperature', 2)] = weather['temperature']
-                wind_data[('pressure', 0)] = weather['pressure']
-                wind_data[('roughness_length', 0)] = weather['roughness_length']
-                
-                # Set the MultiIndex columns with names
-                wind_data.columns = columns
-                
-                print("Successfully created MultiIndex DataFrame from regular DataFrame")
-            except Exception as e:
-                print(f"Error converting wind data to MultiIndex format: {e}")
+        wind_data = self._ensure_wind_data_format()
         
         if self.environment.start == None or self.environment.end == None:
             self.ModelChain = ModelChain(
@@ -351,6 +279,84 @@ class WindPower(Component):
 
         return
 
+    def _ensure_wind_data_format(self):
+        """
+        Ensure that the wind data has the correct format for windpowerlib.
+        
+        The windpowerlib requires a specific MultiIndex format for the columns.
+        This method checks and converts the data if necessary.
+        
+        Returns
+        -------
+        pandas.DataFrame
+            Wind data with the correct format
+        """
+        wind_data = self.environment.wind_data
+        
+        # Check if the data already has the correct format
+        try:
+            from windpowerlib import data as wt
+            # Try to check the data format using windpowerlib's check_weather_data function
+            wt.check_weather_data(wind_data)
+            # If we get here, the data format is correct
+            return wind_data
+        except Exception as e:
+            # Data format is not correct, we need to convert it
+            print(f"Converting wind data to proper format: {e}")
+        
+        print("Converting wind data to proper MultiIndex format")
+        
+        # Extract the data we need
+        if isinstance(wind_data.columns, pd.MultiIndex):
+            # MultiIndex format but possibly wrong structure
+            wind_speed = wind_data[('wind_speed', 10)] if ('wind_speed', 10) in wind_data.columns else pd.Series(0, index=wind_data.index)
+            temperature = wind_data[('temperature', 2)] if ('temperature', 2) in wind_data.columns else pd.Series(0, index=wind_data.index)
+            pressure = wind_data[('pressure', 0)] if ('pressure', 0) in wind_data.columns else pd.Series(0, index=wind_data.index)
+            roughness_length = wind_data[('roughness_length', 0)] if ('roughness_length', 0) in wind_data.columns else pd.Series(0.15, index=wind_data.index)
+        else:
+            # Regular DataFrame format
+            wind_speed = wind_data['wind_speed'] if 'wind_speed' in wind_data.columns else pd.Series(0, index=wind_data.index)
+            temperature = wind_data['temperature'] if 'temperature' in wind_data.columns else pd.Series(0, index=wind_data.index)
+            pressure = wind_data['pressure'] if 'pressure' in wind_data.columns else pd.Series(0, index=wind_data.index)
+            roughness_length = wind_data['roughness_length'] if 'roughness_length' in wind_data.columns else pd.Series(0.15, index=wind_data.index)
+        
+        # First create a regular DataFrame
+        df = pd.DataFrame(
+            {
+                'wind_speed': wind_speed,
+                'temperature': temperature,
+                'pressure': pressure,
+                'roughness_length': roughness_length
+            },
+            index=wind_data.index
+        )
+        
+        # Then convert to MultiIndex format
+        new_wind_data = pd.DataFrame(
+            {
+                ('wind_speed', 10): df['wind_speed'],
+                ('temperature', 2): df['temperature'],
+                ('pressure', 0): df['pressure'],
+                ('roughness_length', 0): df['roughness_length']
+            },
+            index=df.index
+        )
+        
+        # Set the column names explicitly
+        new_wind_data.columns.names = ['variable', 'height']
+        
+        # Verify the format
+        try:
+            wt.check_weather_data(new_wind_data)
+            print("Successfully converted wind data to proper MultiIndex format")
+        except Exception as e:
+            print(f"Warning: Failed to create proper MultiIndex format: {e}")
+        
+        # Update the environment's wind data
+        self.environment.wind_data = new_wind_data
+        
+        return new_wind_data
+    
     def prepare_time_series(self):
         """
         Prepare the time series data for the wind power component.
@@ -372,7 +378,14 @@ class WindPower(Component):
         if len(self.environment.wind_data) == 0:
             raise ValueError("self.environment.wind_data is empty.")
 
-        self.get_wind_turbine()
+        # Ensure the wind data has the correct format
+        self._ensure_wind_data_format()
+        
+        # Initialize the wind turbine if not already done
+        if not hasattr(self, 'wind_turbine') or self.wind_turbine is None:
+            self.initialize_wind_turbine()
+        
+        # Calculate power output
         self.calculate_power_output()
 
         return self.timeseries

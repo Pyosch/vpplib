@@ -15,12 +15,14 @@ import zoneinfo
 import polars as pl
 import datetime
 _ = pl.Config.set_tbl_hide_dataframe_shape(True)
-from wetterdienst import Wetterdienst, Resolution, Parameter, Settings
-from wetterdienst.provider.dwd.observation import DwdObservationRequest
-from wetterdienst.provider.dwd.mosmix import DwdMosmixRequest, DwdForecastDate
+from wetterdienst import Wetterdienst, Settings
 from pvlib import irradiance
 from pvlib.solarposition import get_solarposition
 import numpy as np
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 class Environment(object):
     """Environment class for providing external data to the virtual power plant simulation.
@@ -327,14 +329,15 @@ class Environment(object):
         return self.wind_data
 
     def get_time_from_dwd(self):
-        #Get time from dwd server
-        wd_time_result = Wetterdienst(
-            provider = "dwd",
-            network = "observation"
-        )
-        # In the new API, there's no direct 'now' attribute
-        # We'll use the current time instead
-        return datetime.datetime.now(tz=datetime.timezone.utc).replace(second=0,microsecond=0)
+        """Get current time in UTC timezone.
+        
+        Returns
+        -------
+        datetime.datetime
+            Current time in UTC timezone with seconds and microseconds set to 0.
+        """
+        # Use the current time in UTC timezone
+        return datetime.datetime.now(tz=datetime.timezone.utc).replace(second=0, microsecond=0)
         
     def __get_solar_parameter (self, date, ghi, lat, lon, height, temperature = None, pressure = None, dew_point = None, methode = 'disc', use_methode_name_in_columns = False, extended_solar_data = False,):
         """
@@ -909,25 +912,26 @@ class Environment(object):
             'temperature' : ['temperature']
             }
 
-        # Updated parameter names to match the new API
-        # In the new API, parameters are specified as (resolution, dataset, parameter)
+        # Parameter mapping for the new API
+        # In the new API, parameters are specified differently for observation and mosmix
         available_parameter_dict = {
             "ghi"         : "radiation_global", 
             "dhi"         : "radiation_sky", 
             "pressure"    : "air_pressure", 
             "temperature" : "temperature_air", 
-            "wind_speed"  : "wind", 
+            "wind_speed"  : "wind_speed", 
             "dew_point"   : "temperature_dew_point",
             }
         
-        #Create a dictionsry with the parameters to query
+        # Create a dictionary with the parameters to query
         req_parameter_dict = {param: available_parameter_dict[param] for param in dataset_dict[dataset]}
         
         time_now = self.get_time_from_dwd()
-        # In the new API, Settings is a class with different attributes
-        settings = Settings()
-        # ts_convert_units replaces ts_si_units in the new API
-        settings.ts_convert_units = False
+        # Create settings with the appropriate parameters for the API
+        settings = Settings(
+            ts_shape="wide",
+            ts_humanize=True
+        )
         
         #observation database is updated every full hour
         observation_end_date = time_now.replace(minute = 0 , second = 0, microsecond = 0)
@@ -942,36 +946,60 @@ class Environment(object):
                     print("End date is in the future.")
                 self.__end_dt_utc = observation_end_date
 
-            #Get weather data for your location from dwd observation database
-            # Get the DWD observation request class
-            DwdObservationRequest = Wetterdienst.resolve('dwd', 'observation')
+            # Get weather data for your location from DWD observation database
+            # Initialize the API with the provider and network using the new API structure
+            api = Wetterdienst.resolve('dwd', 'observation')
             
-            # Create parameters list with proper format for the new API
-            # In the new API, parameters are specified as tuples (resolution, dataset, parameter)
-            # or as tuples (resolution, parameter) for some parameters
-            parameters = []
-            for param in req_parameter_dict.values():
-                # For each parameter, create a tuple with the appropriate format
-                if param == "radiation_global":
-                    parameters.append(('10_minutes', 'solar', 'radiation_global'))
-                elif param == "radiation_sky":
-                    parameters.append(('10_minutes', 'solar', 'radiation_sky'))
-                elif param == "air_pressure":
-                    parameters.append(('hourly', 'air_pressure'))
-                elif param == "temperature_air":
-                    parameters.append(('hourly', 'temperature_air'))
-                elif param == "wind":
-                    parameters.append(('hourly', 'wind_speed'))
-                elif param == "temperature_dew_point":
-                    parameters.append(('hourly', 'dew_point'))
+            # Create separate requests for each parameter type with the appropriate resolution
+            wd_query_results = []
             
-            # Create the request with parameters
-            wd_query_result = DwdObservationRequest(
-                parameters=parameters,
-                start_date=self.__start_dt_utc,
-                end_date=self.__end_dt_utc if self.__end_dt_utc.minute % 10 == 0 else self.__end_dt_utc + datetime.timedelta(minutes=5),
-                settings=settings
-            )
+            # Map parameters to the appropriate resolution and parameter group
+            # In the new API, parameters are specified as tuples (resolution, parameter_group)
+            parameter_mapping = {
+                "radiation_global": ("10_minutes", "solar"),
+                "radiation_sky": ("10_minutes", "solar"),
+                "wind_speed": ("hourly", "wind"),
+                "air_pressure": ("hourly", "pressure"),
+                "temperature_air": ("hourly", "temperature_air"),
+                "temperature_dew_point": ("hourly", "dew_point")
+            }
+            
+            # Group parameters by resolution and parameter group
+            parameter_groups = {}
+            for param_key, param_value in req_parameter_dict.items():
+                if param_value in parameter_mapping:
+                    resolution, group = parameter_mapping[param_value]
+                    if (resolution, group) not in parameter_groups:
+                        parameter_groups[(resolution, group)] = []
+                    parameter_groups[(resolution, group)].append(param_key)
+            
+            # Create requests for each resolution and parameter group
+            try:
+                for (resolution, group), params in parameter_groups.items():
+                    logger.info(f"Creating request for resolution={resolution}, group={group}, params={params}")
+                    
+                    # Create the parameter tuple for the API
+                    # Format: [(resolution, group)]
+                    parameter_tuple = [(resolution, group)]
+                    
+                    # Create the request
+                    request = api(
+                        parameters=parameter_tuple,
+                        start_date=self.__start_dt_utc,
+                        end_date=self.__end_dt_utc,
+                        settings=settings
+                    )
+                    wd_query_results.append(request)
+                
+                # If we have any results, use the first one for station filtering
+                if wd_query_results:
+                    wd_query_result = wd_query_results[0]
+                else:
+                    raise ValueError("No parameters to query")
+                    
+            except Exception as e:
+                print(f"Error creating observation request: {e}")
+                raise
         else:
             if self.__start_dt_utc > time_now + datetime.timedelta(hours = 239):
                 raise ValueError("No forecast data avaliable for this time")
@@ -986,42 +1014,47 @@ class Environment(object):
                     microsecond = 0
                     ) + datetime.timedelta(hours = 240)
             if activate_output:  
-                print("Using momsix database.")
-            # Create a new dictionary for MOSMIX parameters
-            mosmix_parameter_dict = {
-                "radiation_global": "Rad1h",
-                "radiation_sky": "RadL3",
-                "air_pressure": "PPPP",
-                "temperature_air": "TTT",
-                "wind": "FF",
-                "temperature_dew_point": "Td"
-            }
-            
+                print("Using mosmix database.")
+                
             if dataset == 'solar':
                 #dhi is not available for MOSMIX
-                req_parameter_dict.pop("dhi")
+                if "dhi" in req_parameter_dict:
+                    req_parameter_dict.pop("dhi")
                 
-            # Convert the parameter names to MOSMIX format
-            mosmix_req_parameter_dict = {}
-            for key, value in req_parameter_dict.items():
-                mosmix_req_parameter_dict[key] = mosmix_parameter_dict.get(value, value)
+            # Initialize the API with the provider and network using the new API structure
+            api = Wetterdienst.resolve('dwd', 'mosmix')
             
-            #Get weather data for your location from dwd MOSMIX database
-            # Create parameters list with proper format for the new API
-            # In the new API, parameters are specified as tuples (resolution, dataset, parameter)
-            parameters = []
-            for param in mosmix_req_parameter_dict.values():
-                # For each parameter, create a tuple with resolution, dataset, and parameter
-                # MOSMIX parameters need to be specified with dataset 'large'
-                parameters.append(('hourly', 'large', param))
+            # In the new API, MOSMIX parameters are specified as tuples (hourly, small/large, parameter_name)
+            # Map our parameters to MOSMIX parameters
+            mosmix_parameter_mapping = {
+                "radiation_global": "radiation_global",
+                "air_pressure": "pressure_air_site_reduced",
+                "temperature_air": "temperature_air_mean_2m",
+                "wind_speed": "wind_speed",
+                "temperature_dew_point": "temperature_dew_point_mean_2m"
+            }
+            
+            # Create the parameter tuples for the API
+            parameter_tuples = []
+            for param_value in req_parameter_dict.values():
+                if param_value in mosmix_parameter_mapping:
+                    # Format: (hourly, small, parameter_name)
+                    parameter_tuples.append(('hourly', 'small', mosmix_parameter_mapping[param_value]))
+            
+            # Create the request with parameters
+            try:
+                logger.info(f"Creating MOSMIX request with parameters: {parameter_tuples}")
                 
-            wd_query_result = DwdMosmixRequest(
-                parameters = parameters,
-                issue = DwdForecastDate.LATEST,  # This replaces DwdMosmixType.LARGE
-                settings = settings,
-                start_date = self.__start_dt_utc,
-                end_date = self.__end_dt_utc + datetime.timedelta(hours = 1)
+                # Create the request using the new API
+                wd_query_result = api(
+                    parameters=parameter_tuples,
+                    start_date=self.__start_dt_utc,
+                    end_date=self.__end_dt_utc + datetime.timedelta(hours=1),
+                    settings=settings
                 )
+            except Exception as e:
+                print(f"Error creating MOSMIX request: {e}")
+                raise
 
         if user_station_id is not None:
             wd_nearby_stations = wd_query_result.filter_by_station_id(
@@ -1054,33 +1087,101 @@ class Environment(object):
                 print('Checking query result for station ' + station_name, station_id + " ...")
             
             #Get query result for the actual station
-            try:
-                # In the new API, values.all() might return an empty DataFrame
-                # We need to handle this case
+            pd_unsorted_data_for_station_list = []
+            
+            if not use_mosmix:
+                # For observation data, we need to get data for each resolution separately
+                # and then combine them
                 try:
-                    wd_unsorted_data_for_station = wd_query_result.filter_by_station_id(station_id=station_id).values.all().df
+                    # Process the first query result (which we already have)
+                    station_data = wd_query_result.filter_by_station_id(station_id=station_id).values.all().df
+                    
+                    # Check if the DataFrame is empty
+                    if hasattr(station_data, 'is_empty') and station_data.is_empty():
+                        print(f"No data available for station {station_id} in first query")
+                        continue
+                        
+                    # Convert to pandas if needed
+                    if isinstance(station_data, pd.core.frame.DataFrame):
+                        pd_station_data = station_data
+                    elif isinstance(station_data, pl.DataFrame):
+                        pd_station_data = station_data.to_pandas()
+                    else:
+                        print(f"Unexpected data type for station {station_id}")
+                        continue
+                        
+                    pd_unsorted_data_for_station_list.append(pd_station_data)
+                    
+                    # If we have more than one query result, process the others
+                    if len(wd_query_results) > 1:
+                        for i in range(1, len(wd_query_results)):
+                            try:
+                                # Get data for this station from this query
+                                query = wd_query_results[i]
+                                
+                                # Get data for this station from this query
+                                station_data = query.filter_by_station_id(station_id=station_id).values.all().df
+                                
+                                # Check if the DataFrame is empty
+                                if hasattr(station_data, 'is_empty') and station_data.is_empty():
+                                    continue
+                                    
+                                # Convert to pandas if needed
+                                if isinstance(station_data, pd.core.frame.DataFrame):
+                                    pd_station_data = station_data
+                                elif isinstance(station_data, pl.DataFrame):
+                                    pd_station_data = station_data.to_pandas()
+                                else:
+                                    continue
+                                    
+                                pd_unsorted_data_for_station_list.append(pd_station_data)
+                            except Exception as e:
+                                print(f"Error getting data for station {station_id} from query {i}: {e}")
+                                continue
+                    
+                    # If we have no data from any query, skip this station
+                    if not pd_unsorted_data_for_station_list:
+                        print(f"No data available for station {station_id}")
+                        continue
+                        
+                    # Combine all data frames
+                    pd_unsorted_data_for_station = pd.concat(pd_unsorted_data_for_station_list, axis=0)
+                except ValueError as ve:
+                    if "cannot concat empty list" in str(ve):
+                        print(f"No data available for station {station_id}")
+                        continue
+                    else:
+                        raise ve
+                except Exception as e:
+                    print(f"Error getting data for station {station_id}: {e}")
+                    continue
+            else:
+                # For MOSMIX data, we can use the single query result
+                try:
+                    station_data = wd_query_result.filter_by_station_id(station_id=station_id).values.all().df
+                    
+                    # Check if the DataFrame is empty
+                    if hasattr(station_data, 'is_empty') and station_data.is_empty():
+                        print("No data available for this station.")
+                        continue
+                        
+                    # Convert to pandas if needed
+                    if isinstance(station_data, pd.core.frame.DataFrame):
+                        pd_unsorted_data_for_station = station_data
+                    elif isinstance(station_data, pl.DataFrame):
+                        pd_unsorted_data_for_station = station_data.to_pandas()
+                    else:
+                        print(f"Data type incorrect for station {station_id}")
+                        continue
                 except ValueError as ve:
                     if "cannot concat empty list" in str(ve):
                         print("No data available for this station.")
                         continue
                     else:
                         raise ve
-                        
-                # Check if the DataFrame is empty
-                if hasattr(wd_unsorted_data_for_station, 'is_empty') and wd_unsorted_data_for_station.is_empty():
-                    print("No data available for this station.")
+                except Exception as e:
+                    print(f"Error getting data for station {station_id}: {e}")
                     continue
-            except Exception as e:
-                print(f"Error getting data for station {station_id}: {e}")
-                continue
-
-            if isinstance(wd_unsorted_data_for_station, pd.core.frame.DataFrame):
-                pd_unsorted_data_for_station = wd_unsorted_data_for_station
-            elif isinstance(wd_unsorted_data_for_station, pl.DataFrame):
-                pd_unsorted_data_for_station = wd_unsorted_data_for_station.to_pandas()
-            else:
-                print(f"Data type incorrect for station {station_id}")
-                continue
                 
             # Check if the DataFrame is empty or doesn't have the expected columns
             if pd_unsorted_data_for_station.empty or 'date' not in pd_unsorted_data_for_station.columns:
@@ -1095,9 +1196,8 @@ class Environment(object):
                 pd_sorted_data_for_station[key] = pd_unsorted_data_for_station.loc[pd_unsorted_data_for_station['parameter'] == req_parameter_dict[key]]['value']
 
             #Fill missing values with NaN, if end time is forced    
-            # Check if this is a mosmix request using string comparison since the class is dynamically created
-            # In the new API, we need to check the class name as a string since the class is dynamically created
-            if not pd_sorted_data_for_station.empty and pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and self.__force_end_time and 'DwdMosmixRequest' in str(type(wd_query_result)):
+            # Check if this is a mosmix request based on the use_mosmix flag
+            if not pd_sorted_data_for_station.empty and pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and self.__force_end_time and use_mosmix:
                 pd_missing_dates = pd.DataFrame(index = pd.date_range(
                     start = pd_sorted_data_for_station.index[-1] + datetime.timedelta(hours = 1),
                     end   = self.__end_dt_utc.replace(minute = 0)+ datetime.timedelta(hours = 2),
@@ -1140,11 +1240,9 @@ class Environment(object):
             print("Query successful!")
             
         station_metadata = (pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id])
-        # Check if this is an observation or mosmix request
-        # In the new API, we need to check the class name as a string since the class is dynamically created
-        # Check the type using string comparison
-        station_metadata ['station_type'] = 'OBSERVATION' if 'DwdObservationRequest' in str(type(wd_query_result)) else 'MOSMIX',  
-        station_metadata ['distance_itaration'] = station_metadata.index
+        # Check if this is an observation or mosmix request based on the network used
+        station_metadata['station_type'] = 'OBSERVATION' if not use_mosmix else 'MOSMIX'
+        station_metadata['distance_itaration'] = station_metadata.index
         station_metadata['Index'] = range(len(station_metadata))
         station_metadata = station_metadata.set_index('Index')
         
