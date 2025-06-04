@@ -178,8 +178,7 @@ def test_prepare_time_series(wind):
         plt.title("Wind Power Output")
         plt.ylabel("Power (kW)")
         plt.grid(True)
-        plt.savefig("wind_power_output.png")
-        print("Plot saved to wind_power_output.png")
+        plt.show()
     except Exception as e:
         import traceback
         print(f"Error in test_prepare_time_series: {e}")
