@@ -10,5 +10,5 @@ matplotlib
 NREL-PySAM
 polars
 numba
-wetterdienst==0.89.0
+wetterdienst==0.109.0
 marshmallow==3.20.1
