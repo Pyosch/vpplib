@@ -80,8 +80,6 @@ pv = Photovoltaic(
     identifier=identifier, 
     environment=environment
 )
-# Set the limit property
-pv.limit = 0.3
 
 # Run the tests with MOSMIX data
 test_prepare_time_series(pv)
@@ -94,8 +92,8 @@ observations_for_timestamp(pv, timestamp_str)
 try:
     # Create a new environment for observation data
     obs_environment = Environment(
-        start = (time_now - datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"), 
-        end = time_now.strftime("%Y-%m-%d %H:%M:%S"), 
+        start = (time_now - datetime.timedelta(days=365)).strftime("%Y-%m-%d %H:%M:%S"), 
+        end = (time_now - datetime.timedelta(days=360)).strftime("%Y-%m-%d %H:%M:%S"), 
         use_timezone_aware_time_index = True, 
         force_end_time = True,
         surpress_output_globally = False)
@@ -121,17 +119,15 @@ try:
         identifier=identifier, 
         environment=obs_environment
     )
-    # Set the limit property
-    obs_pv.limit = 0.3
     
     # Run the tests with observation data
     print("\n--- Testing with observation data ---")
     test_prepare_time_series(obs_pv)
     
     # Use a timestamp from yesterday for testing
-    yesterday_timestamp = (time_now - datetime.timedelta(days=1)).replace(hour=12, minute=0, second=0).strftime("%Y-%m-%d %H:%M:%S")
-    test_value_for_timestamp(obs_pv, yesterday_timestamp)
-    observations_for_timestamp(obs_pv, yesterday_timestamp)
+    test_timestamp = (time_now - datetime.timedelta(days=364)).replace(hour=12, minute=0, second=0).strftime("%Y-%m-%d %H:%M:%S")
+    test_value_for_timestamp(obs_pv, test_timestamp)
+    observations_for_timestamp(obs_pv, test_timestamp)
     
 except Exception as e:
     print(f"\nError with observation data: {e}")
