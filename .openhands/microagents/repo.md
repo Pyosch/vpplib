@@ -50,8 +50,45 @@ Main dependencies include:
 - simses
 - polars
 - NREL-PySAM
-- wetterdienst (version 0.89.0)
+- wetterdienst (version 0.109.0)
 - marshmallow (version 3.20.1)
+
+### Wetterdienst Compatibility
+The repository has been updated to work with wetterdienst v0.109.0 (previously v0.89.0). The following changes were made:
+
+1. **API Changes**:
+   - `DwdMosmixType.LARGE` was replaced with `DwdForecastDate.LATEST`
+   - Parameter format for `DwdMosmixRequest` changed to tuples: `('hourly', 'large', parameter_name)`
+   - Parameter format for `DwdObservationRequest` changed to tuples: `('hourly', parameter_name)` or `('10_minutes', parameter_name)`
+
+2. **Station IDs**:
+   - MOSMIX data: Use station ID "10410" (ESSEN) instead of "01303"
+   - Observation data: Station IDs may need larger search radius (use `distance=100` parameter)
+
+3. **Error Handling**:
+   - Added checks for empty DataFrames before accessing index
+   - Added try-except blocks for "cannot concat empty list" errors
+   - Added proper error messages for missing data
+
+4. **Parameter Changes**:
+   - Created a dedicated MOSMIX parameter dictionary for cleaner code organization
+   - Added `use_mosmix` parameter to `get_dwd_pv_data` method to explicitly control data source
+   - Solar radiation data is available in 10_minutes resolution
+
+5. **PV Object Initialization**:
+   - When creating Photovoltaic objects, include temperature model parameters:
+     ```python
+     pv = Photovoltaic(
+         # other parameters...
+         temp_lib="sapm",
+         temp_model="open_rack_glass_glass",
+     )
+     ```
+   - Inverter names have changed in newer pvlib versions (e.g., "ABB__MICRO_0_25_I_OUTD_US_208__208V_" instead of "ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_")
+
+The main files affected by these changes are:
+- `vpplib/environment.py`: Weather data retrieval and processing
+- `test_pv.py`: Test file for Photovoltaic class
 
 ## Installation
 The package can be installed via pip:
