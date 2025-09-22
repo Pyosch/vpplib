@@ -15,8 +15,8 @@ from vpplib.environment import Environment
 from vpplib.photovoltaic import Photovoltaic
 import datetime # for Mosmix test
 
-latitude = 51.4
-longitude = 6.97
+latitude = 50.933954264541924
+longitude = 6.988538343769104
 identifier = "Cologne"
 timestamp_int = 48
 
@@ -32,10 +32,14 @@ environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
 Using dwd observation (weather recording) database for weather data
 use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
 """
-timestamp_str = "2015-11-09 12:00:00"
+timestamp_now = datetime.datetime.now(datetime.timezone.utc)
+# Round down to the last 15 minute value
+minute = (timestamp_now.minute // 15) * 15
+timestamp_now = timestamp_now.replace(minute=minute, second=0, microsecond=0)
+timestamp_str = (timestamp_now + datetime.timedelta(days=-2)).strftime("%Y-%m-%d %H:%M:%S")
 environment = Environment(
-    start = "2015-01-01 00:00:00", 
-    end = "2015-12-31 23:45:00", 
+    start = (timestamp_now + datetime.timedelta(days=-5)).strftime("%Y-%m-%d %H:%M:%S"),
+    end = (timestamp_now + datetime.timedelta(days=-1)).strftime("%Y-%m-%d %H:%M:%S"),
     use_timezone_aware_time_index = True, 
     surpress_output_globally = False)
 environment.get_dwd_pv_data(lat=latitude, lon=longitude)
