@@ -24,6 +24,9 @@ timestamp_str = "2015-12-07 12:00:00"
 timebase = 15
 latitude = 50.941357
 longitude = 6.958307
+# Add CSV file paths for thermal data
+temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
+temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
 
 # Values for user_profile
 yearly_thermal_energy_demand = 12500
@@ -48,8 +51,9 @@ environment = Environment(
     time_freq=time_freq, 
     surpress_output_globally=False
 )
-environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
-environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)
+# Load mean temperatures from CSVs instead of DWD API
+environment.get_mean_temp_hours(file=temp_hours_file)
+environment.get_mean_temp_days(file=temp_days_file)
 
 user_profile = UserProfile(
     identifier=None,

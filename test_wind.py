@@ -26,19 +26,17 @@ latitude = 51.200001
 longitude = 6.433333
 timestamp_int = 12
 
-
-"""CSV
+"""CSV - Use this method to avoid DWD API issues"""
 timestamp_str = "2015-11-09 12:00:00"
 environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
 environment.get_wind_data(
     file="./input/wind/dwd_wind_data_2015.csv", utc=False
 )
-"""
 
-"""OBSERVATION 
+"""OBSERVATION - Commented out due to wetterdienst breaking changes
 Using dwd observation (weather recording) database for weather data
 use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
-"""
+
 timestamp_str = "2015-01-09 12:00:00"
 environment = Environment(
     start = "2015-01-01 00:00:00", 
@@ -46,9 +44,9 @@ environment = Environment(
     use_timezone_aware_time_index = True, 
     surpress_output_globally = False)
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
+"""
 
-
-"""MOSMIX:
+"""MOSMIX - Commented out due to wetterdienst breaking changes
 Using dwd mosmix (weather forecast) database for weather data
 The forecast is queried for the next 10 days automatically.
 force_end_time is set to True to get a resulting dataframe from the start time to the end time even if there is no forecast data for the last hours of the time period --> Missing data is filled with NaN values.

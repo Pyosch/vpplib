@@ -17,9 +17,13 @@ figsize = (10, 6)
 start = "2015-01-01 00:00:00"
 end = "2015-01-31 23:45:00"
 year = "2015"
+time_freq = "15 min"
 timebase = 15
 latitude = 51.200001
 longitude = 6.433333
+# Add CSV file paths for thermal data
+temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
+temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
 
 # Values for user_profile
 yearly_thermal_energy_demand = 12500  # kWh
@@ -44,16 +48,28 @@ min_stop_time = 2  # timesteps
 heat_pump_type = "Air"
 heat_sys_temp = 60
 
-environment = Environment(timebase=timebase, start=start, end=end, year=year)
-environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude)
-environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude)
-environment.get_dwd_mean_quarter_hours(lat=latitude, lon=longitude)
+environment = Environment(
+    timebase=timebase, 
+    start=start, 
+    end=end, 
+    year=year, 
+    time_freq=time_freq, 
+    surpress_output_globally=False
+)
+# Load mean temperatures from CSVs instead of DWD API
+environment.get_mean_temp_hours(file=temp_hours_file)
+environment.get_mean_temp_days(file=temp_days_file)
+# Create quarter-hourly temperature data by resampling hourly data
+environment.mean_temp_quarter_hours = environment.mean_temp_hours.resample("15 Min").interpolate()
 
 user_profile = UserProfile(
     identifier=None,
     latitude=None,
     longitude=None,
     thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+    mean_temp_days=environment.mean_temp_days,
+    mean_temp_hours=environment.mean_temp_hours,
+    mean_temp_quarter_hours=environment.mean_temp_quarter_hours,
     building_type=building_type,
     comfort_factor=None,
     t_0=t_0,

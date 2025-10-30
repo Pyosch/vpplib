@@ -122,17 +122,17 @@ environment = Environment(
     year=year,
     time_freq=time_freq,
 )
-#%%
-"""
+# Prefer CSV-based inputs to avoid breaking changes in wetterdienst
 environment.get_wind_data(file=wind_file, utc=False)
 environment.get_pv_data(file=pv_file)
 environment.get_mean_temp_days(file=temp_days_file)
 environment.get_mean_temp_hours(file=temp_hours_file)
-"""
-environment.get_dwd_wind_data(lat=latitude,lon=longitude)
-environment.get_dwd_pv_data(lat=latitude,lon=longitude)
-environment.get_dwd_mean_temp_hours(lat=latitude,lon=longitude)
-environment.get_dwd_mean_temp_days(lat=latitude,lon=longitude)
+
+# If you prefer live DWD API, ensure a compatible wetterdienst version and uncomment:
+# environment.get_dwd_wind_data(lat=latitude, lon=longitude)
+# environment.get_dwd_pv_data(lat=latitude, lon=longitude)
+# environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude)
+# environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude)
 
 # %% user profile
 
@@ -143,7 +143,7 @@ user_profile = UserProfile(
     thermal_energy_demand_yearly=yearly_thermal_energy_demand,
     building_type=building_type,
     t_0=t_0,
-    )
+)
 
 user_profile.get_thermal_energy_demand()
 user_profile.thermal_energy_demand.head()
@@ -320,6 +320,8 @@ for bus in vpp.buses_with_hp:
 
     vpp.components[list(vpp.components.keys())[-1]].bus = bus
     vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
+    # Ensure no NaNs remain to avoid ValueError in operator
+    vpp.components[list(vpp.components.keys())[-1]].timeseries.fillna(0, inplace=True)
 
 for bus in vpp.buses_with_wind:
 
