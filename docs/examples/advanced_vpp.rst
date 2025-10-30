@@ -1,293 +1,279 @@
 Advanced Virtual Power Plant
-=======================
+============================
 
-This example shows how to create a more advanced virtual power plant with multiple components and a custom operation strategy.
+This example mirrors the advanced scenario in the codebase (based on test_base_scenario.py).
+It assembles a virtual power plant (PV, storage, BEV, heat pump, wind) on a pandapower grid,
+runs a base scenario without optimization, and extracts/plots results.
+
+Note on input data:
+- Example CSVs used here can be found in the repository under input/*:
+  https://github.com/Pyosch/vpplib/tree/main/input
 
 .. code-block:: python
 
-   import vpplib
    import pandas as pd
-   import matplotlib.pyplot as plt
-   
-   # Create an environment
-   env = vpplib.Environment(timebase=15, timezone="Europe/Berlin")
-   
-   # Create weather data
-   weather_data = pd.DataFrame({
-       "datetime": pd.date_range(start="2020-07-01", end="2020-07-02", freq="15min"),
-       "temperature": [25.0] * 97,
-       "irradiance": [0.0] * 97,
-       "wind_speed": [5.0] * 97
-   })
-   
-   # Set irradiance to follow a typical daily pattern
-   for i in range(97):
-       hour = i // 4
-       if 6 <= hour < 21:  # Daylight hours (6:00 - 21:00)
-           # Simple bell curve for irradiance
-           irradiance = 1000 * (1 - ((hour - 13.5) / 7.5) ** 2)
-           if irradiance < 0:
-               irradiance = 0
-           weather_data.loc[i, "irradiance"] = irradiance
-   
-   # Load weather data
-   env.load_weather_from_dataframe(
-       dataframe=weather_data,
-       datetime_column="datetime",
-       temperature_column="temperature",
-       irradiance_column="irradiance",
-       wind_speed_column="wind_speed"
+   import pandapower as pp
+   import pandapower.networks as pn
+
+   from vpplib.environment import Environment
+   from vpplib.user_profile import UserProfile
+   from vpplib.photovoltaic import Photovoltaic
+   from vpplib.battery_electric_vehicle import BatteryElectricVehicle
+   from vpplib.heat_pump import HeatPump
+   from vpplib.electrical_energy_storage import ElectricalEnergyStorage
+   from vpplib.wind_power import WindPower
+   from vpplib.virtual_power_plant import VirtualPowerPlant
+   from vpplib.operator import Operator
+
+   # Environment and timeframe
+   start = "2015-03-01 00:00:00"
+   end = "2015-03-01 23:45:00"
+   timezone = "Europe/Berlin"
+   year = "2015"
+   time_freq = "15 min"
+   timebase = 15
+   temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
+   temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
+
+   # Location and thermal demand
+   identifier = "bus_1"
+   latitude = 50.941357
+   longitude = 6.958307
+   yearly_thermal_energy_demand = 12500
+   building_type = "DE_HEF33"
+   t_0 = 40
+
+   # Baseload profile (CSV available in input/baseload/)
+   baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
+   baseload.drop(columns=["Time"], inplace=True)
+   baseload.index = pd.date_range(
+       start=year, periods=35040, freq=time_freq, name="time"
    )
-   
-   # Create a user profile
-   user = vpplib.UserProfile(timebase=15)
-   
-   # Create a load profile
-   load_data = pd.DataFrame({
-       "datetime": pd.date_range(start="2020-07-01", end="2020-07-02", freq="15min"),
-       "power": [2.0] * 97
-   })
-   
-   # Set power to follow a typical daily pattern
-   for i in range(97):
-       hour = i // 4
-       if 6 <= hour < 9:  # Morning peak (6:00 - 9:00)
-           load_data.loc[i, "power"] = 4.0
-       elif 17 <= hour < 22:  # Evening peak (17:00 - 22:00)
-           load_data.loc[i, "power"] = 5.0
-       elif 0 <= hour < 6:  # Night (0:00 - 6:00)
-           load_data.loc[i, "power"] = 1.0
-   
-   user.load_power_from_dataframe(
-       dataframe=load_data,
-       datetime_column="datetime",
-       power_column="power"
+
+   unit = "kW"
+
+   # Wind turbine configuration
+   turbine_type = "E-126/4200"
+   hub_height = 135
+   rotor_diameter = 127
+   fetch_curve = "power_curve"
+   data_source = "oedb"
+   wind_file = "./input/wind/dwd_wind_data_2015.csv"
+   wind_speed_model = "logarithmic"
+   density_model = "ideal_gas"
+   temperature_model = "linear_gradient"
+   power_output_model = "power_curve"
+   density_correction = True
+   obstacle_height = 0
+   hellman_exp = None
+
+   # PV configuration (weather CSV available in input/pv/)
+   pv_file = "./input/pv/dwd_pv_data_2015.csv"
+   module_lib = "SandiaMod"
+   module = "Canadian_Solar_CS5P_220M___2009_"
+   inverter_lib = "cecinverter"
+   inverter = "ABB__MICRO_0_25_I_OUTD_US_208__208V_"
+   surface_tilt = (20,)
+   surface_azimuth = 200
+   modules_per_string = 2
+   strings_per_inverter = 2
+   temp_lib = 'sapm'
+   temp_model = 'open_rack_glass_glass'
+
+   # BEV configuration
+   battery_max = 16
+   battery_min = 0
+   battery_usage = 1
+   charging_power = 11
+   charge_efficiency_bev = 0.98
+   load_degradation_begin = 0.8
+
+   # Heat pump configuration
+   heatpump_type = "Air"
+   heat_sys_temp = 60
+   el_power = 5
+   th_power = 3
+   ramp_up_time = 0
+   ramp_down_time = 0
+   min_runtime = 0
+   min_stop_time = 0
+
+   # Storage configuration
+   charge_efficiency_storage = 0.98
+   discharge_efficiency_storage = 0.98
+   max_power = 4
+   capacity = 4
+   max_c = 1
+
+   # Create environment and load weather/temperature data from CSVs
+   environment = Environment(
+       timebase=timebase,
+       timezone=timezone,
+       start=start,
+       end=end,
+       year=year,
+       time_freq=time_freq,
    )
-   
-   # Create a heat profile
-   heat_data = pd.DataFrame({
-       "datetime": pd.date_range(start="2020-07-01", end="2020-07-02", freq="15min"),
-       "heat": [1.0] * 97
-   })
-   
-   # Set heat to follow a typical daily pattern
-   for i in range(97):
-       hour = i // 4
-       if 6 <= hour < 9:  # Morning peak (6:00 - 9:00)
-           heat_data.loc[i, "heat"] = 3.0
-       elif 17 <= hour < 22:  # Evening peak (17:00 - 22:00)
-           heat_data.loc[i, "heat"] = 2.0
-       elif 0 <= hour < 6:  # Night (0:00 - 6:00)
-           heat_data.loc[i, "heat"] = 0.5
-   
-   user.load_heat_from_dataframe(
-       dataframe=heat_data,
-       datetime_column="datetime",
-       heat_column="heat"
+   # Use CSV-based loaders to avoid DWD API breaking changes
+   environment.get_wind_data(file=wind_file, utc=False)
+   environment.get_pv_data(file=pv_file)
+   environment.get_mean_temp_days(file=temp_days_file)
+   environment.get_mean_temp_hours(file=temp_hours_file)
+   # Create quarter-hourly temperature data by resampling hourly data
+   environment.mean_temp_quarter_hours = environment.mean_temp_hours.resample("15 Min").interpolate()
+
+   # User profile (thermal)
+   user_profile = UserProfile(
+       identifier=identifier,
+       latitude=latitude,
+       longitude=longitude,
+       thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+       mean_temp_days=environment.mean_temp_days,
+       mean_temp_hours=environment.mean_temp_hours,
+       mean_temp_quarter_hours=environment.mean_temp_quarter_hours,
+       building_type=building_type,
+       t_0=t_0,
    )
-   
-   # Create components
-   
-   # Photovoltaic system
-   pv = vpplib.Photovoltaic(
-       unit="kW",
-       identifier="PV_1",
-       environment=env,
-       module_lib="SandiaMod",
-       module="Canadian_Solar_CS5P_220M___2009_",
-       inverter_lib="SandiaInverter",
-       inverter="ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_",
-       surface_tilt=30,
-       surface_azimuth=180,
-       modules_per_string=10,
-       strings_per_inverter=2
-   )
-   
-   # Wind turbine
-   wind = vpplib.WindPower(
-       unit="kW",
-       identifier="Wind_1",
-       environment=env,
-       nominal_power=10,
-       hub_height=50,
-       rotor_diameter=20,
-       cut_in_wind_speed=3,
-       cut_out_wind_speed=25,
-       nominal_wind_speed=12
-   )
-   
-   # Combined heat and power
-   chp = vpplib.CombinedHeatAndPower(
-       unit="kW",
-       identifier="CHP_1",
-       environment=env,
-       nominal_electrical_power=5,
-       nominal_thermal_power=10,
-       electrical_efficiency=0.3,
-       thermal_efficiency=0.6,
-       overall_efficiency=0.9
-   )
-   
-   # Electrical energy storage
-   battery = vpplib.ElectricalEnergyStorage(
-       unit="kW",
-       identifier="Battery_1",
-       environment=env,
-       capacity=20,
-       max_power=10,
-       efficiency=0.95,
-       self_discharge=0.001
-   )
-   
-   # Thermal energy storage
-   tes = vpplib.ThermalEnergyStorage(
-       unit="kW",
-       identifier="TES_1",
-       environment=env,
-       capacity=50,
-       max_power=10,
-       efficiency=0.9,
-       self_discharge=0.002
-   )
-   
-   # Heat pump
-   hp = vpplib.HeatPump(
-       unit="kW",
-       identifier="HP_1",
-       environment=env,
-       user_profile=user,
-       nominal_power=5,
-       cop=3.5
-   )
-   
-   # Create a virtual power plant
-   vpp = vpplib.VirtualPowerPlant(identifier="VPP_1")
-   
-   # Add components to the virtual power plant
-   vpp.add_component(pv)
-   vpp.add_component(wind)
-   vpp.add_component(chp)
-   vpp.add_component(battery)
-   vpp.add_component(tes)
-   vpp.add_component(hp)
-   
-   # Create a custom operator
-   class AdvancedOperator(vpplib.Operator):
-       def operate(self, time):
-           # Get components
-           battery = self.vpp.get_component("Battery_1")
-           tes = self.vpp.get_component("TES_1")
-           chp = self.vpp.get_component("CHP_1")
-           hp = self.vpp.get_component("HP_1")
-           
-           # Get user demands
-           electrical_demand = user.get_power(time)
-           thermal_demand = user.get_heat(time)
-           
-           # Get renewable generation
-           pv_power = pv.get_power(time)
-           wind_power = wind.get_power(time)
-           renewable_power = pv_power + wind_power
-           
-           # Calculate electrical balance
-           electrical_balance = renewable_power - electrical_demand
-           
-           # Operate CHP based on thermal demand
-           if thermal_demand > tes.get_power(time):
-               chp.turn_on(time)
-           else:
-               chp.turn_off(time)
-           
-           # Update electrical balance with CHP
-           electrical_balance += chp.get_power(time)
-           
-           # Operate battery
-           if electrical_balance > 0:
-               # Excess power, charge battery
-               battery.charge(electrical_balance, time)
-           else:
-               # Power deficit, discharge battery
-               battery.discharge(abs(electrical_balance), time)
-           
-           # Update electrical balance with battery
-           electrical_balance += battery.get_power(time)
-           
-           # Operate heat pump if there's excess electrical power
-           if electrical_balance > 0:
-               hp.turn_on(time)
-           else:
-               hp.turn_off(time)
-           
-           # Update thermal balance
-           thermal_balance = chp.get_thermal_power(time) + hp.get_thermal_power(time) - thermal_demand
-           
-           # Operate thermal energy storage
-           if thermal_balance > 0:
-               # Excess heat, charge TES
-               tes.charge(thermal_balance, time)
-           else:
-               # Heat deficit, discharge TES
-               tes.discharge(abs(thermal_balance), time)
-   
-   operator = AdvancedOperator(vpp=vpp)
-   
-   # Prepare the simulation
-   vpp.prepare_simulation()
-   
-   # Run the simulation
-   vpp.simulate(start="2020-07-01 00:00:00", end="2020-07-02 00:00:00")
-   
-   # Get the results
-   results = vpp.get_results()
-   
-   # Plot the electrical results
-   fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
-   
-   # Plot electrical power
-   ax1.plot(results.index, results["PV_1"], label="PV", color="orange")
-   ax1.plot(results.index, results["Wind_1"], label="Wind", color="blue")
-   ax1.plot(results.index, results["CHP_1"], label="CHP (electrical)", color="red")
-   ax1.plot(results.index, results["Battery_1"], label="Battery", color="green")
-   ax1.plot(results.index, results["HP_1"], label="Heat Pump", color="purple")
-   
-   # Plot user electrical load
-   user_load = pd.Series(
-       [user.get_power(time) for time in results.index],
-       index=results.index
-   )
-   ax1.plot(results.index, -user_load, label="Electrical Load", color="black", linestyle="--")
-   
-   ax1.set_xlabel("Time")
-   ax1.set_ylabel("Power (kW)")
-   ax1.set_title("Electrical Power Flows")
-   ax1.legend()
-   ax1.grid(True)
-   
-   # Plot thermal power
-   thermal_results = pd.DataFrame(index=results.index)
-   thermal_results["CHP"] = [chp.get_thermal_power(time) for time in results.index]
-   thermal_results["HP"] = [hp.get_thermal_power(time) for time in results.index]
-   thermal_results["TES"] = [tes.get_power(time) for time in results.index]
-   
-   ax2.plot(thermal_results.index, thermal_results["CHP"], label="CHP (thermal)", color="red")
-   ax2.plot(thermal_results.index, thermal_results["HP"], label="Heat Pump", color="purple")
-   ax2.plot(thermal_results.index, thermal_results["TES"], label="Thermal Storage", color="green")
-   
-   # Plot user thermal load
-   user_heat = pd.Series(
-       [user.get_heat(time) for time in results.index],
-       index=results.index
-   )
-   ax2.plot(thermal_results.index, -user_heat, label="Thermal Load", color="black", linestyle="--")
-   
-   ax2.set_xlabel("Time")
-   ax2.set_ylabel("Power (kW)")
-   ax2.set_title("Thermal Power Flows")
-   ax2.legend()
-   ax2.grid(True)
-   
-   plt.tight_layout()
-   plt.savefig("advanced_vpp_simulation.png")
-   plt.show()
-   
-   print("Simulation completed successfully!")
+   user_profile.get_thermal_energy_demand()
+
+   # Create VPP and grid
+   vpp = VirtualPowerPlant("Master")
+   net = pn.panda_four_load_branch()
+
+   # Tag baseload elements in net
+   for bus in net.bus.index:
+       net.load.loc[net.load.bus == bus, 'name'] = net.bus.loc[bus, 'name'] + "_baseload"
+       net.load.loc[net.load.bus == bus, 'type'] = "baseload"
+
+   # Assign components to specific buses for this example
+   vpp.buses_with_pv = ["bus3", "bus4", "bus5", "bus6"]
+   vpp.buses_with_hp = ["bus4"]
+   vpp.buses_with_bev = ["bus5"]
+   vpp.buses_with_storage = ["bus5"]
+   vpp.buses_with_wind = ["bus1"]
+
+   # Create and register components
+   for bus in vpp.buses_with_pv:
+       vpp.add_component(
+           Photovoltaic(
+               unit=unit, latitude=latitude, longitude=longitude,
+               identifier=(bus + "_PV"), environment=environment,
+               module_lib=module_lib, module=module,
+               inverter_lib=inverter_lib, inverter=inverter,
+               surface_tilt=surface_tilt, surface_azimuth=surface_azimuth,
+               modules_per_string=modules_per_string, strings_per_inverter=strings_per_inverter,
+               temp_lib=temp_lib, temp_model=temp_model
+           )
+       )
+       vpp.components[list(vpp.components.keys())[-1]].bus = bus
+       vpp.components[list(vpp.components.keys())[-1]].prepare_time_series()
+
+   for bus in vpp.buses_with_storage:
+       vpp.add_component(
+           ElectricalEnergyStorage(
+               unit=unit, identifier=(bus + "_storage"), environment=environment,
+               capacity=capacity, charge_efficiency=charge_efficiency_storage,
+               discharge_efficiency=discharge_efficiency_storage,
+               max_power=max_power, max_c=max_c,
+           )
+       )
+       comp = vpp.components[list(vpp.components.keys())[-1]]
+       comp.bus = bus
+       comp.timeseries = pd.DataFrame(
+           columns=["state_of_charge", "residual_load"],
+           index=pd.date_range(start=start, end=end, freq=time_freq),
+       )
+
+   for bus in vpp.buses_with_bev:
+       vpp.add_component(
+           BatteryElectricVehicle(
+               unit=unit, identifier=(bus + "_BEV"), environment=environment,
+               battery_max=battery_max, battery_min=battery_min,
+               battery_usage=battery_usage, charging_power=charging_power,
+               charge_efficiency=charge_efficiency_bev,
+               load_degradation_begin=load_degradation_begin,
+           )
+       )
+       comp = vpp.components[list(vpp.components.keys())[-1]]
+       comp.bus = bus
+       comp.prepare_time_series()
+
+   for bus in vpp.buses_with_hp:
+       vpp.add_component(
+           HeatPump(
+               unit=unit, identifier=(bus + "_HP"), environment=environment,
+               thermal_energy_demand=user_profile.thermal_energy_demand,
+               heat_pump_type=heatpump_type, heat_sys_temp=heat_sys_temp,
+               el_power=el_power, th_power=th_power,
+               ramp_up_time=ramp_up_time, ramp_down_time=ramp_down_time,
+               min_runtime=min_runtime, min_stop_time=min_stop_time,
+           )
+       )
+       comp = vpp.components[list(vpp.components.keys())[-1]]
+       comp.bus = bus
+       comp.prepare_time_series()
+       # Fill NaNs to avoid ValueError
+       comp.timeseries.fillna(0, inplace=True)
+
+   for bus in vpp.buses_with_wind:
+       vpp.add_component(
+           WindPower(
+               unit=unit, identifier=(bus + "_Wind"), environment=environment,
+               turbine_type=turbine_type, hub_height=hub_height, rotor_diameter=rotor_diameter,
+               fetch_curve=fetch_curve, data_source=data_source,
+               wind_speed_model=wind_speed_model, density_model=density_model,
+               temperature_model=temperature_model, power_output_model=power_output_model,
+               density_correction=density_correction, obstacle_height=obstacle_height,
+               hellman_exp=hellman_exp,
+           )
+       )
+       comp = vpp.components[list(vpp.components.keys())[-1]]
+       comp.bus = bus
+       comp.prepare_time_series()
+
+   # Create pandapower elements
+   for bus in vpp.buses_with_pv:
+       pp.create_sgen(
+           net, bus=net.bus[net.bus.name == bus].index[0],
+           p_mw=(vpp.components[bus + "_PV"].module.Impo * vpp.components[bus + "_PV"].module.Vmpo / 1_000_000),
+           name=(bus + "_PV"), type="PV",
+       )
+
+   for bus in vpp.buses_with_storage:
+       pp.create_storage(
+           net, bus=net.bus[net.bus.name == bus].index[0],
+           p_mw=0, max_e_mwh=capacity, name=(bus + "_storage"), type="LiIon",
+       )
+
+   for bus in vpp.buses_with_bev:
+       pp.create_load(
+           net, bus=net.bus[net.bus.name == bus].index[0],
+           p_mw=(vpp.components[bus + "_BEV"].charging_power / 1000),
+           name=(bus + "_BEV"), type="BEV",
+       )
+
+   for bus in vpp.buses_with_hp:
+       pp.create_load(
+           net, bus=net.bus[net.bus.name == bus].index[0],
+           p_mw=(vpp.components[bus + "_HP"].el_power / 1000),
+           name=(bus + "_HP"), type="HP",
+       )
+
+   for bus in vpp.buses_with_wind:
+       pp.create_sgen(
+           net, bus=net.bus[net.bus.name == bus].index[0],
+           p_mw=(vpp.components[bus + "_Wind"].wind_turbine.nominal_power / 1_000_000),
+           name=(bus + "_Wind"), type="WindPower",
+       )
+
+   # Run scenario
+   operator = Operator(virtual_power_plant=vpp, net=net, target_data=None)
+   net_dict = operator.run_base_scenario(baseload)
+
+   # Extract and plot
+   results = operator.extract_results(net_dict)
+   single_result = operator.extract_single_result(net_dict, res="ext_grid", value="p_mw")
+
+   single_result.plot(figsize=(16, 9), title="ext_grid from single_result")
+   operator.plot_results(results)
+   operator.plot_storages()
