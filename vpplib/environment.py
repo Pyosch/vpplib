@@ -230,13 +230,13 @@ class Environment(object):
 
     def get_mean_temp_days(self, file):
 
-        self.mean_temp_days = pd.read_csv(file, index_col="time")
+        self.mean_temp_days = pd.read_csv(file, index_col="time", parse_dates=["time"])
 
         return self.mean_temp_days
 
     def get_mean_temp_hours(self, file):
 
-        self.mean_temp_hours = pd.read_csv(file, index_col="time")
+        self.mean_temp_hours = pd.read_csv(file, index_col="time", parse_dates=["time"])
 
         return self.mean_temp_hours
 
