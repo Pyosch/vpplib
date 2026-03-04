@@ -1157,6 +1157,8 @@ class Environment(object):
         """
 
         dataset = 'wind'
+        activate_output = not self.__surpress_output_globally
+        
         if not station_splitting:
             raw_dwd_data, station_metadata = self.__get_dwd_data(
                 dataset = dataset, 
@@ -1166,25 +1168,66 @@ class Environment(object):
                 distance = distance, 
                 min_quality_per_parameter = min_quality_per_parameter
                 )
-        else:
+            
+            # Auto-retry with station_splitting if any required parameter is missing
+            required_wind_params = ['wind_speed', 'pressure', 'temperature']
+            missing_params = [p for p in required_wind_params if p not in raw_dwd_data.columns or raw_dwd_data[p].isna().all()]
+            if missing_params:
+                if activate_output:
+                    print(f"Missing or empty parameters: {missing_params}. Retrying with station splitting...")
+                station_splitting = True  # Fall through to station_splitting logic below
+                
+        if station_splitting:
             raw_dwd_data = pd.DataFrame()
             station_metadata = pd.DataFrame()
             for parameter in ['wind_speed', 'temperature', 'pressure']:
-                raw_dwd_data_buf, station_metadata_buf = self.__get_dwd_data(
-                    dataset = parameter, 
-                    lat = lat, 
-                    lon = lon, 
-                    user_station_id = station_id,
-                    distance = distance, 
-                    min_quality_per_parameter = min_quality_per_parameter
-                    )
-                station_metadata = pd.concat([station_metadata,station_metadata_buf], axis = 0)
-                raw_dwd_data = pd.concat([raw_dwd_data,raw_dwd_data_buf], axis = 1)
+                try:
+                    raw_dwd_data_buf, station_metadata_buf = self.__get_dwd_data(
+                        dataset = parameter, 
+                        lat = lat, 
+                        lon = lon, 
+                        user_station_id = station_id,
+                        distance = distance, 
+                        min_quality_per_parameter = min_quality_per_parameter
+                        )
+                    station_metadata = pd.concat([station_metadata,station_metadata_buf], axis = 0)
+                    raw_dwd_data = pd.concat([raw_dwd_data,raw_dwd_data_buf], axis = 1)
+                except Exception as e:
+                    if activate_output:
+                        print(f"Warning: Could not fetch '{parameter}' data: {e}")
                 
+            if station_metadata.empty:
+                raise Exception("No station data found for any parameter!")
             if station_metadata.station_type.nunique() != 1:
                 raise Exception("Station type error while dataset splitting. Please check times!")
             if station_metadata.station_id.nunique() != 1:
-                print ("Warning! Used different stations for one dataset.")
+                if activate_output:
+                    print ("Note: Used different stations for parameters:")
+                    for _, row in station_metadata.iterrows():
+                        print(f"  Station {row['station_id']} {row['name']} (distance: {round(row['distance'])} km)")
+        
+        # Fallback: estimate pressure from standard atmosphere if still missing
+        if 'pressure' not in raw_dwd_data.columns or raw_dwd_data['pressure'].isna().all():
+            if activate_output:
+                print("Warning: No pressure data available from any station. Using standard atmosphere estimate.")
+            # Barometric formula: P = P0 * (1 - L*h / T0)^(g*M / (R*L))
+            # Using station height if available, otherwise default to 50m (typical lowland)
+            station_height = 50  # default for lowland Germany
+            if not station_metadata.empty and 'height' in station_metadata.columns:
+                station_height = station_metadata['height'].iloc[0]
+                if pd.isna(station_height) or station_height == 0:
+                    station_height = 50
+            # Standard atmosphere pressure at station height in hPa
+            P0 = 1013.25  # sea level pressure hPa
+            L = 0.0065    # temperature lapse rate K/m
+            T0 = 288.15   # standard temperature at sea level K
+            g = 9.80665   # gravitational acceleration m/s^2
+            M = 0.0289644 # molar mass of air kg/mol
+            R = 8.31447   # universal gas constant J/(mol*K)
+            pressure_hpa = P0 * (1 - L * station_height / T0) ** (g * M / (R * L))
+            raw_dwd_data['pressure'] = pressure_hpa
+            if activate_output:
+                print(f"  Estimated pressure at {station_height}m: {pressure_hpa:.1f} hPa")
         
         if station_metadata.station_type.iloc[0] == 'OBSERVATION': 
             self.wind_data = self.__process_observation_parameter(

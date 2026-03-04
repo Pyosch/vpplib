@@ -1104,9 +1104,25 @@ class DWDClient:
                     if df.empty:
                         continue
                     
-                    # Calculate quality
-                    valid_count = df.notna().sum().sum()
-                    total_count = len(df) * len(df.columns)
+                    # Calculate quality only on target data columns,
+                    # excluding QN (quality flag) and unrelated measurement columns
+                    # that inflate quality scores (see GitHub issue #54)
+                    target_cols = []
+                    if param in param_to_dwd_columns:
+                        for target_col, source_cols in param_to_dwd_columns[param].items():
+                            for src_col in source_cols:
+                                if src_col in df.columns:
+                                    target_cols.append(src_col)
+                                    break
+                    else:
+                        target_cols = [col for col in df.columns if not col.startswith('QN')]
+                    
+                    if not target_cols:
+                        continue
+                    
+                    target_df = df[target_cols]
+                    valid_count = target_df.notna().sum().sum()
+                    total_count = len(target_df) * len(target_df.columns)
                     quality = (valid_count / total_count * 100) if total_count > 0 else 0
                     
                     if quality >= min_quality_per_parameter:
