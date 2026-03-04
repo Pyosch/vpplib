@@ -147,6 +147,7 @@ vpplib/__pycache__/
 input/input_vise/
 dwd_results/
 GUI/csv-files/*
+.dwd_cache/
 #To prevent timeout merge conflicts
 .csv
 

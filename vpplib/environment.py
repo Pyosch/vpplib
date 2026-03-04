@@ -15,10 +15,9 @@ import polars as pl
 import datetime
 import pytz
 _ = pl.Config.set_tbl_hide_dataframe_shape(True)
-from wetterdienst.provider.dwd.observation import DwdObservationRequest
-from wetterdienst.metadata.period import Period
-from wetterdienst.settings import Settings
-from wetterdienst.provider.dwd.mosmix import DwdMosmixRequest
+
+# Use direct DWD Open Data access instead of wetterdienst library
+from .dwd_client import DWDClient
 
 from pvlib import irradiance
 from pvlib.solarposition import get_solarposition
@@ -819,7 +818,9 @@ class Environment(object):
     
     def __get_dwd_data(self, dataset, lat=None, lon=None, user_station_id=None, distance=30, min_quality_per_parameter=80):
         """
-            Retrieves weather data from the DWD database.
+            Retrieves weather data from the DWD database using direct DWD Open Data access.
+            
+            This method replaces wetterdienst library usage with the internal DWDClient.
 
             Parameters
             ----------
@@ -852,8 +853,6 @@ class Environment(object):
             ValueError
                 If no station is found within the specified distance.
             Exception
-                If datatype of query result is not pandas or polars
-            Exception
                 If there is no station with valid datasets
 
             Notes
@@ -871,6 +870,7 @@ class Environment(object):
         if (lat is None or lon is None) and user_station_id is None:
             raise ValueError("No location or station-ID given!")
     
+        # Map dataset types to required parameters
         dataset_dict = {
             'solar'       : ['ghi', 'dhi'],
             'air'         : ['temperature'],
@@ -880,211 +880,171 @@ class Environment(object):
             'pressure'    : ['pressure'],
             'temperature' : ['temperature']
         }
-
-        available_parameter_dict = {
-            "ghi"         : "radiation_global", 
-            "dhi"         : "radiation_sky_short_wave_diffuse",
-            "pressure"    : "pressure_air_site", 
-            "temperature" : "temperature_air_mean_2m",
-            "wind_speed"  : "wind_speed", 
-            "dew_point"   : "temperature_dew_point_mean_2m",
+        
+        # Map internal param names to DWD parameter types
+        param_to_dwd_type = {
+            'ghi': 'solar',
+            'dhi': 'solar',
+            'pressure': 'pressure',
+            'temperature': 'temperature',
+            'wind_speed': 'wind',
+            'dew_point': 'temperature',
         }
         
-        observation_param_map = {
-            "radiation_global": ("10_minutes", "solar","radiation_global"),
-            "radiation_sky_short_wave_diffuse": ("10_minutes", "solar", "radiation_sky_short_wave_diffuse"),
-            "pressure_air_site": ("10_minutes", "temperature_air", "pressure_air_site"),
-            "temperature_air_mean_2m": ("10_minutes", "temperature_air", "temperature_air_mean_2m"),
-            "wind_speed": ("10_minutes", "wind", "wind_speed"),
-            "temperature_dew_point_mean_2m": ("10_minutes", "temperature_air", "temperature_dew_point_mean_2m"),
-        }
+        # Get required parameters for this dataset
+        required_params = dataset_dict[dataset]
         
-        # Create a dictionary with the parameters to query
-        req_parameter_dict = {param: available_parameter_dict[param] for param in dataset_dict[dataset]}
+        # Determine DWD parameter types to query
+        dwd_param_types = list(set(param_to_dwd_type[p] for p in required_params if p in param_to_dwd_type))
         
         time_now = self.get_time_from_dwd()
-        settings = Settings(ts_drop_nulls=False, ts_convert_units=True, ts_humanize=True)
         
-        # Observation database is updated every full hour
-        # Round down to the full hour
+        # Observation database is updated every full hour - round down
         observation_end_date = time_now.replace(minute=0, second=0, microsecond=0)
-
-        # Ensure proper UTC (handles naive and aware datetimes)
         if observation_end_date.tzinfo is None:
             observation_end_date = observation_end_date.replace(tzinfo=pytz.UTC)
         else:
-         observation_end_date = observation_end_date.astimezone(pytz.UTC)
+            observation_end_date = observation_end_date.astimezone(pytz.UTC)
 
-        if self.__start_dt_utc < observation_end_date - datetime.timedelta(hours=1) or (
-            self.__start_dt_utc == observation_end_date - datetime.timedelta(hours=1) and self.__end_dt_utc <= observation_end_date):
+        # Determine if we should use observation or MOSMIX database
+        use_observation = (
+            self._Environment__start_dt_utc < observation_end_date - datetime.timedelta(hours=1) or (
+            self._Environment__start_dt_utc == observation_end_date - datetime.timedelta(hours=1) and 
+            self._Environment__end_dt_utc <= observation_end_date)
+        )
+        
+        # Initialize DWD client (lazy initialization)
+        if not hasattr(self, '_dwd_client'):
+            self._dwd_client = DWDClient(
+                cache_dir=".dwd_cache",
+                cache_expiry_hours=24,
+                timezone=str(self.timezone)
+            )
+        
+        if use_observation:
             if activate_output:
                 print("Using observation database.") 
-            if self.__end_dt_utc > observation_end_date and not self.__force_end_time:
+            
+            # Adjust end date if in the future
+            if self._Environment__end_dt_utc > observation_end_date and not self._Environment__force_end_time:
                 if activate_output:
                     print("End date is in the future.")
-                self.__end_dt_utc = observation_end_date
-
-            # Prepare list of parameter tuples for observation
-            req_tuples = [observation_param_map[dwd_param] for dwd_param in req_parameter_dict.values()]
-
-            # Get weather data for your location from DWD observation database
-            wd_query_result = DwdObservationRequest(
-                parameters=req_tuples,
-                start_date=self.__start_dt_utc,
-                end_date=self.__end_dt_utc,
-                settings=settings,
-            )
+                self._Environment__end_dt_utc = observation_end_date
+            
+            try:
+                # Use DWDClient.get_observations
+                raw_data, metadata = self._dwd_client.get_observations(
+                    latitude=lat if lat is not None else 52.52,  # Default to Berlin if using station_id
+                    longitude=lon if lon is not None else 13.41,
+                    parameters=dwd_param_types,
+                    start_date=self._Environment__start_dt_utc.replace(tzinfo=None),
+                    end_date=self._Environment__end_dt_utc.replace(tzinfo=None),
+                    resolution="10_minutes",
+                    max_distance_km=distance,
+                    station_id=user_station_id,
+                    min_quality_per_parameter=min_quality_per_parameter,
+                    force_refresh=False
+                )
+                station_type = 'OBSERVATION'
+            except Exception as e:
+                raise Exception(f"No station with valid data found! Error: {e}")
+                
         else:
-            if self.__start_dt_utc > time_now + datetime.timedelta(hours=240):
+            # Use MOSMIX forecast
+            if self._Environment__start_dt_utc > time_now + datetime.timedelta(hours=240):
                 raise ValueError("No forecast data available for this time")
-            if (self.__end_dt_utc > time_now.replace(
-                minute=0, 
-                second=0, 
-                microsecond=0
-                ) + datetime.timedelta(hours=240)) and not self.__force_end_time:
-                self.__end_dt_utc = time_now.replace(
-                    minute=0, 
-                    second=0, 
-                    microsecond=0
-                    ) + datetime.timedelta(hours=240)
+            
+            if (self._Environment__end_dt_utc > time_now.replace(minute=0, second=0, microsecond=0) + 
+                datetime.timedelta(hours=240)) and not self._Environment__force_end_time:
+                self._Environment__end_dt_utc = time_now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(hours=240)
+            
             if activate_output:  
                 print("Using MOSMIX database.")
-            if dataset == 'solar':
-                # dhi is not available for MOSMIX
-                req_parameter_dict.pop("dhi", None)
-            if "pressure" in req_parameter_dict:
-                # pressure is called pressure_air_site_reduced in MOSMIX
-                req_parameter_dict["pressure"] = "pressure_air_site_reduced"
             
-            # Prepare list of parameter tuples for MOSMIX
-            req_tuples = [("10_minutes", "large", dwd_param) for dwd_param in req_parameter_dict.values()]
+            # MOSMIX doesn't have DHI - it will be calculated later
+            mosmix_params = [p for p in dwd_param_types if p != 'solar'] + (['solar'] if 'solar' in dwd_param_types else [])
             
-            # Get weather data for your location from DWD MOSMIX database
-            wd_query_result = DwdMosmixRequest(
-                parameters=req_tuples, 
-                start_date=self.__start_dt_utc,
-                end_date=self.__end_dt_utc + datetime.timedelta(hours=1),
-                settings=settings,
-            )
-
-        if user_station_id is not None:
-            wd_nearby_stations = wd_query_result.filter_by_station_id(
-                station_id=user_station_id
-            )
-        else:
-            wd_nearby_stations = wd_query_result.filter_by_distance(
-                latlon=(lat, lon), 
-                distance=distance
-            )
-
-        if isinstance(wd_nearby_stations.df, pd.core.frame.DataFrame):
-            empty = wd_nearby_stations.df.empty
-            if not empty:
-                pd_nearby_stations = wd_nearby_stations.df
-        elif isinstance(wd_nearby_stations.df, pl.DataFrame):
-            empty = wd_nearby_stations.df.is_empty()
-            if not empty:
-                pd_nearby_stations = wd_nearby_stations.df.to_pandas()
-        else:
-            empty = True
-        # print("DEBUG nearby stations:", wd_nearby_stations)
-        # print("Type:", type(wd_nearby_stations))
-        # print("Has df?:", hasattr(wd_nearby_stations, "df"))
-        # if hasattr(wd_nearby_stations, "df"):
-        #     print("Nearby stations DataFrame:\n", wd_nearby_stations.df.head())
-        if empty:
-            raise ValueError("No station found! Increase search radius or change location or station-ID")
-
-        valid_station_data = False
-        # Check query result for the stations within the defined distance
-        for station_id in pd_nearby_stations["station_id"].values:
-            station_name = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]['name'].values[0]
-            if activate_output:
-                print('Checking query result for station ' + station_name, station_id + " ...")
-            
-            # Get query result for the actual station
-            station_request = wd_query_result.filter_by_station_id(station_id=station_id)
-            wd_unsorted_data_for_station = station_request.values.all().df
-
-            if isinstance(wd_unsorted_data_for_station, pd.core.frame.DataFrame):
-                pd_unsorted_data_for_station = wd_unsorted_data_for_station
-            elif isinstance(wd_unsorted_data_for_station, pl.DataFrame):
-                pd_unsorted_data_for_station = wd_unsorted_data_for_station.to_pandas()
-            else:
-                raise Exception("Data type incorrect")
-                
-            pd_sorted_data_for_station = pd.DataFrame()
-            pd_unsorted_data_for_station.set_index('date', inplace=True)
-
-            # Format data to get a df with one column for each parameter
-            for key in req_parameter_dict.keys():
-                dwd_param = req_parameter_dict[key]  # Use the mapped parameter (handles pressure_air_site_reduced)
-                pd_sorted_data_for_station[key] = pd_unsorted_data_for_station.loc[pd_unsorted_data_for_station['parameter'] == dwd_param]['value']
-
-            # Check if we have any data
-            if pd_sorted_data_for_station.empty:
-                if activate_output:
-                    print(f"No data found for station {station_name} {station_id} for the requested parameters.")
-                continue
-                
-            # Fill missing values with NaN, if end time is forced    
-            if len(pd_sorted_data_for_station) > 0 and pd_sorted_data_for_station.index[-1] < self.__end_dt_utc and self.__force_end_time and isinstance(wd_query_result, DwdMosmixRequest):
-                pd_missing_dates = pd.DataFrame(index=pd.date_range(
-                    start=pd_sorted_data_for_station.index[-1] + datetime.timedelta(hours=1),
-                    end=self.__end_dt_utc.replace(minute=0) + datetime.timedelta(hours=2),
-                    freq='H'
-                ))
-                pd_sorted_data_for_station = pd.concat([pd_sorted_data_for_station, pd_missing_dates])
-            
+            try:
+                raw_data, metadata = self._dwd_client.get_forecast(
+                    latitude=lat if lat is not None else 52.52,
+                    longitude=lon if lon is not None else 13.41,
+                    parameters=mosmix_params,
+                    start_date=self._Environment__start_dt_utc.replace(tzinfo=None),
+                    end_date=self._Environment__end_dt_utc.replace(tzinfo=None) + datetime.timedelta(hours=1),
+                    station_id=user_station_id,
+                    force_refresh=False
+                )
+                station_type = 'MOSMIX'
+            except Exception as e:
+                raise Exception(f"No forecast data found! Error: {e}")
+        
+        if raw_data.empty:
+            raise Exception("No station with valid data found!")
+        
+        # Build output DataFrame with expected column names
+        pd_sorted_data_for_station = pd.DataFrame(index=raw_data.index)
+        
+        # Map output columns
+        column_mapping = {
+            'ghi': 'ghi',
+            'dhi': 'dhi',
+            'temperature': 'temperature',
+            'pressure': 'pressure', 
+            'wind_speed': 'wind_speed',
+            'dew_point': 'dew_point',
+        }
+        
+        for param in required_params:
+            if param in raw_data.columns:
+                pd_sorted_data_for_station[param] = raw_data[param]
+            elif param in column_mapping and column_mapping[param] in raw_data.columns:
+                pd_sorted_data_for_station[param] = raw_data[column_mapping[param]]
+        
+        # Calculate data quality
+        if not pd_sorted_data_for_station.empty:
             quality = pd.DataFrame()
             quality.index = ['missing', 'valid', 'quality']
-            quality[list(req_parameter_dict.keys())] = 0
-        
-            # Counting the amount of valid and invalid data per parameter
+            quality[required_params] = 0
+            
             for column in pd_sorted_data_for_station.columns:
-                count = pd_sorted_data_for_station.isna()[column].value_counts()
-                # Ensure both True and False are present in the count
-                quality.loc['missing', column] = count.get(True, 0)   # True means NaN/missing
-                quality.loc['valid', column] = count.get(False, 0)    # False means not NaN/valid
+                if column in required_params:
+                    count = pd_sorted_data_for_station.isna()[column].value_counts()
+                    quality.loc['missing', column] = count.get(True, 0)
+                    quality.loc['valid', column] = count.get(False, 0)
             
-            # Calculate the percentage of valid data per parameter    
             total_count = quality.loc['missing'] + quality.loc['valid']
-            quality.loc['quality'] = round((quality.loc['valid'] / total_count) * 100, 1)
+            quality.loc['quality'] = round((quality.loc['valid'] / total_count.replace(0, 1)) * 100, 1)
             
-            # Prevent console to print name of the variable 
-            quality.loc['quality'].name = None
             if activate_output:
                 print("Quality of the data set:")
+                quality.loc['quality'].name = None
                 print(quality.loc['quality'].to_string(header=False))
-            
-            # If quality is good enough
-            requested_params = list(dataset_dict[dataset])
-            subset_quality = quality.loc[:, requested_params]
-            #if quality.loc['quality'].min() >= min_quality_per_parameter:
-            if (subset_quality.loc['quality'] >= min_quality_per_parameter).any():
-                valid_station_data = True
-                if activate_output:
-                    print("Query result valid!")
-                    print("Station " + station_id + " " + station_name + " used")
-                    if user_station_id is None:
-                        distance_str = str(round(pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]['distance'].values[0]))
-                        print("Distance to location: " + distance_str + " km")
-                break
-        if not valid_station_data:
-            raise Exception("No station with valid data found!")
-        if activate_output:
-            print("Query successful!")
-            
-        station_metadata = pd_nearby_stations.loc[pd_nearby_stations['station_id'] == station_id]
-        station_metadata['station_type'] = 'OBSERVATION' if isinstance(wd_query_result, DwdObservationRequest) else 'MOSMIX'
-        station_metadata['distance_itaration'] = station_metadata.index
+        
+        # Build station metadata in expected format
+        selected_station = metadata.get('selected_station', {})
+        station_id = selected_station.get('station_id', user_station_id or 'unknown')
+        station_name = selected_station.get('name', 'Unknown Station')
+        
+        station_metadata = pd.DataFrame([{
+            'station_id': station_id,
+            'name': station_name,
+            'latitude': selected_station.get('latitude', lat),
+            'longitude': selected_station.get('longitude', lon),
+            'height': selected_station.get('height', 0),
+            'distance': selected_station.get('distance', 0),
+            'station_type': station_type,
+        }])
+        station_metadata['distance_itaration'] = 0
         station_metadata['Index'] = range(len(station_metadata))
         station_metadata = station_metadata.set_index('Index')
         
-        return (
-            pd_sorted_data_for_station,
-            station_metadata
-    )
+        if activate_output:
+            print("Query successful!")
+            print(f"Station {station_id} {station_name} used")
+            if user_station_id is None:
+                print(f"Distance to location: {round(selected_station.get('distance', 0))} km")
+        
+        return (pd_sorted_data_for_station, station_metadata)
 
     def get_dwd_pv_data(
         self, lat = None, lon = None, station_id = None, distance = 30, min_quality_per_parameter = 80, estimation_methode_lst = ['disc'], extended_solar_data = False

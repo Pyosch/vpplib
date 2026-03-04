@@ -26,25 +26,28 @@ latitude = 51.200001
 longitude = 6.433333
 timestamp_int = 12
 
-"""CSV - Use this method to avoid DWD API issues"""
+"""CSV - Use this method to avoid DWD API issues
 timestamp_str = "2015-11-09 12:00:00"
 environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
 environment.get_wind_data(
     file="./input/wind/dwd_wind_data_2015.csv", utc=False
 )
-
+"""
 """OBSERVATION - Commented out due to wetterdienst breaking changes
 Using dwd observation (weather recording) database for weather data
 use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
-
-timestamp_str = "2015-01-09 12:00:00"
+"""
+timestamp_now = datetime.datetime.now(datetime.timezone.utc)
+# Round down to the last 15 minute value
+minute = (timestamp_now.minute // 15) * 15
+timestamp_now = timestamp_now.replace(minute=minute, second=0, microsecond=0)
+timestamp_str = (timestamp_now + datetime.timedelta(days=-2)).strftime("%Y-%m-%d %H:%M:%S")
 environment = Environment(
-    start = "2015-01-01 00:00:00", 
-    end = "2015-12-31 23:45:00", 
+    start = (timestamp_now + datetime.timedelta(days=-5)).strftime("%Y-%m-%d %H:%M:%S"),
+    end = (timestamp_now + datetime.timedelta(days=-1)).strftime("%Y-%m-%d %H:%M:%S"),
     use_timezone_aware_time_index = True, 
     surpress_output_globally = False)
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
-"""
 
 """MOSMIX - Commented out due to wetterdienst breaking changes
 Using dwd mosmix (weather forecast) database for weather data

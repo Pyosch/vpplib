@@ -22,15 +22,16 @@ timestamp_int = 48
 
 """
 Read weather data from .csv file - Use this to avoid DWD API issues:
-"""
+
 timestamp_str = "2015-11-09 12:00:00"
 environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
 environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
+"""
 
 """
 Using dwd observation (weather recording) database for weather data - Commented out due to wetterdienst breaking changes
 use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
-
+"""
 timestamp_now = datetime.datetime.now(datetime.timezone.utc)
 # Round down to the last 15 minute value
 minute = (timestamp_now.minute // 15) * 15
@@ -42,7 +43,7 @@ environment = Environment(
     use_timezone_aware_time_index = True, 
     surpress_output_globally = False)
 environment.get_dwd_pv_data(lat=latitude, lon=longitude)
-"""
+
 
 """
 Using dwd mosmix (weather forecast) database for weather data - Commented out due to wetterdienst breaking changes
