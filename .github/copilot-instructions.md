@@ -62,6 +62,9 @@ Tests are ad-hoc scripts in the repo root (`test_*.py`). They instantiate compon
 | `NREL-PySAM` | Battery stateful models |
 | `pandas` / `numpy` / `polars` | Data manipulation |
 
+## Project Environment
+Use the provided virtualenv (`vppenv`) with all dependencies installed. Activate with `.\vppenv\Scripts\activate` (Windows) before running code or tests.
+
 ## Project Conventions
 
 - VPP components dict uses identifier strings; component type is inferred by substring matching (e.g., `'_pv' in identifier`). Choose identifiers accordingly.
