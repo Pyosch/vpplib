@@ -45,21 +45,22 @@ environment = Environment(
 environment.get_dwd_pv_data(lat=latitude, lon=longitude)
 
 
-"""
-Using dwd mosmix (weather forecast) database for weather data - Commented out due to wetterdienst breaking changes
+"""MOSMIX
+Using dwd mosmix (weather forecast) database for weather data.
 The forecast is queried for the next 10 days automatically.
-force_end_time is set to True to get a resulting dataframe from the start time to the end time even if there is no forecast data for the last hours of the time period --> Missing data is filled with NaN values.
-
+force_end_time is set to True to get a resulting dataframe from the start time
+to the end time even if there is no forecast data for the last hours of the time
+period --> Missing data is filled with NaN values.
+"""
 time_now = Environment().get_time_from_dwd()
-timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
-environment = Environment(
+mosmix_timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
+mosmix_environment = Environment(
     start = time_now, 
     end = time_now + datetime.timedelta(hours = 240), 
     force_end_time = True, 
     use_timezone_aware_time_index = True,
     surpress_output_globally = False)
-environment.get_dwd_pv_data(lat=latitude, lon=longitude, min_quality_per_parameter=10)
-"""
+mosmix_environment.get_dwd_pv_data(lat=latitude, lon=longitude, min_quality_per_parameter=10)
 
 pv = Photovoltaic(
     unit="kW",
@@ -108,3 +109,29 @@ test_value_for_timestamp(pv, timestamp_str)
 
 observations_for_timestamp(pv, timestamp_int)
 observations_for_timestamp(pv, timestamp_str)
+
+
+# MOSMIX PV test
+print("\n" + "="*60)
+print("MOSMIX PV Test")
+print("="*60)
+mosmix_pv = Photovoltaic(
+    unit="kW",
+    latitude=latitude,
+    longitude=longitude,
+    identifier=identifier + "_mosmix",
+    environment=mosmix_environment,
+    module_lib="SandiaMod",
+    module="Canadian_Solar_CS5P_220M___2009_",
+    inverter_lib="cecinverter",
+    inverter="ABB__MICRO_0_25_I_OUTD_US_208__208V_",
+    surface_tilt=20,
+    surface_azimuth=200,
+    modules_per_string=2,
+    strings_per_inverter=2,
+    temp_lib='sapm',
+    temp_model='open_rack_glass_glass'
+)
+test_prepare_time_series(mosmix_pv)
+test_value_for_timestamp(mosmix_pv, 48)
+observations_for_timestamp(mosmix_pv, 48)

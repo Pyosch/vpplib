@@ -13,6 +13,7 @@ from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.heating_rod import HeatingRod
 import matplotlib.pyplot as plt
+import datetime
 
 # Values for environment
 start = '2015-01-01 00:00:00'
@@ -95,3 +96,59 @@ test_observationsForTimestamp(hr, timestamp_int)
 
 test_valueForTimestamp(hr, timestamp_str)
 test_observationsForTimestamp(hr, timestamp_str)
+
+
+"""MOSMIX
+Using dwd mosmix (weather forecast) database for temperature data.
+The forecast is queried for the next 10 days automatically.
+"""
+print("\n" + "="*60)
+print("MOSMIX Heating Rod Test")
+print("="*60)
+
+latitude = 50.941357
+longitude = 6.958307
+time_now = Environment().get_time_from_dwd()
+# Round up to next full hour so the 15-min grid aligns with MOSMIX hourly data
+mosmix_start = (time_now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+mosmix_environment = Environment(
+    timebase=timebase,
+    start=mosmix_start,
+    end=mosmix_start + datetime.timedelta(hours=239),
+    force_end_time=True,
+    use_timezone_aware_time_index=True,
+    time_freq=time_freq,
+    surpress_output_globally=False
+)
+mosmix_environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+mosmix_environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+mosmix_environment.mean_temp_quarter_hours = mosmix_environment.mean_temp_hours.resample("15 Min").interpolate()
+
+mosmix_user_profile = UserProfile(
+    identifier=None,
+    latitude=None,
+    longitude=None,
+    thermal_energy_demand_yearly=thermal_energy_demand_yearly,
+    mean_temp_days=mosmix_environment.mean_temp_days,
+    mean_temp_hours=mosmix_environment.mean_temp_hours,
+    mean_temp_quarter_hours=mosmix_environment.mean_temp_quarter_hours,
+    building_type=building_type,
+    comfort_factor=None,
+    t_0=t_0,
+)
+mosmix_user_profile.get_thermal_energy_demand()
+
+mosmix_hr = HeatingRod(
+    identifier='hr1_mosmix',
+    environment=mosmix_environment,
+    thermal_energy_demand=mosmix_user_profile.thermal_energy_demand,
+    el_power=el_power,
+    rampUpTime=rampUpTime,
+    rampDownTime=rampDownTime,
+    min_runtime=min_runtime,
+    min_stop_time=min_stop_time,
+)
+
+test_prepareTimeseries(mosmix_hr)
+test_valueForTimestamp(mosmix_hr, 48)
+test_observationsForTimestamp(mosmix_hr, 48)

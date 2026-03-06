@@ -49,21 +49,22 @@ environment = Environment(
     surpress_output_globally = False)
 environment.get_dwd_wind_data(lat=latitude, lon=longitude)
 
-"""MOSMIX - Commented out due to wetterdienst breaking changes
-Using dwd mosmix (weather forecast) database for weather data
+"""MOSMIX
+Using dwd mosmix (weather forecast) database for weather data.
 The forecast is queried for the next 10 days automatically.
-force_end_time is set to True to get a resulting dataframe from the start time to the end time even if there is no forecast data for the last hours of the time period --> Missing data is filled with NaN values.
-
+force_end_time is set to True to get a resulting dataframe from the start time
+to the end time even if there is no forecast data for the last hours of the time
+period --> Missing data is filled with NaN values.
+"""
 time_now = Environment().get_time_from_dwd()
-timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
-environment = Environment(
+mosmix_timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
+mosmix_environment = Environment(
     start = time_now, 
     end = time_now + datetime.timedelta(hours = 240), 
     force_end_time = True, 
     use_timezone_aware_time_index = True, 
     surpress_output_globally = False)
-environment.get_dwd_wind_data(lat=latitude, lon=longitude)
-"""
+mosmix_environment.get_dwd_wind_data(lat=latitude, lon=longitude)
 
 
 # WindTurbine data
@@ -131,3 +132,29 @@ test_value_for_timestamp(wind, timestamp_str)
 
 observations_for_timestamp(wind, timestamp_int)
 observations_for_timestamp(wind, timestamp_str)
+
+
+# MOSMIX Wind test
+print("\n" + "="*60)
+print("MOSMIX Wind Test")
+print("="*60)
+mosmix_wind = WindPower(
+    unit="kW",
+    identifier="wind_mosmix",
+    environment=mosmix_environment,
+    turbine_type=turbine_type,
+    hub_height=hub_height,
+    rotor_diameter=rotor_diameter,
+    fetch_curve=fetch_curve,
+    data_source=data_source,
+    wind_speed_model=wind_speed_model,
+    density_model=density_model,
+    temperature_model=temperature_model,
+    power_output_model=power_output_model,
+    density_correction=density_correction,
+    obstacle_height=obstacle_height,
+    hellman_exp=hellman_exp,
+)
+test_prepare_time_series(mosmix_wind)
+test_value_for_timestamp(mosmix_wind, 12)
+observations_for_timestamp(mosmix_wind, 12)
