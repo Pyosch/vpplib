@@ -1,5 +1,12 @@
 # Project Guidelines — vpplib
 
+## Repository Overview
+- **Name**: vpplib
+- **Owner**: Pyosch
+- **URL**: https://github.com/Pyosch/vpplib
+- **Description**: A Python library for simulating distributed energy appliances in a virtual power plant.
+- **License**: GNU General Public License v3 (GPLv3)
+
 ## Architecture
 
 vpplib simulates distributed energy resources in a virtual power plant. Five core abstractions compose the system:
