@@ -858,6 +858,13 @@ class ForecastParser:
             if station_ids and station_id not in station_ids:
                 continue
             
+            description_elem = placemark.find('.//kml:description', namespaces)
+            station_description = (
+                description_elem.text.strip()
+                if description_elem is not None and description_elem.text
+                else station_id
+            )
+            
             coords_elem = placemark.find('.//kml:coordinates', namespaces)
             coordinates = None
             if coords_elem is not None and coords_elem.text:
@@ -867,6 +874,11 @@ class ForecastParser:
                         'longitude': float(coord_parts[0]),
                         'latitude': float(coord_parts[1])
                     }
+                    if len(coord_parts) >= 3:
+                        try:
+                            coordinates['altitude'] = float(coord_parts[2])
+                        except ValueError:
+                            pass
             
             extended_data = placemark.find('.//kml:ExtendedData', namespaces)
             if extended_data is None:
@@ -876,6 +888,7 @@ class ForecastParser:
             
             for record in station_data:
                 record['station_id'] = station_id
+                record['station_description'] = station_description
                 if coordinates:
                     record.update(coordinates)
             
@@ -895,7 +908,23 @@ class ForecastParser:
         timestamps = []
         timesteps_elem = kml_root.find('.//dwd:ForecastTimeSteps', namespaces)
         
-        if timesteps_elem is not None and timesteps_elem.text:
+        if timesteps_elem is None:
+            return timestamps
+        
+        # Try child <dwd:TimeStep> elements first (MOSMIX_S/L actual format)
+        timestep_children = timesteps_elem.findall('dwd:TimeStep', namespaces)
+        if timestep_children:
+            for ts_elem in timestep_children:
+                if ts_elem.text:
+                    try:
+                        dt = datetime.fromisoformat(
+                            ts_elem.text.strip().replace('Z', '+00:00').replace('.000+', '+')
+                        )
+                        timestamps.append(dt)
+                    except ValueError:
+                        continue
+        elif timesteps_elem.text and timesteps_elem.text.strip():
+            # Fallback: space-separated text content
             time_strings = timesteps_elem.text.strip().split()
             for ts in time_strings:
                 try:
@@ -952,29 +981,88 @@ class ForecastParser:
     def get_forecast_for_location(self, latitude: float, longitude: float,
                                   parameters: Optional[List[str]] = None,
                                   force_refresh: bool = False) -> pd.DataFrame:
-        df = self.fetch_forecast(parameters=parameters, force_refresh=force_refresh)
+        """Get forecast for nearest station to a location.
         
-        if df.empty:
-            return df
+        Uses a two-pass approach: first extracts only station coordinates
+        from the KMZ to find the nearest station, then parses only that
+        station's forecast data. This avoids parsing all ~5400 stations.
+        """
+        url = f"{DWDConfig.MOSMIX_S}/{DWDConfig.MOSMIX_LATEST_FILE}"
+        kmz_content = self.downloader.download(url, binary=True, force_refresh=force_refresh, expiry_hours=1)
+        kml_root = self._extract_kml_from_kmz(kmz_content)
         
-        if 'latitude' in df.columns and 'longitude' in df.columns:
-            min_distance = float('inf')
-            nearest_station = None
-            
-            for station_id in df['station_id'].unique():
-                station_data = df[df['station_id'] == station_id].iloc[0]
-                station_lat = station_data['latitude']
-                station_lon = station_data['longitude']
-                
-                distance = StationManager._haversine_distance(latitude, longitude, station_lat, station_lon)
-                
-                if distance < min_distance:
-                    min_distance = distance
-                    nearest_station = station_id
-            
-            return df[df['station_id'] == nearest_station].copy()
+        # Pass 1: find nearest station by coordinates only (skip heavy ExtendedData parsing)
+        nearest = self._find_nearest_mosmix_station(kml_root, latitude, longitude)
         
+        if nearest is None:
+            return pd.DataFrame()
+        
+        if parameters is None:
+            parameters = list(DWDConfig.MOSMIX_PARAM_CODES.values())
+        
+        # Pass 2: parse only the nearest station's data
+        df = self._parse_kml_forecast(kml_root, [nearest['station_id']], parameters)
         return df
+    
+    def _find_nearest_mosmix_station(self, kml_root, latitude, longitude):
+        """Extract station coordinates from KML and find nearest to location.
+        
+        Only reads station name, description, and coordinates — skips
+        ExtendedData parsing for a fast first pass over all ~5400 MOSMIX
+        stations.
+        
+        Returns
+        -------
+        dict or None
+            Dictionary with 'station_id', 'name', 'distance_km', or None
+            if no station was found.
+        """
+        namespaces = {
+            'kml': 'http://www.opengis.net/kml/2.2',
+        }
+        placemarks = kml_root.findall('.//kml:Placemark', namespaces)
+        
+        min_distance = float('inf')
+        nearest_info = None
+        
+        for placemark in placemarks:
+            station_name = placemark.find('.//kml:name', namespaces)
+            if station_name is None:
+                continue
+            
+            coords_elem = placemark.find('.//kml:coordinates', namespaces)
+            if coords_elem is None or not coords_elem.text:
+                continue
+            
+            coord_parts = coords_elem.text.strip().split(',')
+            if len(coord_parts) < 2:
+                continue
+            
+            try:
+                station_lon = float(coord_parts[0])
+                station_lat = float(coord_parts[1])
+            except ValueError:
+                continue
+            
+            distance = StationManager._haversine_distance(
+                latitude, longitude, station_lat, station_lon
+            )
+            
+            if distance < min_distance:
+                min_distance = distance
+                sid = station_name.text.strip()
+                description_elem = placemark.find('.//kml:description', namespaces)
+                nearest_info = {
+                    'station_id': sid,
+                    'name': (
+                        description_elem.text.strip()
+                        if description_elem is not None and description_elem.text
+                        else sid
+                    ),
+                    'distance_km': round(min_distance, 1),
+                }
+        
+        return nearest_info
 
 
 # =============================================================================
@@ -1251,10 +1339,21 @@ class DWDClient:
         # Record station info
         if 'station_id' in df.columns:
             metadata['station_id'] = df['station_id'].iloc[0]
+            station_lat = df['latitude'].iloc[0] if 'latitude' in df.columns else latitude
+            station_lon = df['longitude'].iloc[0] if 'longitude' in df.columns else longitude
             metadata['selected_station'] = {
                 'station_id': metadata['station_id'],
-                'latitude': df['latitude'].iloc[0] if 'latitude' in df.columns else latitude,
-                'longitude': df['longitude'].iloc[0] if 'longitude' in df.columns else longitude,
+                'name': (
+                    df['station_description'].iloc[0]
+                    if 'station_description' in df.columns
+                    else metadata['station_id']
+                ),
+                'latitude': station_lat,
+                'longitude': station_lon,
+                'height': df['altitude'].iloc[0] if 'altitude' in df.columns else 0,
+                'distance': StationManager._haversine_distance(
+                    latitude, longitude, station_lat, station_lon
+                ),
             }
         
         # Rename columns to expected format
@@ -1269,7 +1368,7 @@ class DWDClient:
         df = df.rename(columns=rename_map)
         
         # Drop non-data columns
-        drop_cols = ['station_id', 'latitude', 'longitude']
+        drop_cols = ['station_id', 'station_description', 'latitude', 'longitude', 'altitude']
         df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
         
         # Filter by date range

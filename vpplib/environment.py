@@ -510,7 +510,7 @@ class Environment(object):
         -----
         - The calculation is based on the barometric height formula.
         - The provided height should be in meters.
-        - The temperature is expected to be in degrees Celsius.
+        - The temperature is expected to be in Kelvin.
         - The calculated station pressure is returned as a float.
         - The formula used is from the Wikipedia link provided.
         - https://de.wikipedia.org/wiki/Barometrische_Höhenformel
@@ -733,9 +733,9 @@ class Environment(object):
             pd_sorted_data_for_station : pandas.DataFrame
                 DataFrame containing weather data for a station in hourly resolution.
                 Input units:
-                solar: ghi [kJ/m^2], temperature [K], dew_point [K], pressure at sea level [hPa]
+                solar: ghi [kJ/m^2], temperature [K], dew_point [K], pressure at sea level [Pa]
                 air:   temperature [K]
-                wind:  wind_speed [m/s], pressure at sea level [hPa], temperature [K]
+                wind:  wind_speed [m/s], pressure at sea level [Pa], temperature [K]
             dataset : str
                 Type of weather dataset, either 'solar', 'air', or 'wind'.
             pd_station_metadata : pandas.DataFrame, optional for temperature dataset, necessary for solar and wind dataset
@@ -816,7 +816,7 @@ class Environment(object):
         return self.__resample_data(pd_sorted_data_for_station)
     
     
-    def __get_dwd_data(self, dataset, lat=None, lon=None, user_station_id=None, distance=30, min_quality_per_parameter=80):
+    def __get_dwd_data(self, dataset, lat=None, lon=None, user_station_id=None, distance=30, min_quality_per_parameter=80, suppress_output=False):
         """
             Retrieves weather data from the DWD database using direct DWD Open Data access.
             
@@ -836,6 +836,10 @@ class Environment(object):
                 Search radius [km] for stations, by default 30.
             min_quality_per_parameter : int, optional
                 Minimum percentage of valid data required for each parameter, by default 80.
+            suppress_output : bool, optional
+                If True, suppress all printed output regardless of
+                surpress_output_globally. Used for internal sub-queries
+                (e.g. disc/dirint solar estimation), by default False.
         
             Returns
             -------
@@ -863,7 +867,7 @@ class Environment(object):
             - It checks the validity of the query result for each station based on the percentage of valid data for each parameter.
             - If a station with valid data is found, the function returns the raw DWD data
         """
-        activate_output = not self.__surpress_output_globally
+        activate_output = not self.__surpress_output_globally and not suppress_output
 
         if self.start is None or self.end is None:
             raise ValueError("Class instance does not contain start or end time!")
@@ -964,6 +968,11 @@ class Environment(object):
             # MOSMIX doesn't have DHI - it will be calculated later
             mosmix_params = [p for p in dwd_param_types if p != 'solar'] + (['solar'] if 'solar' in dwd_param_types else [])
             
+            # MOSMIX needs dew_point as a separate parameter (maps to Td)
+            # param_to_dwd_type merges dew_point into 'temperature', so add it explicitly
+            if 'dew_point' in required_params and 'dew_point' not in mosmix_params:
+                mosmix_params.append('dew_point')
+            
             try:
                 raw_data, metadata = self._dwd_client.get_forecast(
                     latitude=lat if lat is not None else 52.52,
@@ -1008,6 +1017,12 @@ class Environment(object):
             
             for column in pd_sorted_data_for_station.columns:
                 if column in required_params:
+                    # Skip quality check for columns that will be derived later
+                    # (e.g., dhi is calculated from ghi in MOSMIX solar path)
+                    if station_type == 'MOSMIX' and column == 'dhi':
+                        quality.loc['valid', column] = len(pd_sorted_data_for_station)
+                        quality.loc['missing', column] = 0
+                        continue
                     count = pd_sorted_data_for_station.isna()[column].value_counts()
                     quality.loc['missing', column] = count.get(True, 0)
                     quality.loc['valid', column] = count.get(False, 0)
@@ -1102,9 +1117,11 @@ class Environment(object):
             if 'disc' in estimation_methode_lst or 'dirint' in estimation_methode_lst:
                 raw_dwd_data_buf, station_metadata_buf = self.__get_dwd_data(
                     dataset = 'solar_est',
-                    user_station_id = station_metadata.station_id.iloc[0],
+                    lat = lat,
+                    lon = lon,
                     distance = distance, 
-                    min_quality_per_parameter = min_quality_per_parameter
+                    min_quality_per_parameter = min_quality_per_parameter,
+                    suppress_output = True
                     )
                 if station_metadata_buf.station_type.iloc[0] != 'MOSMIX':
                     raise Exception("Station type error while dataset splitting. Please check times!")
@@ -1292,6 +1309,7 @@ class Environment(object):
                  pd_sorted_data_for_station = raw_dwd_data,
                  dataset = dataset
                  )
+        self.__temp_station_metadata = station_metadata
         return self.__temp_station_metadata
     
     def get_dwd_mean_temp_hours(
