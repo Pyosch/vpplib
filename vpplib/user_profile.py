@@ -400,6 +400,18 @@ class UserProfile(object):
             else:
                 traceback.print_exc("df.mean_temp is out of bounds")
 
+        # Align to actual hourly index length.  When the time range does
+        # not start/end at midnight (e.g. MOSMIX forecasts) the number
+        # of generated hourly values (num_days * 24) can exceed the
+        # hourly index.  Truncate or pad accordingly.
+        n_hours = len(self.mean_temp_hours.index)
+        if len(demand_daily_lst) > n_hours:
+            demand_daily_lst = demand_daily_lst[:n_hours]
+        elif len(demand_daily_lst) < n_hours:
+            demand_daily_lst.extend(
+                [float('nan')] * (n_hours - len(demand_daily_lst))
+            )
+
         self.thermal_energy_demand_daily = pd.DataFrame(
             demand_daily_lst,
             index=self.mean_temp_hours.index
