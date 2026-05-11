@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Environment Module.
 
 This module contains the Environment class, which defines external influences on the
@@ -133,14 +132,14 @@ class Environment(object):
         self.__use_timezone_aware_time_index = use_timezone_aware_time_index
         if not start is None and not end is None:
             
-            if type(self.start) == str:
+            if isinstance(self.start, str):
                 self.__internal_start_datetime_with_class_timezone    =   datetime.datetime.strptime(
                     self.start, '%Y-%m-%d %H:%M:%S'
                     ).replace(tzinfo = self.timezone)
             else:
                 self.__internal_start_datetime_with_class_timezone    =   self.start.astimezone(self.timezone)
 
-            if type(self.end) == str:
+            if isinstance(self.end, str):
                 self.__internal_end_datetime_with_class_timezone      =   datetime.datetime.strptime(
                     self.end  , '%Y-%m-%d %H:%M:%S'
                     ).replace(tzinfo = self.timezone)
@@ -159,6 +158,11 @@ class Environment(object):
                 raise ValueError("End date must be greater than start date")
             if self.__internal_start_datetime_utc + datetime.timedelta(hours=1) > self.__internal_end_datetime_utc:
                 raise ValueError("End date must be at least one hour later than the start date")
+
+            # Normalize start/end to tz-naive string representation so that
+            # DataFrame slicing works regardless of index tz-awareness.
+            self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo=None))
+            self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo=None))
 
     @property
     def __start_dt_utc(self):
@@ -513,7 +517,7 @@ class Environment(object):
         - The temperature is expected to be in Kelvin.
         - The calculated station pressure is returned as a float.
         - The formula used is from the Wikipedia link provided.
-        - https://de.wikipedia.org/wiki/Barometrische_Höhenformel
+        - https://en.wikipedia.org/wiki/Barometric_formula
         """
         pressure_station = (
             pressure_reduced * ( 1 - ( 0.0065  * height) / temperature) ** ((9.81 * 0.02897) / (8.314 * 0.0065))
