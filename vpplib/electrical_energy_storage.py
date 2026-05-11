@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 """
-Info
-----
 This file contains the basic functionalities of the ElectricalEnergyStorage class.
 
 """
@@ -29,8 +26,6 @@ class ElectricalEnergyStorage(Component):
         cost=None,
     ):
         """
-        Info
-        ----
         The class "ElectricalEnergyStorage" adds functionality to implement an
         electrical energy storage to the virtual power plant.
 
@@ -111,8 +106,6 @@ class ElectricalEnergyStorage(Component):
 
     def operate_storage(self, residual_load):
         """
-        Info
-        ----
 
         ...
 
@@ -155,8 +148,6 @@ class ElectricalEnergyStorage(Component):
 
     def observations_for_timestamp(self, timestamp):
         """
-        Info
-        ----
         This function takes a timestamp as the parameter and returns a
         dictionary with key (String) value (Any) pairs.
         Depending on the type of component, different status parameters of the
@@ -192,17 +183,21 @@ class ElectricalEnergyStorage(Component):
         ...
 
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             state_of_charge, residual_load = self.timeseries.iloc[timestamp]
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            state_of_charge, residual_load = self.timeseries.loc[pd.Timestamp(timestamp)]
+
+        elif isinstance(timestamp, (pd.Timestamp, dt.datetime)):
 
             state_of_charge, residual_load = self.timeseries.loc[timestamp]
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
         observations = {
@@ -220,8 +215,6 @@ class ElectricalEnergyStorage(Component):
 
     def charge(self, charge):
         """
-        Info
-        ----
         This function takes the energy [kWh] that should be charged and the timebase as
         parameters. The timebase [minutes] is neccessary to calculate if the maximum
         power is exceeded.
@@ -286,8 +279,6 @@ class ElectricalEnergyStorage(Component):
 
     def discharge(self, charge):
         """
-        Info
-        ----
         This function takes the energy [kWh] that should be discharged and the timebase as
         parameters. The timebase [minutes] is neccessary to calculate if the maximum
         power is exceeded.
@@ -357,17 +348,21 @@ class ElectricalEnergyStorage(Component):
     # Override balancing function from super class.
     def value_for_timestamp(self, timestamp):
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             return self.timeseries.iloc[timestamp]["residual_load"]
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            return self.timeseries.loc[pd.Timestamp(timestamp), "residual_load"]
+
+        elif isinstance(timestamp, (pd.Timestamp, dt.datetime)):
 
             return self.timeseries.loc[timestamp, "residual_load"]
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
 
@@ -610,8 +605,6 @@ class PySAMBatteryStateful(Component):
 
     def prepare_time_series(self):
         """.
-        Info
-        ----
         This function prepares the time series for the battery by
         iterating over the time steps and calling the operate_storage
         function for each time step. It stores the state of charge and
@@ -656,25 +649,26 @@ class PySAMBatteryStateful(Component):
 
     def value_for_timestamp(self, timestamp):
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             return self.timeseries.iloc[timestamp]["ac_power"]
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            return self.timeseries.loc[pd.Timestamp(timestamp), "ac_power"]
+
+        elif isinstance(timestamp, (pd.Timestamp, dt.datetime)):
 
             return self.timeseries.loc[timestamp, "ac_power"]
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string."
-                + " Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
     def observations_for_timestamp(self, timestamp):
         """.
 
-        Info
-        ----
         This function takes a timestamp as the parameter and returns a
         dictionary with key (String) value (Any) pairs.
         Depending on the type of component, different status parameters of the
@@ -699,18 +693,21 @@ class PySAMBatteryStateful(Component):
             any type.
 
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             state_of_charge, ac_power = self.timeseries.iloc[timestamp]
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            state_of_charge, ac_power = self.timeseries.loc[pd.Timestamp(timestamp)]
+
+        elif isinstance(timestamp, (pd.Timestamp, dt.datetime)):
 
             state_of_charge, ac_power = self.timeseries.loc[timestamp]
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string."
-                + " Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
         observations = {

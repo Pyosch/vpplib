@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Wind Power Module
 ---------------
@@ -9,6 +8,10 @@ The WindPower class uses the windpowerlib package to calculate power output
 based on wind speed data and turbine specifications. It supports various models
 for wind speed, air density, temperature, and power output calculations.
 """
+
+import datetime
+
+import pandas as pd
 
 from .component import Component
 
@@ -361,9 +364,10 @@ class WindPower(Component):
         
         Parameters
         ----------
-        timestamp : int or str
+        timestamp : int, datetime.datetime, pd.Timestamp, or str
             If int: index position in the timeseries
             If str: timestamp in format 'YYYY-MM-DD hh:mm:ss'
+            If datetime.datetime or pd.Timestamp: used directly for label-based lookup
             
         Returns
         -------
@@ -373,20 +377,22 @@ class WindPower(Component):
         Raises
         ------
         ValueError
-            If the timestamp is not of type int or str
+            If the timestamp is not of type int, datetime.datetime, pd.Timestamp, or str
             
         Notes
         -----
         In the context of a virtual power plant, this method returns a negative value
         as wind power is considered generation (not consumption).
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             return self.timeseries.iloc[timestamp].item() * self.limit
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+            return self.timeseries.loc[pd.Timestamp(timestamp)].item() * self.limit
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             return self.timeseries.loc[timestamp].item() * self.limit
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
     def observations_for_timestamp(self, timestamp):
@@ -399,9 +405,10 @@ class WindPower(Component):
         
         Parameters
         ----------
-        timestamp : int or str
+        timestamp : int, datetime.datetime, pd.Timestamp, or str
             If int: index position in the timeseries
             If str: timestamp in format 'YYYY-MM-DD hh:mm:ss'
+            If datetime.datetime or pd.Timestamp: used directly for label-based lookup
             
         Returns
         -------
@@ -411,7 +418,7 @@ class WindPower(Component):
         Raises
         ------
         ValueError
-            If the timestamp is not of type int or str
+            If the timestamp is not of type int, datetime.datetime, pd.Timestamp, or str
             
         Notes
         -----
@@ -419,20 +426,15 @@ class WindPower(Component):
         wind speed, air density, or other relevant parameters if they are available
         in the ModelChain results.
         """
-        if type(timestamp) == int:
-
+        if isinstance(timestamp, int):
             wind_generation = self.timeseries.iloc[timestamp]
-
-        elif type(timestamp) == str:
-
+        elif isinstance(timestamp, str):
+            wind_generation = self.timeseries.loc[pd.Timestamp(timestamp)]
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             wind_generation = self.timeseries.loc[timestamp]
-
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. "
-                + "Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
-
         observations = {"wind_generation": wind_generation}
-
         return observations

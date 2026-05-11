@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Info
-----
 This file contains the basic functionalities of the CombinedHeatAndPower class.
 
 """
+
+import datetime
 
 from vpplib.component import Component
 import pandas as pd
@@ -29,8 +28,6 @@ class CombinedHeatAndPower(Component):
     ):
 
         """
-        Info
-        ----
         The constructor takes an identifier (String) for referencing the
         current combined heat and power plant. The parameters nominal power
         (Float) determines the nominal power both electrical and thermal.
@@ -131,8 +128,6 @@ class CombinedHeatAndPower(Component):
     def prepare_time_series(self):
 
         """
-        Info
-        ----
         This is the standard function to create a time series for the
         CombinedHeatAndPower class. For this time series no specific operation
         stategy is implemented.
@@ -170,8 +165,6 @@ class CombinedHeatAndPower(Component):
     def limit_power_to(self, limit):
 
         """
-        Info
-        ----
         Limit the power of the combined heat and power plant to the given
         percentage.
 
@@ -197,8 +190,6 @@ class CombinedHeatAndPower(Component):
     def is_valid_ramp_up(self, timestamp):
 
         """
-        Info
-        ----
         Check if a ramp up is valid by comparing the current timestamp,
         the timestamp of the last ramp down and the minimum stop time of the
         chp.
@@ -215,13 +206,23 @@ class CombinedHeatAndPower(Component):
 
         """
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             if timestamp - self.last_ramp_down > self.min_stop_time:
                 self.is_running = True
             else:
                 self.is_running = False
 
-        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+        elif isinstance(timestamp, str):
+            timestamp = pd.Timestamp(timestamp)
+            if (
+                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
+                < timestamp
+            ):
+                self.is_running = True
+            else:
+                self.is_running = False
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             if (
                 self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
                 < timestamp
@@ -232,8 +233,8 @@ class CombinedHeatAndPower(Component):
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or "
-                + "pandas._libs.tslibs.timestamps.Timestamp"
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
             )
 
         return self.is_running
@@ -241,8 +242,6 @@ class CombinedHeatAndPower(Component):
     def is_valid_ramp_down(self, timestamp):
 
         """
-        Info
-        ----
         Check if a ramp down is valid by comparing the current timestamp,
         the timestamp of the last ramp up and the minimum stop time of the
         chp.
@@ -259,13 +258,23 @@ class CombinedHeatAndPower(Component):
 
         """
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             if timestamp - self.last_ramp_up > self.min_runtime:
                 self.is_running = False
             else:
                 self.is_running = True
 
-        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+        elif isinstance(timestamp, str):
+            timestamp = pd.Timestamp(timestamp)
+            if (
+                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
+                < timestamp
+            ):
+                self.is_running = False
+            else:
+                self.is_running = True
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             if (
                 self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
                 < timestamp
@@ -276,8 +285,8 @@ class CombinedHeatAndPower(Component):
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or "
-                + "pandas._libs.tslibs.timestamps.Timestamp"
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
             )
 
         return self.is_running
@@ -285,8 +294,6 @@ class CombinedHeatAndPower(Component):
     def ramp_up(self, timestamp):
 
         """
-        Info
-        ----
         This function ramps up the combined heat and power plant.
         The timestamp is neccessary to calculate if the chp is running in
         later iterations of balancing.
@@ -317,8 +324,6 @@ class CombinedHeatAndPower(Component):
     def ramp_down(self, timestamp):
 
         """
-        Info
-        ----
         This function ramps down the combined heat and power plant.
         The timestamp is neccessary to calculate if the chp is running in
         later iterations of balancing.
@@ -354,8 +359,6 @@ class CombinedHeatAndPower(Component):
     def observations_for_timestamp(self, timestamp):
 
         """
-        Info
-        ----
         This function takes a timestamp as the parameter and returns a
         dictionary with key (String) value (Any) pairs.
 
@@ -396,8 +399,6 @@ class CombinedHeatAndPower(Component):
     def log_observation(self, observation, timestamp):
 
         """
-        Info
-        ----
         This function logs the values from the dictionary, returned by the
         function observations_for_timestamp to the corresponding timestamp
         in self.timeseries. This allows to create a timeseries, depending on an
@@ -428,8 +429,6 @@ class CombinedHeatAndPower(Component):
     def value_for_timestamp(self, timestamp):
 
         """
-        Info
-        ----
         This function takes a timestamp as the parameter and returns the
         corresponding power demand for that timestamp.
         A positiv result represents a load.

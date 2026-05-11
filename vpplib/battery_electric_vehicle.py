@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 """
-Info
-----
 This file contains the basic functionalities of the BatteryElectricVehicle
 class.
 
 """
 from vpplib.component import Component
 
+import datetime
 import pandas as pd
 import random
 
@@ -37,8 +35,6 @@ class BatteryElectricVehicle(Component):
         )
 
         """
-        Info
-        ----
         This class provides a model with the basic functionalities of a
         battery electric vehicle.
 
@@ -121,8 +117,6 @@ class BatteryElectricVehicle(Component):
     def prepare_time_series(self):
 
         """
-        Info
-        ----
         This is the standard function to create a time series for the
         BatteryElectricVehicle class. For this time series no specific charging
         stategy is implemented.
@@ -169,8 +163,6 @@ class BatteryElectricVehicle(Component):
     def charge(self):
 
         """
-        Info
-        ----
         Determine the charge of the car battery and the power drawn by the
         charger.
 
@@ -284,8 +276,6 @@ class BatteryElectricVehicle(Component):
     def split_time(self):
 
         """
-        Info
-        ----
         Split the index into date and hour. The hour will be used to calculate
         self.at_home, which is needed to determine start and end of charging.
 
@@ -310,8 +300,6 @@ class BatteryElectricVehicle(Component):
     def set_weekday(self):
 
         """
-        Info
-        ----
         Determine the weekday, depending on the index. 0 = Monday, 6 = Sunday.
         The weekdays are later used to determine the possible departure and
         arrival times of the vehicle in the set_at_home() function.
@@ -328,8 +316,6 @@ class BatteryElectricVehicle(Component):
     def set_at_home(self):
 
         """
-        Info
-        ----
         Determine the Times when the car is at home.
         During the week (weekday < 5) and on the weekend (weekday >= 5).
         Pick departure and arrival times from the preconfigured lists, which
@@ -368,6 +354,11 @@ class BatteryElectricVehicle(Component):
             self.get_trip_times()
 
         lst = []
+
+        # Initialize with default trip times in case the timeseries does not
+        # start at midnight (where departure/arrival would first be assigned).
+        departure = self.week_trip_start[0]
+        arrival = self.week_trip_end[0]
 
         for hour, weekday in zip(self.hour, self.weekday):
             if (hour == "00:00:00") & (weekday < 5):
@@ -412,8 +403,6 @@ class BatteryElectricVehicle(Component):
     def value_for_timestamp(self, timestamp):
 
         """
-        Info
-        ----
         This function takes a timestamp as the parameter and returns the
         corresponding power demand for that timestamp.
         A positiv result represents a load.
@@ -430,25 +419,27 @@ class BatteryElectricVehicle(Component):
 
         """
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             return self.timeseries.iloc[timestamp]["car_charger"] * self.limit
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            return self.timeseries.loc[pd.Timestamp(timestamp), "car_charger"] * self.limit
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
 
             return self.timeseries.loc[timestamp, "car_charger"] * self.limit
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. "
-                + "Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, "
+                + "pd.Timestamp, or str."
             )
 
     def observations_for_timestamp(self, timestamp):
 
         """
-        Info
-        ----
         This function takes a timestamp as the parameter and returns a
         dictionary with key (String) value (Any) pairs.
 
@@ -463,20 +454,26 @@ class BatteryElectricVehicle(Component):
         self.timeseries.car_capacity and self.timeseries.at_home
 
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             car_charger, car_capacity, at_home = self.timeseries.iloc[
                 timestamp
             ]
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            car_charger, car_capacity, at_home = self.timeseries.loc[
+                pd.Timestamp(timestamp)
+            ]
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
 
             car_charger, car_capacity, at_home = self.timeseries.loc[timestamp]
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. "
-                + "Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, "
+                + "pd.Timestamp, or str."
             )
 
         observations = {
@@ -490,8 +487,6 @@ class BatteryElectricVehicle(Component):
     def get_trip_times(self):
 
         """
-        Info
-        ----
         This function returns predefined trip times for the battery electric vehicle.
         The trip times are divided into weekday and weekend trip times.
         The trip times are used to determine the times when the car is not at home 

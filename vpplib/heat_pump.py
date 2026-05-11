@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Info
-----
 This file contains the basic functionalities of the HeatPump class.
 
 """
+
+import datetime
 
 import pandas as pd
 from .component import Component
@@ -28,8 +27,6 @@ class HeatPump(Component):
     ):
 
         """
-        Info
-        ----
         Initializes a HeatPump instance with specified parameters and configuration.
         
         Parameters
@@ -125,8 +122,6 @@ class HeatPump(Component):
     def get_cop(self):
 
         """
-        Info
-        ----
         Calculate the Coefficient of Performance (COP) of the heat pump based on its type and environmental conditions.
         This method computes the COP for each hour using empirical formulas specific to the heat pump type
         ("Air" or "Ground"). The calculation uses the system's heat supply temperature and the mean hourly
@@ -183,8 +178,6 @@ class HeatPump(Component):
 
     def get_current_cop(self, tmp):
         """
-        Info
-        ----
         Calculate the current coefficient of performance (COP) for the heat pump based on the input temperature.
         The COP is determined using different empirical formulas depending on the type of heat pump:
             - For "Air" heat pumps, a quadratic formula based on the temperature difference is used.
@@ -226,8 +219,6 @@ class HeatPump(Component):
     # from VPPComponents
     def prepare_time_series(self):
         """
-        Info
-        ----
         Prepares and returns the time series data for the heat pump operation.
         This method ensures that the coefficient of performance (COP) and thermal energy demand
         are available and valid. If the COP is not set, it is calculated. If the thermal energy
@@ -273,8 +264,6 @@ class HeatPump(Component):
 
     def get_timeseries_year(self):
         """
-        Info
-        ----
         Generates and returns a DataFrame containing the yearly time series data for the heat pump.
         This method populates the `timeseries_year` DataFrame with the following columns:
             - "thermal_energy_output": Set equal to the heat pump's thermal energy demand.
@@ -317,8 +306,6 @@ class HeatPump(Component):
     # =========================================================================
     def limit_power_to(self, limit):
         """
-        Info
-        ----
         Sets the power limit for the heat pump.
         This method validates and sets the power limit as a fraction of the maximum power.
         The limit must be a float between 0 and 1 (inclusive). If the provided value is
@@ -354,24 +341,26 @@ class HeatPump(Component):
     # Override balancing function from super class.
     def value_for_timestamp(self, timestamp):
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             return self.timeseries.iloc[timestamp]["el_demand"] * self.limit
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            return self.timeseries.loc[pd.Timestamp(timestamp), "el_demand"] * self.limit
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
 
             return self.timeseries.loc[timestamp, "el_demand"] * self.limit
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. "
-                + "Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
             )
 
     def observations_for_timestamp(self, timestamp):
         """
-        Info
-        ----
         Returns a dictionary of observations for a given timestamp, including thermal energy output, 
         coefficient of performance (COP), and electrical demand.
         
@@ -404,7 +393,7 @@ class HeatPump(Component):
         all values are set to zero.
         """
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
 
@@ -424,7 +413,9 @@ class HeatPump(Component):
                 else:
                     el_demand, cop, thermal_energy_output = 0, 0, 0
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            timestamp = pd.Timestamp(timestamp)
 
             if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
 
@@ -443,15 +434,12 @@ class HeatPump(Component):
                 else:
                     el_demand, cop, thermal_energy_output = 0, 0, 0
 
-        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
 
-            if (
-                pd.isna(next(iter(self.timeseries.loc[str(timestamp)])))
-                == False
-            ):
+            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
 
                 thermal_energy_output, cop, el_demand = self.timeseries.loc[
-                    str(timestamp)
+                    timestamp
                 ]
 
             else:
@@ -459,7 +447,7 @@ class HeatPump(Component):
                 if self.is_running:
                     el_demand = self.el_power
                     temp = self.environment.mean_temp_quarter_hours.temperature.loc[
-                        str(timestamp)
+                        timestamp
                     ]
                     cop = self.get_current_cop(temp)
                     thermal_energy_output = el_demand * cop
@@ -468,9 +456,8 @@ class HeatPump(Component):
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int, "
-                + "string (Stringformat: YYYY-MM-DD hh:mm:ss)"
-                + " or pd._libs.tslibs.timestamps.Timestamp"
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
             )
 
         observations = {
@@ -495,8 +482,6 @@ class HeatPump(Component):
 
     def is_valid_ramp_up(self, timestamp):
         """
-        Info
-        ----
         Determines whether the heat pump can validly ramp up at the given timestamp.
         
         Parameters
@@ -524,13 +509,23 @@ class HeatPump(Component):
           timeseries frequency) is less than the current timestamp.
         """
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             if timestamp - self.last_ramp_down > self.min_stop_time:
                 self.is_running = True
             else:
                 self.is_running = False
 
-        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+        elif isinstance(timestamp, str):
+            timestamp = pd.Timestamp(timestamp)
+            if (
+                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
+                < timestamp
+            ):
+                self.is_running = True
+            else:
+                self.is_running = False
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             if (
                 self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
                 < timestamp
@@ -541,14 +536,12 @@ class HeatPump(Component):
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or "
-                + "pandas._libs.tslibs.timestamps.Timestamp"
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
             )
 
     def is_valid_ramp_down(self, timestamp):
         """
-        Info
-        ----
         Determines whether the heat pump can validly ramp down at the given timestamp.
         
         Parameters
@@ -570,13 +563,23 @@ class HeatPump(Component):
         This method updates the `is_running` attribute based on whether the minimum runtime has elapsed since the last ramp up.
         """
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             if timestamp - self.last_ramp_up > self.min_runtime:
                 self.is_running = False
             else:
                 self.is_running = True
 
-        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+        elif isinstance(timestamp, str):
+            timestamp = pd.Timestamp(timestamp)
+            if (
+                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
+                < timestamp
+            ):
+                self.is_running = False
+            else:
+                self.is_running = True
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             if (
                 self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
                 < timestamp
@@ -587,14 +590,12 @@ class HeatPump(Component):
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or "
-                + "pandas._libs.tslibs.timestamps.Timestamp"
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
             )
 
     def ramp_up(self, timestamp):
         """
-        Info
-        ----
         Attempts to ramp up the heat pump at the specified timestamp.
         
         Parameters
@@ -627,8 +628,6 @@ class HeatPump(Component):
 
     def ramp_down(self, timestamp):
         """
-        Info
-        ----
         Attempts to ramp down (turn off) the heat pump at the specified timestamp.
         
         Parameters

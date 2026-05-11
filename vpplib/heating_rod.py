@@ -14,6 +14,8 @@ Key features:
 - Time series generation for heat output and electrical demand
 """
 
+import datetime
+
 import pandas as pd
 from .component import Component
 
@@ -313,15 +315,20 @@ class HeatingRod(Component):
         ValueError
             If the timestamp is not of type int or string.
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             return self.timeseries.iloc[timestamp]["el_demand"] * self.limit
-        
-        elif type(timestamp) == str:
+
+        elif isinstance(timestamp, str):
+            return self.timeseries.loc[pd.Timestamp(timestamp), "el_demand"] * self.limit
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             return self.timeseries.loc[timestamp, "el_demand"] * self.limit
-        
+
         else:
-            raise ValueError("timestamp needs to be of type int or string. " +
-                             "Stringformat: YYYY-MM-DD hh:mm:ss")
+            raise ValueError(
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
+            )
         
     
     def observationsForTimestamp(self, timestamp):
@@ -349,61 +356,64 @@ class HeatingRod(Component):
         ValueError
             If the timestamp is not of a supported type.
         """
-        if type(timestamp) == int:
-            
+        if isinstance(timestamp, int):
+
             if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
-                
+
                 heat_output, el_demand = self.timeseries.iloc[timestamp]
-                efficiency = self.efficiency   
-                
+                efficiency = self.efficiency
+
             else:
-                
-                if self.isRunning: 
+
+                if self.isRunning:
                     el_demand = self.el_power
                     temp = self.environment.mean_temp_quarter_hours.temperature.iloc[timestamp]
-                    efficiency = self.efficiency                   
+                    efficiency = self.efficiency
                     heat_output = el_demand * efficiency
-                else: 
+                else:
                     el_demand, efficiency, heat_output = 0, 0, 0
-            
-        elif type(timestamp) == str:
-            
+
+        elif isinstance(timestamp, str):
+
+            timestamp = pd.Timestamp(timestamp)
+
             if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-                
+
                 heat_output, el_demand = self.timeseries.loc[timestamp]
-                efficiency = self.efficiency   
-                
+                efficiency = self.efficiency
+
             else:
-                
-                if self.isRunning: 
+
+                if self.isRunning:
                     el_demand = self.el_power
                     temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
-                    efficiency = self.efficiency                  
+                    efficiency = self.efficiency
                     heat_output = el_demand * efficiency
-                else: 
+                else:
                     el_demand, efficiency, heat_output = 0, 0, 0
-                
-        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
-            
-            if pd.isna(next(iter(self.timeseries.loc[str(timestamp)]))) == False:
-                
-                 heat_output, el_demand = self.timeseries.loc[str(timestamp)]
-                 efficiency = self.efficiency   
-                 
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
+
+            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
+
+                heat_output, el_demand = self.timeseries.loc[timestamp]
+                efficiency = self.efficiency
+
             else:
-                
-                if self.isRunning: 
+
+                if self.isRunning:
                     el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[str(timestamp)]
-                    efficiency = self.efficiency                  
+                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
+                    efficiency = self.efficiency
                     heat_output = el_demand * efficiency
-                else: 
+                else:
                     el_demand, efficiency, heat_output = 0, 0, 0
-            
+
         else:
-            raise ValueError("timestamp needs to be of type int, " +
-                             "string (Stringformat: YYYY-MM-DD hh:mm:ss)" +
-                             " or pd._libs.tslibs.timestamps.Timestamp")
+            raise ValueError(
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
+            )
         
         observations = {'heat_output':heat_output, 
                         'efficiency':efficiency, 'el_demand':el_demand}
@@ -453,19 +463,30 @@ class HeatingRod(Component):
         -----
         This method updates the isRunning attribute based on the check result.
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             if timestamp - self.lastRampDown > self.min_stop_time:
                 self.isRunning = True
-            else: self.isRunning = False
-        
-        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+            else:
+                self.isRunning = False
+
+        elif isinstance(timestamp, str):
+            timestamp = pd.Timestamp(timestamp)
             if self.lastRampDown + self.min_stop_time * timestamp.freq < timestamp:
                 self.isRunning = True
-            else: self.isRunning = False
-            
+            else:
+                self.isRunning = False
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
+            if self.lastRampDown + self.min_stop_time * timestamp.freq < timestamp:
+                self.isRunning = True
+            else:
+                self.isRunning = False
+
         else:
-            raise ValueError("timestamp needs to be of type int or " +
-                             "pandas._libs.tslibs.timestamps.Timestamp")
+            raise ValueError(
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
+            )
         
     def isLegitRampDown(self, timestamp):
         """
@@ -487,19 +508,30 @@ class HeatingRod(Component):
         -----
         This method updates the isRunning attribute based on the check result.
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             if timestamp - self.lastRampUp > self.min_runtime:
                 self.isRunning = False
-            else: self.isRunning = True
-        
-        elif type(timestamp) == pd._libs.tslibs.timestamps.Timestamp:
+            else:
+                self.isRunning = True
+
+        elif isinstance(timestamp, str):
+            timestamp = pd.Timestamp(timestamp)
             if self.lastRampUp + self.min_runtime * timestamp.freq < timestamp:
                 self.isRunning = False
-            else: self.isRunning = True
-            
+            else:
+                self.isRunning = True
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
+            if self.lastRampUp + self.min_runtime * timestamp.freq < timestamp:
+                self.isRunning = False
+            else:
+                self.isRunning = True
+
         else:
-            raise ValueError("timestamp needs to be of type int or " +
-                             "pandas._libs.tslibs.timestamps.Timestamp")
+            raise ValueError(
+                "timestamp must be int, datetime.datetime, "
+                "pd.Timestamp, or str."
+            )
         
     def rampUp(self, timestamp):
         """

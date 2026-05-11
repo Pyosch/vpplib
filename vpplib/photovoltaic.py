@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Photovoltaic Module.
 
 This module contains the Photovoltaic class, which models a photovoltaic system
@@ -11,6 +10,7 @@ for preparing time series data, limiting power output, and retrieving observatio
 
 from vpplib.component import Component
 
+import datetime
 import pandas as pd
 import random
 
@@ -287,10 +287,11 @@ class Photovoltaic(Component):
         
         Parameters
         ----------
-        timestamp : int or str
+        timestamp : int, datetime.datetime, pd.Timestamp, or str
             The timestamp for which to retrieve the value.
-            If int, it's treated as an index in the timeseries.
-            If str, it's treated as a datetime string in format 'YYYY-MM-DD hh:mm:ss'.
+            If int, it is treated as a positional index in the timeseries.
+            If datetime/Timestamp, it is used for label-based lookup.
+            If str, it is parsed to datetime first.
             
         Returns
         -------
@@ -300,18 +301,19 @@ class Photovoltaic(Component):
         Raises
         ------
         ValueError
-            If the timestamp is not of type int or str.
+            If the timestamp type is not supported.
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
             return (
                 self.timeseries[self.identifier].iloc[timestamp] * self.limit
             )
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+            return self.timeseries[self.identifier].loc[pd.Timestamp(timestamp)] * self.limit
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             return self.timeseries[self.identifier].loc[timestamp] * self.limit
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. "
-                + "Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
     def observations_for_timestamp(self, timestamp):
@@ -322,10 +324,11 @@ class Photovoltaic(Component):
         
         Parameters
         ----------
-        timestamp : int or str
+        timestamp : int, datetime.datetime, pd.Timestamp, or str
             The timestamp for which to retrieve observations.
-            If int, it's treated as an index in the timeseries.
-            If str, it's treated as a datetime string in format 'YYYY-MM-DD hh:mm:ss'.
+            If int, it is treated as a positional index in the timeseries.
+            If datetime/Timestamp, it is used for label-based lookup.
+            If str, it is parsed to datetime first.
             
         Returns
         -------
@@ -335,24 +338,20 @@ class Photovoltaic(Component):
         Raises
         ------
         ValueError
-            If the timestamp is not of type int or str.
+            If the timestamp type is not supported.
         """
-        if type(timestamp) == int:
-
+        if isinstance(timestamp, int):
             el_generation = self.timeseries.iloc[timestamp]
-
-        elif type(timestamp) == str:
-
+        elif isinstance(timestamp, str):
+            el_generation = self.timeseries.loc[pd.Timestamp(timestamp)]
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
             el_generation = self.timeseries.loc[timestamp]
-
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string. "
-                + "Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
         observations = {"el_generation": el_generation}
-
         return observations
 
     def pick_pvsystem(self, min_module_power,

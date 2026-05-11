@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Thermal Energy Storage Module
 ----------------------------
@@ -116,8 +115,8 @@ class ThermalEnergyStorage(Component):
         self.mass = mass
         self.cp = cp
         self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
-        # Aus Datenblättern ergibt sich, dass ein Wärmespeicher je Tag rund 10%
-        # Bereitschaftsverluste hat (ohne Rohrleitungen!!)
+        # Data sheets indicate that a thermal storage loses about 10% of its
+        # standby energy per day (excluding pipe losses).
         self.thermal_energy_loss_per_day = thermal_energy_loss_per_day
         self.efficiency_per_timestep = 1 - (
             thermal_energy_loss_per_day

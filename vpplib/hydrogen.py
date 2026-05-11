@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 """
-Info
-----
 This file contains the basic functionalities of the ElectricalEnergyStorage class.
 
 """
@@ -10,6 +7,7 @@ from vpplib.component import Component
 import pandas as pd
 import numpy as np
 import math
+import datetime
 import datetime as dt
 import time
 from configparser import ConfigParser
@@ -22,8 +20,6 @@ from scipy.optimize import fsolve
 class ElectrolysisSimses(Component):
     """.
 
-    Info
-    ----
     Standard values are taken from
     "simses/simulation/system_tests/configs/simulation.test_23.ini"
 
@@ -291,25 +287,26 @@ class ElectrolysisSimses(Component):
 
     def value_for_timestamp(self, timestamp):
 
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             return self.timeseries.iloc[timestamp]["ac_power"]
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            return self.timeseries.loc[pd.Timestamp(timestamp), "ac_power"]
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
 
             return self.timeseries.loc[timestamp, "ac_power"]
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string."
-                + " Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
     def observations_for_timestamp(self, timestamp):
         """.
 
-        Info
-        ----
         This function takes a timestamp as the parameter and returns a
         dictionary with key (String) value (Any) pairs.
         Depending on the type of component, different status parameters of the
@@ -340,18 +337,21 @@ class ElectrolysisSimses(Component):
         ...
 
         """
-        if type(timestamp) == int:
+        if isinstance(timestamp, int):
 
             state_of_charge, ac_power = self.timeseries.iloc[timestamp]
 
-        elif type(timestamp) == str:
+        elif isinstance(timestamp, str):
+
+            state_of_charge, ac_power = self.timeseries.loc[pd.Timestamp(timestamp)]
+
+        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
 
             state_of_charge, ac_power = self.timeseries.loc[timestamp]
 
         else:
             raise ValueError(
-                "timestamp needs to be of type int or string."
-                + " Stringformat: YYYY-MM-DD hh:mm:ss"
+                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
             )
 
         observations = {
