@@ -47,6 +47,13 @@ class WeightingStrategy(Enum):
     DATA_COMPLETENESS = "data_completeness"
 
 
+class RankingStrategy(Enum):
+    """Strategy for ranking candidate stations."""
+    DISTANCE_ONLY = "DISTANCE_ONLY"
+    QUALITY_WEIGHTED = "QUALITY_WEIGHTED"
+    QUALITY_FIRST = "QUALITY_FIRST"
+
+
 class DWDConfig:
     """Configuration settings for DWD data fetching."""
     
@@ -550,25 +557,53 @@ class StationManager:
                              max_distance_km: Optional[float] = None,
                              resolution: str = "hourly",
                              active_only: bool = False,
-                             date: Optional[datetime] = None) -> List[Station]:
+                             date: Optional[datetime] = None,
+                             ranking_strategy: str = "DISTANCE_ONLY") -> List[Station]:
         if parameter not in self.stations:
             self.load_stations(parameter, resolution)
-        
+
         stations_list = list(self.stations[parameter].values())
-        
+
         if active_only:
             stations_list = [s for s in stations_list if s.is_active(date)]
-        
+
         for station in stations_list:
             station.distance_km = self._haversine_distance(
                 latitude, longitude, station.latitude, station.longitude
             )
-        
+
         stations_list.sort(key=lambda s: s.distance_km)
-        
+
         if max_distance_km is not None:
             stations_list = [s for s in stations_list if s.distance_km <= max_distance_km]
-        
+
+        strategy = ranking_strategy.upper() if isinstance(ranking_strategy, str) else ranking_strategy.value
+        if strategy != "DISTANCE_ONLY" and stations_list:
+            now = datetime.utcnow()
+            candidates = stations_list[:max(n, 5)]
+
+            def _quality_score(station: "Station") -> float:
+                end = station.end_date
+                if end is None or end > now:
+                    return 1.0
+                delta_days = (now - end).days
+                if delta_days < 365:
+                    return 0.7
+                if delta_days < 3 * 365:
+                    return 0.3
+                return 0.1
+
+            if strategy == "QUALITY_WEIGHTED":
+                for s in candidates:
+                    q = _quality_score(s)
+                    s._rank_score = (q ** 2 * 1000) / (s.distance_km ** 2 + 1e-10)
+                candidates.sort(key=lambda s: s._rank_score, reverse=True)
+            elif strategy == "QUALITY_FIRST":
+                candidates.sort(key=lambda s: (-_quality_score(s), s.distance_km))
+
+            remaining = [s for s in stations_list if s not in candidates]
+            stations_list = candidates + remaining
+
         return stations_list[:n]
     
     def get_station_by_id(self, station_id: str, parameter: str,
@@ -1095,10 +1130,13 @@ class DWDClient:
                         n_stations: int = 5,
                         station_id: Optional[str] = None,
                         min_quality_per_parameter: int = 80,
-                        force_refresh: bool = False) -> Tuple[pd.DataFrame, Dict]:
+                        force_refresh: bool = False,
+                        allow_multi_station: bool = False,
+                        ranking_strategy: str = "DISTANCE_ONLY",
+                        for_pvlib: bool = False) -> Tuple[pd.DataFrame, Dict]:
         """
         Get observation data for a location.
-        
+
         Parameters
         ----------
         latitude, longitude : float
@@ -1112,18 +1150,27 @@ class DWDClient:
         max_distance_km : float
             Maximum station distance
         n_stations : int
-            Number of stations to try per parameter
+            Number of stations to try (or merge when allow_multi_station=True) per parameter
         station_id : str, optional
             Specific station ID to use
         min_quality_per_parameter : int
             Minimum percentage of valid data required
         force_refresh : bool
             Force re-download
-            
+        allow_multi_station : bool
+            When True, fetch from up to n_stations nearest stations and merge using
+            inverse-distance weighting instead of falling back to the first good station.
+        ranking_strategy : str
+            How to rank candidate stations: 'DISTANCE_ONLY' (default), 'QUALITY_WEIGHTED',
+            or 'QUALITY_FIRST'. See RankingStrategy enum.
+        for_pvlib : bool
+            When True, rename and convert output columns to pvlib-compatible format:
+            'ghi' (W/m²), 'temp_air' (°C), 'wind_speed' (m/s), 'pressure' (hPa).
+
         Returns
         -------
         Tuple[pd.DataFrame, Dict]
-            DataFrame with data, metadata dict with station info
+            DataFrame with data, metadata dict with station info and completeness_report.
         """
         metadata = {
             'location': {'latitude': latitude, 'longitude': longitude},
@@ -1132,28 +1179,37 @@ class DWDClient:
             'warnings': [],
             'station_type': 'OBSERVATION'
         }
-        
-        # Parameter mappings for vpplib
+
+        # Parameter mappings for vpplib — ordered from most specific to most general.
+        # 10-min names first, then hourly, then daily (TMK, PMK, FMK).
+        # Daily solar has no GHI; SDK (sunshine duration) is included as a fallback.
         param_to_dwd_columns = {
             'solar': {
-                'ghi': ['GS_10', 'FG_LBERG', 'ATMO_STRAHL'],
+                'ghi': ['GS_10', 'FG_LBERG', 'ATMO_STRAHL', 'SDK'],
                 'dhi': ['DS_10', 'DIFFUS_HIMMEL_KW_J'],
             },
             'temperature': {
-                'temperature': ['TT_10', 'TT_TU', 'TTT'],
+                'temperature': ['TT_10', 'TT_TU', 'TTT', 'TMK'],
             },
             'pressure': {
-                'pressure': ['PP_10', 'P0', 'P', 'PPPP'],
+                'pressure': ['PP_10', 'P0', 'P', 'PPPP', 'PMK'],
             },
             'wind': {
-                'wind_speed': ['FF_10', 'FF', 'F'],
+                'wind_speed': ['FF_10', 'FF', 'F', 'FMK'],
             }
         }
-        
+
+        if resolution == 'daily' and 'solar' in parameters:
+            metadata['warnings'].append(
+                "DWD daily resolution does not provide GHI; 'SDK' (sunshine duration) is "
+                "used as a proxy. Consider using 'hourly' or '10_minutes' for solar data."
+            )
+
         combined_data = {}
-        valid_station_found = False
+        # tracks per-param fallback status for completeness report
+        param_fallback_used: Dict[str, bool] = {}
         selected_station_metadata = None
-        
+
         for param in parameters:
             # Find stations
             if station_id:
@@ -1170,99 +1226,313 @@ class DWDClient:
                     n=n_stations,
                     max_distance_km=max_distance_km,
                     resolution=resolution,
-                    active_only=False
+                    active_only=False,
+                    ranking_strategy=ranking_strategy
                 )
-            
+
             if not stations:
                 metadata['warnings'].append(f"No stations found for parameter '{param}'")
                 continue
-            
-            # Try stations until we find one with valid data
-            for station in stations:
-                try:
-                    df, obs_meta = self.obs_parser.fetch_observations(
-                        station.station_id, param,
-                        start_date, end_date,
-                        resolution, force_refresh=force_refresh
-                    )
-                    
-                    if obs_meta.get('warnings'):
-                        metadata['warnings'].extend(obs_meta['warnings'])
-                    
-                    if df.empty:
-                        continue
-                    
-                    # Calculate quality only on target data columns,
-                    # excluding QN (quality flag) and unrelated measurement columns
-                    # that inflate quality scores (see GitHub issue #54)
-                    target_cols = []
-                    if param in param_to_dwd_columns:
-                        for target_col, source_cols in param_to_dwd_columns[param].items():
-                            for src_col in source_cols:
-                                if src_col in df.columns:
-                                    target_cols.append(src_col)
-                                    break
-                    else:
-                        target_cols = [col for col in df.columns if not col.startswith('QN')]
-                    
-                    if not target_cols:
-                        continue
-                    
-                    target_df = df[target_cols]
-                    valid_count = target_df.notna().sum().sum()
-                    total_count = len(target_df) * len(target_df.columns)
-                    quality = (valid_count / total_count * 100) if total_count > 0 else 0
-                    
-                    if quality >= min_quality_per_parameter:
-                        # Rename columns to expected names
+
+            if allow_multi_station:
+                # Collect all valid station data and merge
+                station_dfs: List[Tuple[Any, pd.DataFrame]] = []
+                for station in stations:
+                    try:
+                        df, obs_meta = self.obs_parser.fetch_observations(
+                            station.station_id, param,
+                            start_date, end_date,
+                            resolution, force_refresh=force_refresh
+                        )
+                        if obs_meta.get('warnings'):
+                            metadata['warnings'].extend(obs_meta['warnings'])
+                        if df.empty:
+                            continue
+
+                        # Normalise columns to expected output names
+                        normalised: Dict[str, Any] = {}
                         if param in param_to_dwd_columns:
                             for target_col, source_cols in param_to_dwd_columns[param].items():
                                 for src_col in source_cols:
                                     if src_col in df.columns:
-                                        combined_data[target_col] = df[src_col]
+                                        normalised[target_col] = df[src_col]
                                         break
                         else:
                             for col in df.columns:
                                 if not col.startswith('QN'):
-                                    combined_data[col] = df[col]
-                        
-                        metadata['stations_used'][param] = {
-                            'station_id': station.station_id,
-                            'name': station.name,
-                            'distance_km': station.distance_km,
-                            'latitude': station.latitude,
-                            'longitude': station.longitude,
-                            'height': station.elevation,
-                            'quality': round(quality, 1)
+                                    normalised[col] = df[col]
+
+                        if normalised:
+                            station_dfs.append((station, pd.DataFrame(normalised)))
+                    except Exception as e:
+                        metadata['warnings'].append(
+                            f"Failed to fetch {param} from station {station.station_id}: {e}"
+                        )
+
+                if station_dfs:
+                    merged = self._merge_multi_station_data(station_dfs)
+                    for col in merged.columns:
+                        combined_data[col] = merged[col]
+                    param_fallback_used[param] = len(station_dfs) > 1
+                    metadata['stations_used'][param] = [
+                        {
+                            'station_id': s.station_id,
+                            'name': s.name,
+                            'distance_km': s.distance_km,
+                            'latitude': s.latitude,
+                            'longitude': s.longitude,
+                            'height': s.elevation,
                         }
-                        
-                        if selected_station_metadata is None:
-                            selected_station_metadata = {
+                        for s, _ in station_dfs
+                    ]
+                    if selected_station_metadata is None:
+                        first_s = station_dfs[0][0]
+                        selected_station_metadata = {
+                            'station_id': first_s.station_id,
+                            'name': first_s.name,
+                            'latitude': first_s.latitude,
+                            'longitude': first_s.longitude,
+                            'height': first_s.elevation,
+                            'distance': first_s.distance_km,
+                        }
+                else:
+                    metadata['warnings'].append(f"No valid station data for parameter '{param}'")
+
+            else:
+                # Sequential fallback: use first station that passes quality check
+                for station in stations:
+                    try:
+                        df, obs_meta = self.obs_parser.fetch_observations(
+                            station.station_id, param,
+                            start_date, end_date,
+                            resolution, force_refresh=force_refresh
+                        )
+
+                        if obs_meta.get('warnings'):
+                            metadata['warnings'].extend(obs_meta['warnings'])
+
+                        if df.empty:
+                            continue
+
+                        # Calculate quality only on target data columns,
+                        # excluding QN (quality flag) and unrelated measurement columns
+                        # that inflate quality scores (see GitHub issue #54)
+                        target_cols = []
+                        if param in param_to_dwd_columns:
+                            for target_col, source_cols in param_to_dwd_columns[param].items():
+                                for src_col in source_cols:
+                                    if src_col in df.columns:
+                                        target_cols.append(src_col)
+                                        break
+                        else:
+                            target_cols = [col for col in df.columns if not col.startswith('QN')]
+
+                        if not target_cols:
+                            continue
+
+                        target_df = df[target_cols]
+                        valid_count = target_df.notna().sum().sum()
+                        total_count = len(target_df) * len(target_df.columns)
+                        quality = (valid_count / total_count * 100) if total_count > 0 else 0
+
+                        if quality >= min_quality_per_parameter:
+                            if param in param_to_dwd_columns:
+                                for target_col, source_cols in param_to_dwd_columns[param].items():
+                                    for src_col in source_cols:
+                                        if src_col in df.columns:
+                                            combined_data[target_col] = df[src_col]
+                                            break
+                            else:
+                                for col in df.columns:
+                                    if not col.startswith('QN'):
+                                        combined_data[col] = df[col]
+
+                            param_fallback_used[param] = False
+                            metadata['stations_used'][param] = {
                                 'station_id': station.station_id,
                                 'name': station.name,
+                                'distance_km': station.distance_km,
                                 'latitude': station.latitude,
                                 'longitude': station.longitude,
                                 'height': station.elevation,
-                                'distance': station.distance_km
+                                'quality': round(quality, 1)
                             }
-                        
-                        valid_station_found = True
-                        break
-                        
-                except Exception as e:
-                    metadata['warnings'].append(f"Failed to fetch {param} from station {station.station_id}: {e}")
-        
+
+                            if selected_station_metadata is None:
+                                selected_station_metadata = {
+                                    'station_id': station.station_id,
+                                    'name': station.name,
+                                    'latitude': station.latitude,
+                                    'longitude': station.longitude,
+                                    'height': station.elevation,
+                                    'distance': station.distance_km
+                                }
+
+                            break
+
+                    except Exception as e:
+                        metadata['warnings'].append(
+                            f"Failed to fetch {param} from station {station.station_id}: {e}"
+                        )
+
         if not combined_data:
             raise ValueError("No valid station data found!")
-        
-        # Create combined DataFrame
+
         result_df = pd.DataFrame(combined_data)
-        
-        # Add station metadata
+
         if selected_station_metadata:
             metadata['selected_station'] = selected_station_metadata
-        
+
+        metadata['completeness_report'] = self._build_completeness_report(
+            result_df, parameters, start_date, end_date, param_fallback_used
+        )
+
+        if for_pvlib:
+            result_df = self._apply_pvlib_transform(result_df)
+
         return result_df, metadata
+
+    def _merge_multi_station_data(
+        self,
+        station_dfs: List[Tuple[Any, pd.DataFrame]],
+        weighting_strategy: WeightingStrategy = WeightingStrategy.INVERSE_DISTANCE,
+    ) -> pd.DataFrame:
+        """Merge DataFrames from multiple stations using the chosen weighting strategy."""
+        if len(station_dfs) == 1:
+            return station_dfs[0][1]
+
+        if weighting_strategy == WeightingStrategy.NEAREST_ONLY:
+            nearest = min(station_dfs, key=lambda x: x[0].distance_km)
+            return nearest[1]
+
+        # Build union index
+        all_indices = [df.index for _, df in station_dfs]
+        union_index = all_indices[0]
+        for idx in all_indices[1:]:
+            union_index = union_index.union(idx)
+
+        # Collect numeric columns present in any station
+        all_cols: set = set()
+        for _, df in station_dfs:
+            all_cols.update(df.select_dtypes(include='number').columns)
+
+        result_data: Dict[str, Any] = {}
+        for col in all_cols:
+            weighted_sum = pd.Series(0.0, index=union_index)
+            weight_sum = pd.Series(0.0, index=union_index)
+
+            for station, df in station_dfs:
+                if col not in df.columns:
+                    continue
+                series = df[col].reindex(union_index)
+                mask = series.notna()
+
+                if weighting_strategy == WeightingStrategy.SIMPLE_AVERAGE:
+                    w = 1.0
+                elif weighting_strategy == WeightingStrategy.INVERSE_DISTANCE:
+                    w = 1.0 / (station.distance_km ** 2 + 1e-10)
+                elif weighting_strategy == WeightingStrategy.DATA_COMPLETENESS:
+                    w = 1.0 - df[col].isna().mean()
+                else:
+                    w = 1.0
+
+                weighted_sum[mask] += series[mask] * w
+                weight_sum[mask] += w
+
+            valid_mask = weight_sum > 0
+            out = pd.Series(np.nan, index=union_index)
+            out[valid_mask] = weighted_sum[valid_mask] / weight_sum[valid_mask]
+            result_data[col] = out
+
+        return pd.DataFrame(result_data, index=union_index)
+
+    def _build_completeness_report(
+        self,
+        result_df: pd.DataFrame,
+        parameters: List[str],
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+        param_fallback_used: Dict[str, bool],
+    ) -> Dict:
+        """Build a per-parameter data completeness report."""
+        report: Dict[str, Dict] = {}
+
+        # Map output column names back to parameters for reporting
+        param_to_output_cols = {
+            'solar': ['ghi', 'dhi'],
+            'temperature': ['temperature'],
+            'pressure': ['pressure'],
+            'wind': ['wind_speed'],
+        }
+
+        for param in parameters:
+            cols = [c for c in param_to_output_cols.get(param, []) if c in result_df.columns]
+            if not cols:
+                report[param] = {
+                    'coverage_pct': 0.0,
+                    'gap_intervals': [],
+                    'fallback_used': param_fallback_used.get(param, False),
+                }
+                continue
+
+            series = result_df[cols].iloc[:, 0]
+            total = len(series)
+            if total == 0:
+                coverage_pct = 0.0
+            else:
+                coverage_pct = round(series.notna().sum() / total * 100, 1)
+
+            gap_intervals = []
+            in_gap = False
+            gap_start = None
+            for ts, val in series.items():
+                if pd.isna(val):
+                    if not in_gap:
+                        in_gap = True
+                        gap_start = ts
+                else:
+                    if in_gap:
+                        gap_intervals.append((gap_start, ts))
+                        in_gap = False
+            if in_gap and gap_start is not None:
+                gap_intervals.append((gap_start, series.index[-1]))
+
+            report[param] = {
+                'coverage_pct': coverage_pct,
+                'gap_intervals': gap_intervals,
+                'fallback_used': param_fallback_used.get(param, False),
+            }
+
+        return report
+
+    def _apply_pvlib_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Rename and convert columns to pvlib-compatible format."""
+        df = df.copy()
+
+        # Rename temperature → temp_air
+        if 'temperature' in df.columns:
+            df = df.rename(columns={'temperature': 'temp_air'})
+
+        # Solar: convert J/cm² → W/m² for 10-min data (median < 1000)
+        for col in ['ghi', 'dhi']:
+            if col in df.columns:
+                numeric = df[col].dropna()
+                if len(numeric) > 0:
+                    med = numeric.median()
+                    if med < 1000:
+                        # 10-min J/cm² → W/m²: multiply by 10000/600
+                        df[col] = df[col] * (10000 / 600)
+                    elif 1000 <= med <= 5000:
+                        # hourly kJ/m²/h → W/m²: multiply by 1000/3600
+                        df[col] = df[col] * (1000 / 3600)
+
+        # Pressure: Pa → hPa
+        if 'pressure' in df.columns:
+            numeric = df['pressure'].dropna()
+            if len(numeric) > 0 and numeric.median() > 10000:
+                df['pressure'] = df['pressure'] / 100.0
+
+        return df
     
     def get_forecast(self, latitude: float, longitude: float,
                     parameters: List[str],
