@@ -16,6 +16,7 @@ TODO: Setup data type for target data and alter the referencing accordingly!
 """
 
 import math
+import random
 import pandas as pd
 import pandapower as pp
 import matplotlib.pyplot as plt
@@ -989,3 +990,178 @@ class Operator(object):
                 self.virtual_power_plant.components[comp].timeseries.plot(
                     figsize=(16, 9), title=comp
                 )
+
+
+# =============================================================================
+# Module-level utility functions
+# =============================================================================
+
+def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Return the Haversine distance in km between two WGS84 points."""
+    R = 6371.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = (math.sin(d_lat / 2) ** 2
+         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+         * math.sin(d_lon / 2) ** 2)
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def assign_assets_to_buses(
+    net,
+    gdf: "pd.DataFrame",
+    seed: int = 42,
+) -> "dict[str, int]":
+    """Assign MaStR assets to pandapower bus indices.
+
+    Parameters
+    ----------
+    net : pandapower.pandapowerNet
+        Target network. Uses net.bus_geodata if available and non-empty.
+    gdf : pd.DataFrame
+        MaStR asset table. Required columns:
+          - 'EinheitMastrNummer' (str): unique asset ID
+          - 'Breitengrad' (float, NaN allowed): WGS84 latitude
+          - 'Laengengrad' (float, NaN allowed): WGS84 longitude
+    seed : int
+        Random seed for reproducible random assignments.
+
+    Returns
+    -------
+    dict[str, int]
+        {EinheitMastrNummer: bus_index_in_net}
+
+    Logic
+    -----
+    For each asset:
+      - If net.bus_geodata is non-empty AND asset has valid lat/lon:
+          assign to nearest bus by Haversine distance.
+          net.bus_geodata columns are 'x' (longitude) and 'y' (latitude).
+      - Otherwise:
+          assign randomly to one of net.load.bus.unique().
+    """
+    rng = random.Random(seed)
+
+    bus_geodata = getattr(net, "bus_geodata", pd.DataFrame())
+    has_geo = bus_geodata is not None and not bus_geodata.empty
+
+    if len(net.load) > 0:
+        load_buses = net.load.bus.unique().tolist()
+    else:
+        load_buses = list(net.bus.index)
+
+    result: dict = {}
+    for _, row in gdf.iterrows():
+        asset_id = row["EinheitMastrNummer"]
+        lat = row.get("Breitengrad")
+        lon = row.get("Laengengrad")
+
+        use_geo = (
+            has_geo
+            and lat is not None
+            and not pd.isna(lat)
+            and lon is not None
+            and not pd.isna(lon)
+        )
+
+        if use_geo:
+            best_bus = min(
+                bus_geodata.index,
+                key=lambda i: _haversine(
+                    lat, lon,
+                    bus_geodata.loc[i, "y"],
+                    bus_geodata.loc[i, "x"],
+                ),
+            )
+            result[asset_id] = best_bus
+        else:
+            result[asset_id] = rng.choice(load_buses)
+
+    return result
+
+
+def build_timeseries_net(
+    net,
+    sgen_timeseries_df: "pd.DataFrame",
+    load_timeseries_df: "pd.DataFrame",
+    output_keys: "list[tuple[str, str]] | None" = None,
+) -> "dict[str, pd.DataFrame]":
+    """Run a time-series power flow using pandapower's timeseries module.
+
+    Parameters
+    ----------
+    net : pandapower.pandapowerNet
+        Network already populated with sgen and load elements.
+        Element indices must match the columns of the input DataFrames.
+    sgen_timeseries_df : pd.DataFrame
+        Index  : DatetimeIndex (one row per timestep)
+        Columns: sgen element indices (int) from net.sgen.index
+        Values : p_mw (float, positive = feed-in)
+    load_timeseries_df : pd.DataFrame
+        Index  : DatetimeIndex (same as sgen_timeseries_df)
+        Columns: load element indices (int) from net.load.index
+        Values : p_mw (float, positive = consumption)
+    output_keys : list of (element, variable) tuples
+        Default: [('res_line', 'loading_percent'), ('res_bus', 'vm_pu')]
+
+    Returns
+    -------
+    dict with keys matching output_keys, e.g.:
+        {
+          'res_line': pd.DataFrame,  # index=timestep, columns=line index
+                                     # values=loading_percent
+          'res_bus':  pd.DataFrame,  # index=timestep, columns=bus index
+                                     # values=vm_pu
+        }
+
+    Implementation
+    --------------
+    Use pandapower's built-in timeseries module:
+      from pandapower.timeseries import DFData, OutputWriter, run_timeseries
+      from pandapower.control import ConstControl
+
+    Steps:
+      1. Wrap DataFrames in DFData.
+      2. Create one ConstControl per DataFrame pointing at the correct element.
+      3. Create OutputWriter logging the requested variables.
+      4. Call run_timeseries(net, time_steps=range(len(sgen_timeseries_df))).
+      5. Extract and return results from OutputWriter.
+
+    Note: Controllers and OutputWriter are attached to `net` as side effects.
+    Callers should pass a copy of net if they need the original unchanged.
+    """
+    from pandapower.timeseries import DFData, OutputWriter, run_timeseries
+    from pandapower.control import ConstControl
+
+    if output_keys is None:
+        output_keys = [("res_line", "loading_percent"), ("res_bus", "vm_pu")]
+
+    time_steps = range(len(sgen_timeseries_df))
+
+    if len(sgen_timeseries_df.columns) > 0:
+        ConstControl(
+            net,
+            element="sgen",
+            variable="p_mw",
+            element_index=sgen_timeseries_df.columns.tolist(),
+            profile_name=sgen_timeseries_df.columns.tolist(),
+            data_source=DFData(sgen_timeseries_df),
+        )
+
+    ConstControl(
+        net,
+        element="load",
+        variable="p_mw",
+        element_index=load_timeseries_df.columns.tolist(),
+        profile_name=load_timeseries_df.columns.tolist(),
+        data_source=DFData(load_timeseries_df),
+    )
+
+    ow = OutputWriter(net, time_steps, output_path=None)
+    for element, variable in output_keys:
+        ow.log_variable(element, variable)
+
+    run_timeseries(net, time_steps=time_steps)
+
+    # OutputWriter stores results with keys like 'res_line.loading_percent'
+    return {element: ow.output[f"{element}.{variable}"] for element, variable in output_keys}
