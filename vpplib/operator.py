@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
+﻿"""
 Operator Module
 --------------
 This module contains the Operator class which is responsible for operating
@@ -20,7 +19,7 @@ import math
 import pandas as pd
 import pandapower as pp
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 class Operator(object):
@@ -229,14 +228,14 @@ class Operator(object):
             columns=[self.net.bus.index[self.net.bus.type == "b"]], index=index
         )  # maybe only take buses with storage
 
-        for idx in tqdm(index):
+        for idx in tqdm(index, desc="Running base scenario"):
             for component in self.virtual_power_plant.components.keys():
 
                 if "storage" not in component:
 
                     value_for_timestamp = self.virtual_power_plant.components[
                         component
-                    ].value_for_timestamp(str(idx))
+                    ].value_for_timestamp(idx)
 
                     if math.isnan(value_for_timestamp):
                         raise ValueError(
@@ -288,7 +287,7 @@ class Operator(object):
                                     self.net.load.name == name, 'bus'
                                 ].item()
                             )
-                        ][str(idx)]
+                        ][idx]
                         / 1000000
                     )
                     self.net.load.loc[self.net.load.name == name, 'q_mvar'] = 0
@@ -352,7 +351,7 @@ class Operator(object):
                         else:
 
                             if len(sgen_at_bus) > 0:
-                                # TODO: assign generation according to origin of energy (PV, wind oder CHP)
+                                # TODO: assign generation according to origin of energy (PV, wind or CHP)
                                 gen_bus = sgen_at_bus.pop()
                                 self.net.sgen.loc[
                                     self.net.sgen.index == gen_bus, 'p_mw'
@@ -485,7 +484,7 @@ class Operator(object):
                     next(iter(self.virtual_power_plant.components))
                 ].environment.time_freq)
 
-        for idx in tqdm(index):
+        for idx in tqdm(index, desc="Running simbench scenario"):
 
             # assign loadprofiles to simbench components
             self.apply_absolute_simbench_values(profiles, idx)
@@ -497,7 +496,7 @@ class Operator(object):
 
                         value_for_timestamp = self.virtual_power_plant.components[
                             component
-                        ].value_for_timestamp(str(idx))
+                        ].value_for_timestamp(idx)
 
                         if math.isnan(value_for_timestamp):
                             raise ValueError(
@@ -605,7 +604,7 @@ class Operator(object):
                         else:
 
                             if len(sgen_at_bus) > 0:
-                                # TODO: assign generation according to origin of energy (PV, wind oder CHP)
+                                # TODO: assign generation according to origin of energy (PV, wind or CHP)
                                 gen_bus = sgen_at_bus.pop()
                                 self.net.sgen.loc[
                                     self.net.sgen.index == gen_bus, 'p_mw'
@@ -682,7 +681,7 @@ class Operator(object):
 
         # The net_dic contains the data of the grid. The timestamps are the
         # keys of the dictionary. First, extract the information to the df
-        for idx in tqdm(net_dict.keys()):
+        for idx in tqdm(net_dict.keys(), desc="Extracting results"):
 
             ext_grid = pd.concat(
                 [ext_grid,
