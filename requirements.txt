@@ -13,3 +13,4 @@ numba
 requests>=2.31.0
 lxml>=4.9.0
 pytz>=2023.3
+pytest>=7.0

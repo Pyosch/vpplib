@@ -27,11 +27,26 @@ VPPlib requires the following main dependencies:
 - simbench
 - simses
 - polars
-- wetterdienst (version 0.89.0)
-- marshmallow (version 3.20.1)
+- requests
+- lxml
+- pytz
+- tqdm
 - NREL-PySAM
 
-Note: Some dependencies like wetterdienst and marshmallow require specific versions for compatibility.
+## Testing
+
+Tests use pytest and require internet access (DWD API). All tests are marked `@pytest.mark.integration`.
+
+```bash
+# Install dev dependencies
+pip install -e .
+
+# Run all integration tests
+pytest -m integration
+
+# Run tests with verbose output
+pytest -v
+```
 ## Overview
 
 For the simulation of the virtual power plant a basic data structure is developed. It consists of multiple classes to design a virtual power plant, build models of the components and operate it in a distribution grid.

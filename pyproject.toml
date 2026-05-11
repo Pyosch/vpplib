@@ -26,11 +26,21 @@ version = {attr = "vpplib.__version__"}
 dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.packages.find]
-include = ["vpplib"]
+include = ["vpplib*"]
+
+[tool.setuptools.package-data]
+vpplib = ["../input/**/*"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: tests that require internet access (DWD API)",
+]
+addopts = "-v"
 
 [project.urls]
 "GitHub" = "https://github.com/Pyosch/vpplib"

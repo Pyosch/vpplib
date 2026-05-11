@@ -24,11 +24,12 @@ Data flow: `Environment` + `UserProfile` → `Component.prepare_time_series()` �
 - **No type hints** in function signatures; types documented in docstrings only.
 - Classes inherit explicitly from `object` (e.g., `class Component(object):`).
 - **Sign convention**: positive = consumption/load, negative = generation.
-- Timestamps are strings (`'YYYY-MM-DD hh:mm:ss'`) or integer indices.
+- Timestamps are accepted as `int` (iloc index), `str` (parsed via `pd.Timestamp()`), `datetime.datetime`, or `pd.Timestamp`. Use `isinstance()` dispatch.
 - Use relative imports within `vpplib/` (e.g., `from .component import Component`).
-- Some file headers start with `# -*- coding: utf-8 -*-`. Remove when editing, but don't add to files that don't have it.
-- Docstrings: prefer **NumPy-style** (Parameters / Returns / Attributes sections). Some older files use an informal `Info` header — match to **NumPy-style** when editing.
+- Do not add `# -*- coding: utf-8 -*-` file headers.
+- Docstrings: **NumPy-style** (Parameters / Returns / Attributes sections).
 - `snake_case` for variables/methods/modules, `PascalCase` for classes.
+- Use `isinstance()` instead of `type()` comparisons.
 
 ## Component Pattern
 
@@ -37,7 +38,7 @@ When adding a new component, follow the existing pattern (see [vpplib/photovolta
 1. Inherit from `Component`, call `super().__init__(unit, environment)`.
 2. Set `self.identifier` and component-specific attributes.
 3. Override `prepare_time_series()` — compute timeseries using `self.environment` data, store in `self.timeseries` (pandas DataFrame).
-4. Override `value_for_timestamp(timestamp)` — accept `int` index or `str` datetime; return power in kW.
+4. Override `value_for_timestamp(timestamp)` — accept `int`, `str`, `datetime.datetime`, or `pd.Timestamp`; return power in kW.
 5. Override `observations_for_timestamp(timestamp)` — return `dict` of status info (e.g., SoC).
 6. Export the class in [vpplib/\_\_init\_\_.py](vpplib/__init__.py).
 
@@ -47,16 +48,15 @@ When adding a new component, follow the existing pattern (see [vpplib/photovolta
 # Install from source (editable)
 pip install -e .
 
-# Run individual test scripts (no pytest — standalone scripts)
-python test_pv.py
-python test_base_scenario.py        # integration test: full VPP + pandapower
-python test_imports.py              # smoke test: verifies all imports
+# Run the pytest test suite (requires internet for DWD API)
+pytest -m integration
+pytest -v
 
 # Build docs
 cd docs && make html
 ```
 
-Tests are ad-hoc scripts in the repo root (`test_*.py`). They instantiate components, call `prepare_time_series()` and `value_for_timestamp()`, then print or plot results — no assertions or test framework. Input data lives in `input/` (CSV files for baseload, pv, thermal, wind).
+Tests live in `tests/` and use pytest with `@pytest.mark.integration` markers. They fetch live DWD weather data, instantiate components, and assert on timeseries outputs. Old ad-hoc test scripts are preserved as examples in `examples/`. Input data for examples lives in `input/` (CSV files for baseload, pv, thermal, wind).
 
 ## Key Dependencies
 
@@ -68,6 +68,8 @@ Tests are ad-hoc scripts in the repo root (`test_*.py`). They instantiate compon
 | `simses` | Battery simulation (hydrogen scenario) |
 | `NREL-PySAM` | Battery stateful models |
 | `pandas` / `numpy` / `polars` | Data manipulation |
+| `requests` / `lxml` / `pytz` | DWD Open Data API client |
+| `tqdm` | Progress bars |
 
 ## Project Environment
 Use the provided virtualenv (`vppenv`) with all dependencies installed. Activate with `.\vppenv\Scripts\activate` (Windows) before running code or tests.
@@ -75,6 +77,5 @@ Use the provided virtualenv (`vppenv`) with all dependencies installed. Activate
 ## Project Conventions
 
 - VPP components dict uses identifier strings; component type is inferred by substring matching (e.g., `'_pv' in identifier`). Choose identifiers accordingly.
-- `Environment` CSV paths default to `./input/` subdirectories — tests rely on these files existing.
-- German-language comments and TODOs appear occasionally; translate to English when editing nearby code.
-- `type()` comparisons are used instead of `isinstance()` — follow existing style in the file you're editing.
+- `Environment` CSV paths default to `./input/` subdirectories — example scripts rely on these files existing.
+- Comments and TODOs should be in English.
