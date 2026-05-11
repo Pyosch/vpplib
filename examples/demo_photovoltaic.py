@@ -1,0 +1,137 @@
+# -*- coding: utf-8 -*-
+"""
+Info
+----
+In this testfile the basic functionalities of the Photovoltaic class are tested.
+Run each time you make changes on an existing function.
+Adjust if a new function is added or
+parameters in an existing function are changed.
+
+"""
+
+import matplotlib.pyplot as plt
+
+from vpplib.environment import Environment
+from vpplib.photovoltaic import Photovoltaic
+import datetime # for Mosmix test
+
+latitude = 50.933954264541924
+longitude = 6.988538343769104
+identifier = "Cologne"
+timestamp_int = 48
+
+"""
+Read weather data from .csv file - Use this to avoid DWD API issues:
+
+timestamp_str = "2015-11-09 12:00:00"
+environment = Environment(start="2015-01-01 00:00:00", end="2015-12-31 23:45:00")
+environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
+"""
+
+"""
+Using dwd observation (weather recording) database for weather data - Commented out due to wetterdienst breaking changes
+use_timezone_aware_time_index has to be set to True because there is a timezone shift within the queried time period. Otherwise the dataframe's time index would be non monotonic.
+"""
+timestamp_now = datetime.datetime.now(datetime.timezone.utc)
+# Round down to the last 15 minute value
+minute = (timestamp_now.minute // 15) * 15
+timestamp_now = timestamp_now.replace(minute=minute, second=0, microsecond=0)
+timestamp_str = (timestamp_now + datetime.timedelta(days=-2)).strftime("%Y-%m-%d %H:%M:%S")
+environment = Environment(
+    start = (timestamp_now + datetime.timedelta(days=-5)).strftime("%Y-%m-%d %H:%M:%S"),
+    end = (timestamp_now + datetime.timedelta(days=-1)).strftime("%Y-%m-%d %H:%M:%S"),
+    use_timezone_aware_time_index = True, 
+    surpress_output_globally = False)
+environment.get_dwd_pv_data(lat=latitude, lon=longitude)
+
+
+"""MOSMIX
+Using dwd mosmix (weather forecast) database for weather data.
+The forecast is queried for the next 10 days automatically.
+force_end_time is set to True to get a resulting dataframe from the start time
+to the end time even if there is no forecast data for the last hours of the time
+period --> Missing data is filled with NaN values.
+"""
+time_now = Environment().get_time_from_dwd()
+mosmix_timestamp_str = str((time_now + datetime.timedelta(days = 5)).replace(minute = 0, second = 0))
+mosmix_environment = Environment(
+    start = time_now, 
+    end = time_now + datetime.timedelta(hours = 240), 
+    force_end_time = True, 
+    use_timezone_aware_time_index = True,
+    surpress_output_globally = False)
+mosmix_environment.get_dwd_pv_data(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+
+pv = Photovoltaic(
+    unit="kW",
+    latitude=latitude,
+    longitude=longitude,
+    identifier=identifier,
+    environment=environment,
+    module_lib="SandiaMod",
+    module="Canadian_Solar_CS5P_220M___2009_",
+    inverter_lib="cecinverter",
+    inverter="ABB__MICRO_0_25_I_OUTD_US_208__208V_",
+    surface_tilt=20,
+    surface_azimuth=200,
+    modules_per_string=2,
+    strings_per_inverter=2,
+    temp_lib='sapm',
+    temp_model='open_rack_glass_glass'
+)
+
+
+def test_prepare_time_series(pv):
+
+    pv.prepare_time_series()
+    print("prepare_time_series:")
+    print(pv.timeseries.head())
+    pv.timeseries.plot(figsize=(16, 9))
+    plt.show()
+
+
+def test_value_for_timestamp(pv, timestamp):
+
+    timestepvalue = pv.value_for_timestamp(timestamp)
+    print("\nvalue_for_timestamp:\n", timestepvalue)
+
+
+def observations_for_timestamp(pv, timestamp):
+
+    print("observations_for_timestamp:")
+    observation = pv.observations_for_timestamp(timestamp)
+    print(observation, "\n")
+
+
+test_prepare_time_series(pv)
+test_value_for_timestamp(pv, timestamp_int)
+test_value_for_timestamp(pv, timestamp_str)
+
+observations_for_timestamp(pv, timestamp_int)
+observations_for_timestamp(pv, timestamp_str)
+
+
+# MOSMIX PV test
+print("\n" + "="*60)
+print("MOSMIX PV Test")
+print("="*60)
+mosmix_pv = Photovoltaic(
+    unit="kW",
+    latitude=latitude,
+    longitude=longitude,
+    identifier=identifier + "_mosmix",
+    environment=mosmix_environment,
+    module_lib="SandiaMod",
+    module="Canadian_Solar_CS5P_220M___2009_",
+    inverter_lib="cecinverter",
+    inverter="ABB__MICRO_0_25_I_OUTD_US_208__208V_",
+    surface_tilt=20,
+    surface_azimuth=200,
+    modules_per_string=2,
+    strings_per_inverter=2,
+    temp_lib='sapm',
+    temp_model='open_rack_glass_glass'
+)
+test_prepare_time_series(mosmix_pv)
+test_value_for_timestamp(mosmix_pv, 48)
+observations_for_timestamp(mosmix_pv, 48)
