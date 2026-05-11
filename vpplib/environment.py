@@ -820,7 +820,7 @@ class Environment(object):
         return self.__resample_data(pd_sorted_data_for_station)
     
     
-    def __get_dwd_data(self, dataset, lat=None, lon=None, user_station_id=None, distance=30, min_quality_per_parameter=80, suppress_output=False):
+    def __get_dwd_data(self, dataset, lat=None, lon=None, user_station_id=None, distance=30, min_quality_per_parameter=80, suppress_output=False, resolution="10_minutes", ranking_strategy="DISTANCE_ONLY", allow_multi_station=False, for_pvlib=False):
         """
             Retrieves weather data from the DWD database using direct DWD Open Data access.
             
@@ -947,11 +947,14 @@ class Environment(object):
                     parameters=dwd_param_types,
                     start_date=self._Environment__start_dt_utc.replace(tzinfo=None),
                     end_date=self._Environment__end_dt_utc.replace(tzinfo=None),
-                    resolution="10_minutes",
+                    resolution=resolution,
                     max_distance_km=distance,
                     station_id=user_station_id,
                     min_quality_per_parameter=min_quality_per_parameter,
-                    force_refresh=False
+                    force_refresh=False,
+                    allow_multi_station=allow_multi_station,
+                    ranking_strategy=ranking_strategy,
+                    for_pvlib=for_pvlib,
                 )
                 station_type = 'OBSERVATION'
             except Exception as e:
