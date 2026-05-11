@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Virtual Power Plant Module.
 
 This module contains the VirtualPowerPlant class, which serves as the central
@@ -12,7 +11,7 @@ data and time series for analysis and visualization.
 import random
 import pandas as pd
 import sqlite3
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from vpplib.photovoltaic import Photovoltaic
 from vpplib.battery_electric_vehicle import BatteryElectricVehicle
@@ -127,8 +126,7 @@ class VirtualPowerPlant(object):
 
         df_component_values = pd.DataFrame(index=[0])
 
-        print("Exporting components:")
-        for component in tqdm(self.components.keys()):
+        for component in tqdm(self.components.keys(), desc="Exporting components"):
             if '_pv' in component:
                 df_component_values[self.components[component].identifier + "_kWp"] = (
                     self.components[component].module.Impo
@@ -180,7 +178,6 @@ class VirtualPowerPlant(object):
                     self.components[component].identifier + "_arrival_soc"
                     ] = random.uniform(self.components[component].battery_min,
                                        self.components[component].battery_max)
-                #TODO: timeseries vereinheitlichen!!
                 df_timeseries[self.components[component].identifier] = self.components[
                     component].timeseries["car_charger"]
 
@@ -272,55 +269,39 @@ class VirtualPowerPlant(object):
 
         # dataframe for exporting component values
 
-        df_component_values = pd.DataFrame(
-            columns=("name",
-                     "technology",
-                     "bus",
-                     "arrival_soc",
-                     "capacity_kWh",
-                     "power_kW",
-                     "th_power_kW",
-                     "efficiency_el",
-                     "efficiency_th"))
+        rows = []
 
-        print("Exporting component values:")
-        
-        for component in tqdm(self.components.keys()):
+        for component in tqdm(self.components.keys(), desc="Exporting component values"):
             if '_pv' in component:
-                df_component_values = df_component_values.append(
+                rows.append(
                     {"name": component,
                      "technology": "pv",
                      "bus": self.components[component].bus,
                      "power_kW": (self.components[component].module.Impo
                      * self.components[component].module.Vmpo
                      / 1000
-                     * self.components[component].system.modules_per_string
-                     * self.components[component].system.strings_per_inverter)},
-                    ignore_index=True)
+                     * self.components[component].modules_per_string
+                     * self.components[component].strings_per_inverter)})
 
             elif '_ees' in component:
-                df_component_values = df_component_values.append(
+                rows.append(
                     {"name": component,
                      "technology": "ees",
                      "bus": self.components[component].bus,
                      "capacity_kWh": self.components[component].capacity,
                      "power_kW": self.components[component].max_power,
-                     "efficiency_el": self.components[component].charge_efficiency},
-                    ignore_index=True)
-
+                     "efficiency_el": self.components[component].charge_efficiency})
 
             elif '_wea' in component:
-                df_component_values = df_component_values.append(
+                rows.append(
                     {"name": component,
                      "technology": "wea",
                      "bus": self.components[component].bus,
                      "power_kW": self.components[component].ModelChain.power_plant.nominal_power
-                    / 1000},
-                    ignore_index=True)
-
+                    / 1000})
 
             elif '_bev' in component:
-                df_component_values = df_component_values.append(
+                rows.append(
                     {"name": component,
                      "technology": "bev",
                      "bus": self.components[component].bus,
@@ -330,20 +311,18 @@ class VirtualPowerPlant(object):
                          ),
                      "capacity_kWh": self.components[component].battery_max,
                      "power_kW": self.components[component].charging_power,
-                     "efficiency_el": self.components[component].charge_efficiency},
-                    ignore_index=True)
+                     "efficiency_el": self.components[component].charge_efficiency})
 
             elif '_hp' in component:
-                df_component_values = df_component_values.append(
+                rows.append(
                     {"name": component,
                      "technology": "hp",
                      "bus": self.components[component].bus,
-                     "power_kW": self.components[component].el_power},
-                    ignore_index=True)
+                     "power_kW": self.components[component].el_power})
 
             elif '_tes' in component:
                 # Formula: E = m * cp * dT
-                df_component_values = df_component_values.append(
+                rows.append(
                     {"name": component,
                      "technology": "tes",
                      "bus": self.components[component].bus,
@@ -351,29 +330,34 @@ class VirtualPowerPlant(object):
                             * self.components[component].cp
                             * (self.components[component].hysteresis * 2)  #dT
                             / 3600),  # convert KJ to kW,
-                     "efficiency_th": self.components[component].efficiency_th},
-                    ignore_index=True)
+                     "efficiency_th": self.components[component].efficiency_th})
 
             elif '_chp' in component:
-                df_component_values = df_component_values.append(
+                rows.append(
                     {"name": component,
                      "technology": "chp",
                      "bus": self.components[component].bus,
                      "power_kW": self.components[component].el_power,
                      "th_power_kW": self.components[component].th_power,
                      "efficiency_el": self.components[component].efficiency_el,
-                     "efficiency_th": self.components[component].efficiency_th},
-                    ignore_index=True)
+                     "efficiency_th": self.components[component].efficiency_th})
 
             elif '_hr' in component:
-                df_component_values = df_component_values.append(
+                rows.append(
                     {"name": component,
                      "technology": "hr",
                      "bus": self.components[component].bus,
                      "th_power_kW": self.components[component].el_power, #TODO: change to power_kW after the Project
-                     "efficiency_th": self.components[component].efficiency}, #TODO: Change to el_efficiency after the Project
-                    ignore_index=True)
+                     "efficiency_th": self.components[component].efficiency}  #TODO: Change to el_efficiency after the Project
+                )
 
+        columns = ["name", "technology", "bus", "arrival_soc",
+                   "capacity_kWh", "power_kW", "th_power_kW",
+                   "efficiency_el", "efficiency_th"]
+        if rows:
+            df_component_values = pd.DataFrame(rows, columns=columns)
+        else:
+            df_component_values = pd.DataFrame(columns=columns)
 
         return df_component_values
 
@@ -427,8 +411,6 @@ class VirtualPowerPlant(object):
     def export_components_to_sql(self, name = "export"):
 
         """
-        Info
-        ----
         This function exports the component values and the timeseries of the
         components of the virtual power plant to a sql database.
         
@@ -486,8 +468,7 @@ class VirtualPowerPlant(object):
                   +"th_energy)")
 
         # Insert data of the components into the component_values table
-        print("Exporting components to sql:")
-        for component in tqdm(self.components.keys()):
+        for component in tqdm(self.components.keys(), desc="Exporting components to SQL"):
 
             if '_pv' in component:
                 c.execute("INSERT INTO component_values "
@@ -771,8 +752,6 @@ class VirtualPowerPlant(object):
         storage_percentage=0,
     ):
         """
-        Info
-        ----
         
         ...
         
@@ -920,8 +899,6 @@ class VirtualPowerPlant(object):
     def balance_at_timestamp(self, timestamp):
 
         """
-        Info
-        ----
         Simulation handling
     
         This function calculates the balance of all generation and consumption at a
