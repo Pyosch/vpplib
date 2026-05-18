@@ -4,11 +4,15 @@ from vpplib.photovoltaic import Photovoltaic
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import datetime
 
-# environment
-start = "2015-06-01 00:00:00"
-end = "2015-06-07 23:45:00"
-year = "2015"
+# Reference period: yesterday going back one year
+yesterday = datetime.date.today() - datetime.timedelta(days=1)
+ref_start = yesterday.replace(year=yesterday.year - 1)
+
+# Simulation window: a summer week within the reference year for PV generation
+start = f"{ref_start.year}-06-15 00:00:00"
+end = f"{ref_start.year}-06-21 23:45:00"
 timebase = 15
 
 # user_profile
@@ -34,11 +38,11 @@ nominal_energy=20
 
 # test
 timestamp_int = 48
-timestamp_str = "2015-06-01 12:00:00"
+timestamp_str = f"{ref_start.year}-06-15 12:00:00"
 
 
-environment = Environment(timebase=timebase, start=start, end=end, year=year)
-environment.get_pv_data(file="./input/pv/dwd_pv_data_2015.csv")
+environment = Environment(timebase=timebase, start=start, end=end, surpress_output_globally=False)
+environment.get_dwd_pv_data(lat=latitude, lon=longitude)
 
 # create pv object and timeseries
 pv = Photovoltaic(
@@ -63,13 +67,15 @@ pv.prepare_time_series()
 
 baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
-baseload.set_index(environment.pv_data.index, inplace=True)
+# Re-index baseload to pv timeseries index so alignment is guaranteed
+baseload = baseload.iloc[:len(pv.timeseries)].copy()
+baseload.index = pv.timeseries.index
 
 # combine baseload and pv timeseries to get residual load
-house_loadshape = pd.DataFrame(baseload["0"].loc[start:end] / 1000)
-house_loadshape["pv_gen"] = pv.timeseries.loc[start:end]
+house_loadshape = pd.DataFrame(baseload["0"] / 1000)
+house_loadshape["pv_gen"] = pv.timeseries
 house_loadshape["residual_load"] = (
-    baseload["0"].loc[start:end] / 1000 - pv.timeseries.bus_pv
+    baseload["0"] / 1000 - pv.timeseries[name + "_pv"]
 )
 
 # create storage object and timeseries
