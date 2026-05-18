@@ -430,8 +430,10 @@ class HeatPump(Component):
 
                 if self.is_running:
                     el_demand = self.el_power
+                    temp_idx = self.environment.mean_temp_quarter_hours.index
+                    ts_temp = timestamp.tz_localize(temp_idx.tz) if temp_idx.tz is not None and timestamp.tzinfo is None else timestamp
                     temp = self.environment.mean_temp_quarter_hours.temperature.loc[
-                        timestamp
+                        ts_temp
                     ]
                     cop = self.get_current_cop(temp)
                     thermal_energy_output = el_demand * cop
@@ -450,8 +452,10 @@ class HeatPump(Component):
 
                 if self.is_running:
                     el_demand = self.el_power
+                    temp_idx = self.environment.mean_temp_quarter_hours.index
+                    ts_temp = timestamp.tz_localize(temp_idx.tz) if temp_idx.tz is not None and timestamp.tzinfo is None else timestamp
                     temp = self.environment.mean_temp_quarter_hours.temperature.loc[
-                        timestamp
+                        ts_temp
                     ]
                     cop = self.get_current_cop(temp)
                     thermal_energy_output = el_demand * cop

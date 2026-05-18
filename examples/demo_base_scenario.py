@@ -8,6 +8,7 @@ Created on Tue Jul  2 10:38:17 2019
 import pandas as pd
 import pandapower as pp
 import pandapower.networks as pn
+import datetime
 
 from vpplib.environment import Environment
 from vpplib.user_profile import UserProfile
@@ -19,17 +20,18 @@ from vpplib.wind_power import WindPower
 from vpplib.virtual_power_plant import VirtualPowerPlant
 from vpplib.operator import Operator
 
+# Reference period: yesterday going back one year
+yesterday = datetime.date.today() - datetime.timedelta(days=1)
+ref_start = yesterday.replace(year=yesterday.year - 1)
+ref_end = yesterday
 
 # environment
-start = "2015-03-01 00:00:00"
-end = "2015-03-01 23:45:00"
+start = f"{ref_end.year}-03-01 00:00:00"
+end = f"{ref_end.year}-03-01 23:45:00"
 timezone = "Europe/Berlin"
-year = "2015"
 time_freq = "15 min"
 timebase = 15
 index = pd.date_range(start=start, end=end, freq=time_freq)
-temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
-temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
 
 # user_profile
 identifier = "bus_1"
@@ -42,7 +44,7 @@ t_0 = 40
 baseload = pd.read_csv("./input/baseload/df_S_15min.csv")
 baseload.drop(columns=["Time"], inplace=True)
 baseload.index = pd.date_range(
-    start=year, periods=35040, freq=time_freq, name="time"
+    start=str(ref_end.year), periods=len(baseload), freq=time_freq, name="time"
 )
 
 unit = "kW"
@@ -55,7 +57,6 @@ fetch_curve = "power_curve"
 data_source = "oedb"
 
 # WindPower ModelChain data
-wind_file = "./input/wind/dwd_wind_data_2015.csv"
 wind_speed_model = "logarithmic"
 density_model = "ideal_gas"
 temperature_model = "linear_gradient"
@@ -65,7 +66,6 @@ obstacle_height = 0
 hellman_exp = None
 
 # PV data
-pv_file = "./input/pv/dwd_pv_data_2015.csv"
 module_lib = "SandiaMod"
 module = "Canadian_Solar_CS5P_220M___2009_"
 inverter_lib = "cecinverter"
@@ -114,25 +114,33 @@ wind_percentage = 0
 
 # %% environment
 
+# ---------------------------------------------------------------------------
+# Fetch one full reference year of DWD observation data for the location.
+# This drives the consumerfactor calibration used by the heat pump.
+# ---------------------------------------------------------------------------
+print(f"Fetching DWD observation data {ref_start} to {ref_end} at ({latitude}, {longitude}) ...")
+ref_environment = Environment(
+    timebase=60,
+    start=f"{ref_start} 00:00:00",
+    end=f"{ref_end} 23:00:00",
+    time_freq="60 min",
+    surpress_output_globally=True,
+)
+ref_environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+ref_environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+ref_environment.mean_temp_quarter_hours = ref_environment.mean_temp_hours.resample("15 Min").interpolate()
+
 environment = Environment(
     timebase=timebase,
     timezone=timezone,
     start=start,
     end=end,
-    year=year,
     time_freq=time_freq,
 )
-# Prefer CSV-based inputs to avoid breaking changes in wetterdienst
-environment.get_wind_data(file=wind_file, utc=False)
-environment.get_pv_data(file=pv_file)
-environment.get_mean_temp_days(file=temp_days_file)
-environment.get_mean_temp_hours(file=temp_hours_file)
-
-# If you prefer live DWD API, ensure a compatible wetterdienst version and uncomment:
-# environment.get_dwd_wind_data(lat=latitude, lon=longitude)
-# environment.get_dwd_pv_data(lat=latitude, lon=longitude)
-# environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude)
-# environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude)
+environment.get_dwd_wind_data(lat=latitude, lon=longitude)
+environment.get_dwd_pv_data(lat=latitude, lon=longitude)
+environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude, min_quality_per_parameter=10)
 
 # %% user profile
 
@@ -141,11 +149,15 @@ user_profile = UserProfile(
     latitude=latitude,
     longitude=longitude,
     thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+    mean_temp_days=ref_environment.mean_temp_days,
+    mean_temp_hours=ref_environment.mean_temp_hours,
+    mean_temp_quarter_hours=ref_environment.mean_temp_quarter_hours,
     building_type=building_type,
     t_0=t_0,
 )
 
 user_profile.get_thermal_energy_demand()
+print(f"Location-calibrated consumerfactor: {user_profile.consumerfactor:.4f}")
 user_profile.thermal_energy_demand.head()
 
 # %% create instance of VirtualPowerPlant and the designated grid

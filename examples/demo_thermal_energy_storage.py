@@ -6,25 +6,29 @@ Created on Thu Aug 22 15:33:53 2019
 """
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import datetime
 
 from vpplib.user_profile import UserProfile
 from vpplib.environment import Environment
 from vpplib.thermal_energy_storage import ThermalEnergyStorage
 from vpplib.heat_pump import HeatPump
-import datetime
 
 figsize = (10, 6)
-# Values for environment
-start = "2015-01-01 00:00:00"
-end = "2015-01-31 23:45:00"
-year = "2015"
-time_freq = "15 min"
-timebase = 15
+
+# Reference period: yesterday going back one year
+yesterday = datetime.date.today() - datetime.timedelta(days=1)
+ref_start = yesterday.replace(year=yesterday.year - 1)
+ref_end = yesterday
+
+# Location
 latitude = 51.200001
 longitude = 6.433333
-# Add CSV file paths for thermal data
-temp_days_file = "./input/thermal/dwd_temp_days_2015.csv"
-temp_hours_file = "./input/thermal/dwd_temp_hours_2015.csv"
+
+# Values for environment — January of the most recent year in the reference period
+start = f"{ref_end.year}-01-01 00:00:00"
+end = f"{ref_end.year}-01-31 23:45:00"
+time_freq = "15 min"
+timebase = 15
 
 # Values for user_profile
 yearly_thermal_energy_demand = 12500  # kWh
@@ -49,28 +53,30 @@ min_stop_time = 2  # timesteps
 heat_pump_type = "Air"
 heat_sys_temp = 60
 
-environment = Environment(
-    timebase=timebase, 
-    start=start, 
-    end=end, 
-    year=year, 
-    time_freq=time_freq, 
-    surpress_output_globally=False
+# ---------------------------------------------------------------------------
+# Fetch one full reference year of DWD observation data for the location.
+# This drives the consumerfactor calibration that the MOSMIX section reuses.
+# ---------------------------------------------------------------------------
+print(f"Fetching DWD observation data {ref_start} to {ref_end} at ({latitude}, {longitude}) ...")
+ref_environment = Environment(
+    timebase=60,
+    start=f"{ref_start} 00:00:00",
+    end=f"{ref_end} 23:00:00",
+    time_freq="60 min",
+    surpress_output_globally=True,
 )
-# Load mean temperatures from CSVs instead of DWD API
-environment.get_mean_temp_hours(file=temp_hours_file)
-environment.get_mean_temp_days(file=temp_days_file)
-# Create quarter-hourly temperature data by resampling hourly data
-environment.mean_temp_quarter_hours = environment.mean_temp_hours.resample("15 Min").interpolate()
+ref_environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+ref_environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+ref_environment.mean_temp_quarter_hours = ref_environment.mean_temp_hours.resample("15 Min").interpolate()
 
 user_profile = UserProfile(
     identifier=None,
-    latitude=None,
-    longitude=None,
+    latitude=latitude,
+    longitude=longitude,
     thermal_energy_demand_yearly=yearly_thermal_energy_demand,
-    mean_temp_days=environment.mean_temp_days,
-    mean_temp_hours=environment.mean_temp_hours,
-    mean_temp_quarter_hours=environment.mean_temp_quarter_hours,
+    mean_temp_days=ref_environment.mean_temp_days,
+    mean_temp_hours=ref_environment.mean_temp_hours,
+    mean_temp_quarter_hours=ref_environment.mean_temp_quarter_hours,
     building_type=building_type,
     comfort_factor=None,
     t_0=t_0,
@@ -85,6 +91,19 @@ def test_get_thermal_energy_demand(user_profile):
 
 
 test_get_thermal_energy_demand(user_profile)
+print(f"Location-calibrated consumerfactor: {user_profile.consumerfactor:.4f}")
+
+# January simulation environment — fetch temperature data for the simulation window
+environment = Environment(
+    timebase=timebase,
+    start=start,
+    end=end,
+    time_freq=time_freq,
+    surpress_output_globally=False
+)
+environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+environment.mean_temp_quarter_hours = environment.mean_temp_hours.resample("15 Min").interpolate()
 
 tes = ThermalEnergyStorage(
     environment=environment,
@@ -101,7 +120,7 @@ hp = HeatPump(
     identifier="hp1",
     unit="kW",
     environment=environment,
-    thermal_energy_demand = user_profile.thermal_energy_demand,
+    thermal_energy_demand=user_profile.thermal_energy_demand,
     el_power=el_power,
     th_power=th_power,
     ramp_up_time=ramp_up_time,
@@ -165,8 +184,8 @@ mosmix_environment.mean_temp_quarter_hours = mosmix_environment.mean_temp_hours.
 
 mosmix_user_profile = UserProfile(
     identifier=None,
-    latitude=None,
-    longitude=None,
+    latitude=latitude,
+    longitude=longitude,
     thermal_energy_demand_yearly=yearly_thermal_energy_demand,
     mean_temp_days=mosmix_environment.mean_temp_days,
     mean_temp_hours=mosmix_environment.mean_temp_hours,
@@ -174,6 +193,7 @@ mosmix_user_profile = UserProfile(
     building_type=building_type,
     comfort_factor=None,
     t_0=t_0,
+    consumerfactor=user_profile.consumerfactor,
 )
 mosmix_user_profile.get_thermal_energy_demand()
 
@@ -204,7 +224,7 @@ mosmix_hp = HeatPump(
 )
 
 try:
-    for i in tqdm(mosmix_hp.timeseries.index):
+    for i in tqdm(mosmix_hp.thermal_energy_demand.index):
         mosmix_tes.operate_storage(i, mosmix_hp)
 except ValueError as e:
     print(f"\nStorage simulation stopped early: {e}")

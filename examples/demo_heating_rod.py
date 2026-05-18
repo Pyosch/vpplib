@@ -15,13 +15,21 @@ from vpplib.heating_rod import HeatingRod
 import matplotlib.pyplot as plt
 import datetime
 
-# Values for environment
-start = '2015-01-01 00:00:00'
-end = '2015-01-14 23:45:00'
-year = '2015'
+# Reference period: yesterday going back one year
+yesterday = datetime.date.today() - datetime.timedelta(days=1)
+ref_start = yesterday.replace(year=yesterday.year - 1)
+ref_end = yesterday
+
+# Location
+latitude = 50.941357
+longitude = 6.958307
+
+# Values for environment — January of the most recent year in the reference period
+start = f"{ref_end.year}-01-01 00:00:00"
+end = f"{ref_end.year}-01-14 23:45:00"
 time_freq = "15 min"
 timestamp_int = 48
-timestamp_str = '2015-01-01 12:00:00'
+timestamp_str = f"{ref_end.year}-01-01 12:00:00"
 timebase = 15
 
 # Values for user_profile
@@ -36,16 +44,39 @@ rampDownTime = 1/15  # timesteps
 min_runtime = 1  # timesteps
 min_stop_time = 2  # timesteps
 
-environment = Environment(timebase=timebase, start=start, end=end, year=year,
-                          time_freq=time_freq)
+# ---------------------------------------------------------------------------
+# Fetch one full reference year of DWD observation data for the location.
+# This drives the consumerfactor calibration that the MOSMIX section reuses.
+# ---------------------------------------------------------------------------
+print(f"Fetching DWD observation data {ref_start} to {ref_end} at ({latitude}, {longitude}) ...")
+ref_environment = Environment(
+    timebase=60,
+    start=f"{ref_start} 00:00:00",
+    end=f"{ref_end} 23:00:00",
+    time_freq="60 min",
+    surpress_output_globally=True,
+)
+ref_environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+ref_environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+ref_environment.mean_temp_quarter_hours = ref_environment.mean_temp_hours.resample("15 Min").interpolate()
 
-user_profile = UserProfile(identifier=None,
-                           latitude=None,
-                           longitude=None,
-                           thermal_energy_demand_yearly=thermal_energy_demand_yearly,
-                           building_type=building_type,
-                           comfort_factor=None,
-                           t_0=t_0)
+user_profile = UserProfile(
+    identifier=None,
+    latitude=latitude,
+    longitude=longitude,
+    thermal_energy_demand_yearly=thermal_energy_demand_yearly,
+    mean_temp_days=ref_environment.mean_temp_days,
+    mean_temp_hours=ref_environment.mean_temp_hours,
+    mean_temp_quarter_hours=ref_environment.mean_temp_quarter_hours,
+    building_type=building_type,
+    comfort_factor=None,
+    t_0=t_0,
+)
+
+environment = Environment(timebase=timebase, start=start, end=end, time_freq=time_freq, surpress_output_globally=False)
+environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude, min_quality_per_parameter=10)
+environment.mean_temp_quarter_hours = environment.mean_temp_hours.resample("15 Min").interpolate()
 
 
 def test_get_thermal_energy_demand(user_profile):
@@ -56,11 +87,12 @@ def test_get_thermal_energy_demand(user_profile):
 
 
 test_get_thermal_energy_demand(user_profile)
+print(f"Location-calibrated consumerfactor: {user_profile.consumerfactor:.4f}")
 
 hr = HeatingRod(identifier='hp1',
-                environment=environment, 
+                environment=environment,
                 thermal_energy_demand=user_profile.thermal_energy_demand,
-                el_power=el_power, 
+                el_power=el_power,
                 rampUpTime=rampUpTime,
                 rampDownTime=rampDownTime,
                 min_runtime=min_runtime,
@@ -106,8 +138,6 @@ print("\n" + "="*60)
 print("MOSMIX Heating Rod Test")
 print("="*60)
 
-latitude = 50.941357
-longitude = 6.958307
 time_now = Environment().get_time_from_dwd()
 # Round up to next full hour so the 15-min grid aligns with MOSMIX hourly data
 mosmix_start = (time_now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
@@ -126,8 +156,8 @@ mosmix_environment.mean_temp_quarter_hours = mosmix_environment.mean_temp_hours.
 
 mosmix_user_profile = UserProfile(
     identifier=None,
-    latitude=None,
-    longitude=None,
+    latitude=latitude,
+    longitude=longitude,
     thermal_energy_demand_yearly=thermal_energy_demand_yearly,
     mean_temp_days=mosmix_environment.mean_temp_days,
     mean_temp_hours=mosmix_environment.mean_temp_hours,
@@ -135,6 +165,7 @@ mosmix_user_profile = UserProfile(
     building_type=building_type,
     comfort_factor=None,
     t_0=t_0,
+    consumerfactor=user_profile.consumerfactor,
 )
 mosmix_user_profile.get_thermal_energy_demand()
 
