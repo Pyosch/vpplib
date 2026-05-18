@@ -508,3 +508,72 @@ class UserProfile(object):
         self.thermal_energy_demand.interpolate(inplace=True)
 
         return self.thermal_energy_demand
+
+    @classmethod
+    def get_location_calibrated_consumerfactor(
+        cls,
+        lat: float,
+        lon: float,
+        building_type: str,
+        thermal_energy_demand_yearly: float,
+        reference_year: int = None,
+        t_0: float = 40,
+        min_quality_per_parameter: int = 80,
+    ) -> float:
+        """
+        Compute consumerfactor from a full year of DWD observation data for the
+        given location instead of the generic 2015 CSV. Gives a station-specific
+        calibration that accounts for local climate (coastal, alpine, urban heat
+        island, etc.). The underlying DWD download is cached for 24 hours by
+        DWDClient, so repeated calls in the same session are fast.
+
+        Parameters
+        ----------
+        lat, lon : float
+            Coordinates used to select the nearest DWD observation station.
+        building_type : str
+            SigLinDe building type (e.g. 'DE_HEF33').
+        thermal_energy_demand_yearly : float
+            Annual thermal energy demand in kWh (same value passed to UserProfile).
+        reference_year : int, optional
+            Calendar year to use for calibration. Defaults to the last complete
+            calendar year (current year - 1).
+        t_0 : float, optional
+            SigLinDe reference temperature in °C (default 40).
+        min_quality_per_parameter : int, optional
+            Minimum data completeness % required from DWD (default 80).
+
+        Returns
+        -------
+        float
+            Calibrated consumerfactor for the location and building type.
+        """
+        import datetime
+        from vpplib.environment import Environment  # lazy import — avoids circular dep
+
+        if reference_year is None:
+            reference_year = datetime.date.today().year - 1
+
+        ref_env = Environment(
+            timebase=60,
+            start=f"{reference_year}-01-01 00:00:00",
+            end=f"{reference_year}-12-31 23:00:00",
+            time_freq="60 min",
+            surpress_output_globally=True,
+        )
+        ref_env.get_dwd_mean_temp_days(
+            lat=lat,
+            lon=lon,
+            min_quality_per_parameter=min_quality_per_parameter,
+        )
+
+        ref_profile = cls(
+            thermal_energy_demand_yearly=thermal_energy_demand_yearly,
+            mean_temp_days=ref_env.mean_temp_days,
+            building_type=building_type,
+            t_0=t_0,
+        )
+        ref_profile.get_building_parameters()
+        ref_profile.get_h_del()
+        ref_profile.get_consumerfactor()
+        return ref_profile.consumerfactor
