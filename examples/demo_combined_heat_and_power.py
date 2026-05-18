@@ -146,6 +146,14 @@ mosmix_environment.get_dwd_mean_temp_hours(lat=latitude, lon=longitude, min_qual
 mosmix_environment.get_dwd_mean_temp_days(lat=latitude, lon=longitude, min_quality_per_parameter=10)
 mosmix_environment.mean_temp_quarter_hours = mosmix_environment.mean_temp_hours.resample("15 Min").interpolate()
 
+location_consumerfactor = UserProfile.get_location_calibrated_consumerfactor(
+    lat=latitude,
+    lon=longitude,
+    building_type=building_type,
+    thermal_energy_demand_yearly=yearly_thermal_energy_demand,
+)
+print(f"Location-calibrated consumerfactor: {location_consumerfactor:.4f}")
+
 mosmix_user_profile = UserProfile(
     identifier=None,
     latitude=None,
@@ -157,7 +165,7 @@ mosmix_user_profile = UserProfile(
     building_type=building_type,
     comfort_factor=None,
     t_0=t_0,
-    consumerfactor=user_profile.consumerfactor,
+    consumerfactor=location_consumerfactor,
 )
 mosmix_user_profile.get_thermal_energy_demand()
 
