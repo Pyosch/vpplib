@@ -620,9 +620,7 @@ class PySAMBatteryStateful(Component):
         soc_lst = list()
         ac_lst = list()
 
-        for timestep in pd.date_range(start=self.environment.start,
-                                      end=self.environment.end,
-                                      freq=self.environment.time_freq):
+        for timestep in self.residual_load.index:
 
             soc, ac = self.operate_storage(
                 self.residual_load[timestep]
@@ -634,9 +632,7 @@ class PySAMBatteryStateful(Component):
         self.timeseries = pd.DataFrame(
             {"state_of_charge": soc_lst,
              "ac_power": ac_lst},
-            index=pd.date_range(start=self.environment.start,
-                                end=self.environment.end,
-                                freq=self.environment.time_freq)
+            index=self.residual_load.index,
         )
 
         return self.timeseries
