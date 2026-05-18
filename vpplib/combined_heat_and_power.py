@@ -100,6 +100,9 @@ class CombinedHeatAndPower(Component):
 
         # Configure attributes
         self.identifier = identifier
+        if thermal_energy_demand.index.tz is not None:
+            thermal_energy_demand = thermal_energy_demand.copy()
+            thermal_energy_demand.index = thermal_energy_demand.index.tz_localize(None)
         self.thermal_energy_demand = thermal_energy_demand
         self.el_power = el_power
         self.th_power = th_power
@@ -121,8 +124,8 @@ class CombinedHeatAndPower(Component):
             ),
         )
 
-        self.last_ramp_up = self.thermal_energy_demand.index[0]
-        self.last_ramp_down = self.thermal_energy_demand.index[0]
+        self.last_ramp_up = self.timeseries.index[0]
+        self.last_ramp_down = self.timeseries.index[0]
         self.limit = 1.0
 
     def prepare_time_series(self):

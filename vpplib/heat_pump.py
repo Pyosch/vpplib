@@ -90,6 +90,9 @@ class HeatPump(Component):
         self.heat_pump_type = heat_pump_type
         self.el_power = el_power
         self.th_power = th_power
+        if thermal_energy_demand.index.tz is not None:
+            thermal_energy_demand = thermal_energy_demand.copy()
+            thermal_energy_demand.index = thermal_energy_demand.index.tz_localize(None)
         self.thermal_energy_demand = thermal_energy_demand
         self.limit = 1
 
@@ -98,9 +101,6 @@ class HeatPump(Component):
         self.ramp_down_time = ramp_down_time
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
-        self.last_ramp_up = self.thermal_energy_demand.index[0]
-        self.last_ramp_down = self.thermal_energy_demand.index[0]
-
         self.timeseries_year = pd.DataFrame(
             columns=["thermal_energy_output", "cop", "el_demand"],
             index=self.thermal_energy_demand.index,
@@ -114,6 +114,8 @@ class HeatPump(Component):
                 name="time",
             ),
         )
+        self.last_ramp_up = self.timeseries.index[0]
+        self.last_ramp_down = self.timeseries.index[0]
 
         self.heat_sys_temp = heat_sys_temp
 

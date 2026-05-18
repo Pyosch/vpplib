@@ -106,25 +106,27 @@ class HeatingRod(Component):
         self.efficiency = efficiency
         self.el_power = el_power
         self.limit = 1
+        if thermal_energy_demand.index.tz is not None:
+            thermal_energy_demand = thermal_energy_demand.copy()
+            thermal_energy_demand.index = thermal_energy_demand.index.tz_localize(None)
         self.thermal_energy_demand = thermal_energy_demand
-        
+
         # Ramp parameters
         self.rampUpTime = rampUpTime
         self.rampDownTime = rampDownTime
         self.min_runtime = min_runtime
         self.min_stop_time = min_stop_time
-        self.lastRampUp = self.thermal_energy_demand.index[0]
-        self.lastRampDown = self.thermal_energy_demand.index[0]
-
         self.timeseries_year = pd.DataFrame(
-                columns=["heat_output", "el_demand"], 
+                columns=["heat_output", "el_demand"],
                 index=self.thermal_energy_demand.index)
         self.timeseries = pd.DataFrame(
-                columns=["heat_output", "el_demand"], 
-                index=pd.date_range(start=self.environment.start, 
-                                    end=self.environment.end, 
-                                    freq=self.environment.time_freq, 
+                columns=["heat_output", "el_demand"],
+                index=pd.date_range(start=self.environment.start,
+                                    end=self.environment.end,
+                                    freq=self.environment.time_freq,
                                     name="time"))
+        self.lastRampUp = self.timeseries.index[0]
+        self.lastRampDown = self.timeseries.index[0]
         
         self.isRunning = False
               

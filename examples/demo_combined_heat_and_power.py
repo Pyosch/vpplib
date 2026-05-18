@@ -157,6 +157,7 @@ mosmix_user_profile = UserProfile(
     building_type=building_type,
     comfort_factor=None,
     t_0=t_0,
+    consumerfactor=user_profile.consumerfactor,
 )
 mosmix_user_profile.get_thermal_energy_demand()
 
@@ -186,7 +187,7 @@ mosmix_tes = ThermalEnergyStorage(
 )
 
 try:
-    for i in tqdm(mosmix_chp.timeseries.index):
+    for i in tqdm(mosmix_chp.thermal_energy_demand.index):
         mosmix_tes.operate_storage(i, mosmix_chp)
 except ValueError as e:
     print(f"\nStorage simulation stopped early: {e}")

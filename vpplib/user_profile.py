@@ -76,6 +76,7 @@ class UserProfile(object):
         max_connection_power=None,
         comfort_factor=None,
         t_0=40,
+        consumerfactor=None,
     ):
         """
         Initialize a UserProfile object.
@@ -174,7 +175,7 @@ class UserProfile(object):
         self.h_del = None
         self.thermal_energy_demand_yearly = thermal_energy_demand_yearly
         self.thermal_energy_demand_daily = None
-        self.consumerfactor = None
+        self.consumerfactor = consumerfactor
 
 
     def get_thermal_energy_demand(self):
@@ -441,9 +442,13 @@ class UserProfile(object):
         insulation quality, and user behavior.
         """
         # consumerfactor (Kundenwert) K_w
-        self.consumerfactor = self.thermal_energy_demand_yearly / (
-            sum(self.h_del["h_del"])
-        )
+        # Skip recalculation if an externally calibrated value was supplied
+        # (e.g. from a full-year reference profile when only a short MOSMIX
+        # window is available, which would otherwise inflate the factor).
+        if self.consumerfactor is None:
+            self.consumerfactor = self.thermal_energy_demand_yearly / (
+                sum(self.h_del["h_del"])
+            )
         return self.consumerfactor
 
     # %%:
