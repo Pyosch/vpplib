@@ -1020,7 +1020,7 @@ class Environment(object):
         if not pd_sorted_data_for_station.empty:
             quality = pd.DataFrame()
             quality.index = ['missing', 'valid', 'quality']
-            quality[required_params] = 0
+            quality[required_params] = 0.0
             
             for column in pd_sorted_data_for_station.columns:
                 if column in required_params:
