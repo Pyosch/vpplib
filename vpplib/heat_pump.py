@@ -174,6 +174,8 @@ class HeatPump(Component):
             data=cop_lst,
             index=self.environment.mean_temp_hours.index,
         )
+        if self.cop.index.tz is not None:
+            self.cop.index = self.cop.index.tz_localize(None)
         self.cop.columns = ["cop"]
 
         return self.cop

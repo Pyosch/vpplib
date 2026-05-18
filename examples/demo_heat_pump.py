@@ -144,10 +144,11 @@ print("MOSMIX Heat Pump Test")
 print("="*60)
 
 time_now = Environment().get_time_from_dwd()
+mosmix_start = (time_now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
 mosmix_environment = Environment(
     timebase=timebase,
-    start=time_now,
-    end=time_now + datetime.timedelta(hours=240),
+    start=mosmix_start,
+    end=mosmix_start + datetime.timedelta(hours=239),
     force_end_time=True,
     use_timezone_aware_time_index=True,
     time_freq=time_freq,
@@ -159,8 +160,8 @@ mosmix_environment.mean_temp_quarter_hours = mosmix_environment.mean_temp_hours.
 
 mosmix_user_profile = UserProfile(
     identifier=None,
-    latitude=None,
-    longitude=None,
+    latitude=latitude,
+    longitude=longitude,
     thermal_energy_demand_yearly=yearly_thermal_energy_demand,
     mean_temp_days=mosmix_environment.mean_temp_days,
     mean_temp_hours=mosmix_environment.mean_temp_hours,
@@ -168,6 +169,7 @@ mosmix_user_profile = UserProfile(
     building_type=building_type,
     comfort_factor=None,
     t_0=t_0,
+    consumerfactor=user_profile.consumerfactor,
 )
 mosmix_user_profile.get_thermal_energy_demand()
 
