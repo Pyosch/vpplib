@@ -524,6 +524,55 @@ class Environment(object):
             )
         return pressure_station
      
+    def __blend_with_gap_fill(self, obs_df, mosmix_df, activate_output=True):
+        """Concatenate processed observation and MOSMIX DataFrames.
+
+        If a temporal gap exists between the two sources, it is filled with
+        zeros and a warning is printed.  Both DataFrames are expected to
+        carry the same column structure (identical after their respective
+        __process_*_parameter calls).
+        """
+        if obs_df.empty:
+            return mosmix_df
+        if mosmix_df.empty:
+            return obs_df
+
+        # Align timezones: bring MOSMIX to the same tz as observations
+        obs_tz = obs_df.index.tz
+        if obs_tz is not None and mosmix_df.index.tz is None:
+            mosmix_df = mosmix_df.copy()
+            mosmix_df.index = mosmix_df.index.tz_localize('UTC').tz_convert(obs_tz)
+        elif obs_tz is None and mosmix_df.index.tz is not None:
+            mosmix_df = mosmix_df.copy()
+            mosmix_df.index = mosmix_df.index.tz_localize(None)
+        elif obs_tz is not None and mosmix_df.index.tz is not None and obs_tz != mosmix_df.index.tz:
+            mosmix_df = mosmix_df.copy()
+            mosmix_df.index = mosmix_df.index.tz_convert(obs_tz)
+
+        obs_end      = obs_df.index.max()
+        mosmix_start = mosmix_df.index.min()
+
+        if mosmix_start > obs_end:
+            freq = obs_df.index.freq or pd.tseries.frequencies.to_offset(
+                obs_df.index.to_series().diff().dropna().mode()[0]
+            )
+            gap_index = pd.date_range(
+                start=obs_end      + freq,
+                end  =mosmix_start - freq,
+                freq =freq,
+                tz   =obs_tz,
+            )
+            if len(gap_index):
+                gap_df = pd.DataFrame(0.0, index=gap_index, columns=obs_df.columns)
+                if activate_output:
+                    print(
+                        f"Warning: Data gap between observation and MOSMIX filled with zeros: "
+                        f"{gap_index[0]} – {gap_index[-1]}"
+                    )
+                return pd.concat([obs_df, gap_df, mosmix_df]).sort_index()
+
+        return pd.concat([obs_df, mosmix_df]).sort_index()
+
     def __resample_data(self, df, time_freq = None):
         """
             Resamples and interpolates weather data.
@@ -931,14 +980,117 @@ class Environment(object):
         
         if use_observation:
             if activate_output:
-                print("Using observation database.") 
-            
-            # Adjust end date if in the future
+                print("Using observation database.")
+
+            # --- Blended path: end date extends beyond available observation data ---
             if self._Environment__end_dt_utc > observation_end_date and not self._Environment__force_end_time:
                 if activate_output:
-                    print("End date is in the future.")
-                self._Environment__end_dt_utc = observation_end_date
-            
+                    print("End date extends beyond observation window. Blending with MOSMIX forecast.")
+
+                # Observation part
+                try:
+                    obs_raw, obs_meta = self._dwd_client.get_observations(
+                        latitude=lat if lat is not None else 52.52,
+                        longitude=lon if lon is not None else 13.41,
+                        parameters=dwd_param_types,
+                        start_date=self._Environment__start_dt_utc.replace(tzinfo=None),
+                        end_date=observation_end_date.replace(tzinfo=None),
+                        resolution=resolution,
+                        max_distance_km=distance,
+                        station_id=user_station_id,
+                        min_quality_per_parameter=min_quality_per_parameter,
+                        force_refresh=False,
+                        allow_multi_station=allow_multi_station,
+                        ranking_strategy=ranking_strategy,
+                        for_pvlib=for_pvlib,
+                    )
+                except Exception as e:
+                    raise Exception(f"No observation station with valid data found! Error: {e}")
+
+                # MOSMIX part — cap at 240 h; for solar also fetch solar_est columns
+                mosmix_end = min(
+                    self._Environment__end_dt_utc,
+                    time_now.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(hours=240),
+                )
+                mosmix_params_blend = [p for p in dwd_param_types if p != 'solar'] + (
+                    ['solar'] if 'solar' in dwd_param_types else []
+                )
+                if 'dew_point' in required_params and 'dew_point' not in mosmix_params_blend:
+                    mosmix_params_blend.append('dew_point')
+                if dataset == 'solar':
+                    for _extra in ['pressure', 'temperature', 'dew_point']:
+                        if _extra not in mosmix_params_blend:
+                            mosmix_params_blend.append(_extra)
+
+                try:
+                    mosmix_raw, mosmix_meta = self._dwd_client.get_forecast(
+                        latitude=lat if lat is not None else 52.52,
+                        longitude=lon if lon is not None else 13.41,
+                        parameters=mosmix_params_blend,
+                        start_date=observation_end_date.replace(tzinfo=None),
+                        end_date=mosmix_end.replace(tzinfo=None) + datetime.timedelta(hours=1),
+                        station_id=user_station_id,
+                        force_refresh=False,
+                    )
+                except Exception:
+                    mosmix_raw  = pd.DataFrame()
+                    mosmix_meta = {}
+
+                # Build station-metadata DataFrames for each part
+                def _build_meta(sel, stype):
+                    _df = pd.DataFrame([{
+                        'station_id'       : sel.get('station_id', user_station_id or 'unknown'),
+                        'name'             : sel.get('name', 'Unknown Station'),
+                        'latitude'         : sel.get('latitude', lat),
+                        'longitude'        : sel.get('longitude', lon),
+                        'height'           : sel.get('height', 0),
+                        'distance'         : sel.get('distance', 0),
+                        'station_type'     : stype,
+                        'distance_itaration': 0,
+                    }])
+                    _df.index.name = 'Index'
+                    return _df
+
+                obs_station_meta    = _build_meta(obs_meta.get('selected_station', {}),    'OBSERVATION')
+                mosmix_station_meta = _build_meta(mosmix_meta.get('selected_station', {}), 'MOSMIX')
+
+                # Process observation part
+                if not obs_raw.empty:
+                    pd_obs = pd.DataFrame(index=obs_raw.index)
+                    for param in required_params:
+                        if param in obs_raw.columns:
+                            pd_obs[param] = obs_raw[param]
+                    processed_obs = self.__process_observation_parameter(pd_obs, dataset, obs_station_meta)
+                else:
+                    processed_obs = pd.DataFrame()
+
+                # Process MOSMIX part
+                if not mosmix_raw.empty:
+                    mosmix_cols = list(required_params) + (
+                        [c for c in ['pressure', 'temperature', 'dew_point']
+                         if dataset == 'solar' and c in mosmix_raw.columns and c not in required_params]
+                    )
+                    pd_mosmix = pd.DataFrame(index=mosmix_raw.index)
+                    for param in mosmix_cols:
+                        if param in mosmix_raw.columns:
+                            pd_mosmix[param] = mosmix_raw[param]
+                    processed_mosmix = self.__process_mosmix_parameter(
+                        pd_mosmix, dataset, pd_station_metadata=mosmix_station_meta
+                    )
+                else:
+                    processed_mosmix = pd.DataFrame()
+
+                if processed_obs.empty and processed_mosmix.empty:
+                    raise Exception("No station with valid data found!")
+
+                blended = self.__blend_with_gap_fill(processed_obs, processed_mosmix, activate_output)
+
+                blended_metadata = _build_meta(obs_meta.get('selected_station', {}), 'BLENDED')
+                if activate_output:
+                    print("Query successful! (blended observation + MOSMIX)")
+                return blended, blended_metadata
+
+            # --- Pure observation path (original code) ---
             try:
                 # Use DWDClient.get_observations
                 raw_data, metadata = self._dwd_client.get_observations(
@@ -1113,35 +1265,38 @@ class Environment(object):
             distance = distance, 
             min_quality_per_parameter = min_quality_per_parameter
             )   
-        if station_metadata.station_type.iloc[0] == 'OBSERVATION':
+        stype = station_metadata.station_type.iloc[0]
+        if stype == 'OBSERVATION':
             self.pv_data = self.__process_observation_parameter(
-                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_sorted_data_for_station = raw_dwd_data,
                  pd_station_metadata = station_metadata,
                  dataset = dataset,
                 extended_solar_data = extended_solar_data
                  )
-        elif station_metadata.station_type.iloc[0] == 'MOSMIX':
+        elif stype == 'MOSMIX':
             if 'disc' in estimation_methode_lst or 'dirint' in estimation_methode_lst:
                 raw_dwd_data_buf, station_metadata_buf = self.__get_dwd_data(
                     dataset = 'solar_est',
                     lat = lat,
                     lon = lon,
-                    distance = distance, 
+                    distance = distance,
                     min_quality_per_parameter = min_quality_per_parameter,
                     suppress_output = True
                     )
                 if station_metadata_buf.station_type.iloc[0] != 'MOSMIX':
                     raise Exception("Station type error while dataset splitting. Please check times!")
                 raw_dwd_data = pd.concat([raw_dwd_data,raw_dwd_data_buf], axis = 1)
-            
+
             self.pv_data = self.__process_mosmix_parameter(
-                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_sorted_data_for_station = raw_dwd_data,
                  pd_station_metadata = station_metadata,
                  dataset = dataset,
                  estimation_methode_lst = estimation_methode_lst,
                  extended_solar_data = extended_solar_data
                  )
-            
+        elif stype == 'BLENDED':
+            self.pv_data = raw_dwd_data  # already processed inside __get_dwd_data
+
         return station_metadata
 
     def get_dwd_wind_data(
@@ -1253,17 +1408,20 @@ class Environment(object):
             if activate_output:
                 print(f"  Estimated pressure at {station_height}m: {pressure_hpa:.1f} hPa")
         
-        if station_metadata.station_type.iloc[0] == 'OBSERVATION': 
+        stype = station_metadata.station_type.iloc[0]
+        if stype == 'OBSERVATION':
             self.wind_data = self.__process_observation_parameter(
                  pd_sorted_data_for_station = raw_dwd_data,
                  dataset = dataset
                  )
-        elif station_metadata.station_type.iloc[0] == 'MOSMIX': 
+        elif stype == 'MOSMIX':
             self.wind_data = self.__process_mosmix_parameter(
                  pd_sorted_data_for_station = raw_dwd_data,
                  pd_station_metadata = station_metadata,
                  dataset = dataset
                  )
+        elif stype == 'BLENDED':
+            self.wind_data = raw_dwd_data  # already processed inside __get_dwd_data
         return station_metadata
 
     def get_dwd_temp_data(
@@ -1306,16 +1464,19 @@ class Environment(object):
             distance = distance, 
             min_quality_per_parameter = min_quality_per_parameter
             )    
-        if station_metadata.station_type.iloc[0] == 'OBSERVATION':
+        stype = station_metadata.station_type.iloc[0]
+        if stype == 'OBSERVATION':
             self.temp_data = self.__process_observation_parameter(
-                 pd_sorted_data_for_station = raw_dwd_data, 
+                 pd_sorted_data_for_station = raw_dwd_data,
                  dataset = dataset
                  )
-        elif station_metadata.station_type.iloc[0] == 'MOSMIX': 
+        elif stype == 'MOSMIX':
             self.temp_data = self.__process_mosmix_parameter(
                  pd_sorted_data_for_station = raw_dwd_data,
                  dataset = dataset
                  )
+        elif stype == 'BLENDED':
+            self.temp_data = raw_dwd_data  # already processed inside __get_dwd_data
         self.__temp_station_metadata = station_metadata
         return self.__temp_station_metadata
     
