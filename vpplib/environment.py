@@ -607,12 +607,17 @@ class Environment(object):
             time_freq =  self.time_freq
         
         #Convert UTC timestamps to class timezone
-        if df.index[0].tzinfo != None:
+        if df.index[0].tzinfo is None:
+            # Naive timestamps assumed to be UTC — safety net in case a data
+            # source bypasses the UTC-localisation in _parse_zip_data
+            df.index = pd.to_datetime(df.index).tz_localize('UTC').tz_convert(self.timezone)
+            df.index.rename("time", inplace=True)
+        else:
             timezone_aware_date_list = list()
             for time in df.index:
                 timezone_aware_date_list.append(
                     time.tz_convert(self.timezone)
-                    )     
+                    )
             df['time_tz'] = timezone_aware_date_list
             df.set_index('time_tz',inplace = True)
             df.index.rename("time", inplace = True)
@@ -652,7 +657,10 @@ class Environment(object):
             df['time_wo_tz'] = timezone_unaware_date_list
             df.set_index('time_wo_tz',inplace = True)
             df.index.rename("time", inplace = True)
-            
+            # DST fall-back creates duplicate naive timestamps — keep first (CEST) entry
+            if df.index.duplicated().any():
+                df = df[~df.index.duplicated(keep="first")]
+
         df = df.reindex(sorted(df.columns), axis=1)
         df = round(df,2)
         return df

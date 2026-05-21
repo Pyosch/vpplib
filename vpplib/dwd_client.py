@@ -668,9 +668,24 @@ class ObservationParser:
             metadata['warnings'].append(f"Could not fetch recent data: {e}")
         
         # Determine if historical needed
+        # start_date / end_date arrive as naive UTC from __get_dwd_data;
+        # recent_df.index is now UTC-aware after _parse_zip_data — normalise
+        # both sides to naive before comparing to avoid TypeError.
+        def _to_naive_utc(ts):
+            if ts is None:
+                return None
+            if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+                return ts.tz_localize(None) if hasattr(ts, 'tz_localize') else ts.replace(tzinfo=None)
+            return ts
+
         need_historical = False
         if start_date is not None and recent_df is not None and not recent_df.empty:
-            if start_date < recent_df.index.min():
+            recent_min = _to_naive_utc(recent_df.index.min())
+            recent_max = _to_naive_utc(recent_df.index.max())
+            if start_date < recent_min:
+                need_historical = True
+            elif end_date is not None and recent_max < end_date:
+                # Recent file starts at the right point but doesn't cover the full end
                 need_historical = True
         elif start_date is not None and (recent_df is None or recent_df.empty):
             need_historical = True
@@ -801,18 +816,20 @@ class ObservationParser:
                     skipinitialspace=True
                 )
         
-        # Parse timestamp
+        # Parse timestamp — DWD observation timestamps are always UTC
         if 'MESS_DATUM' in df.columns:
             df['datetime'] = pd.to_datetime(df['MESS_DATUM'], format='%Y%m%d%H%M', errors='coerce')
             if df['datetime'].isna().all():
                 df['datetime'] = pd.to_datetime(df['MESS_DATUM'], format='%Y%m%d%H', errors='coerce')
             df.set_index('datetime', inplace=True)
+            df.index = df.index.tz_localize('UTC')
             df.drop('MESS_DATUM', axis=1, inplace=True, errors='ignore')
         elif 'MESS_DATUM_BEGINN' in df.columns:
             df['datetime'] = pd.to_datetime(df['MESS_DATUM_BEGINN'], format='%Y%m%d%H%M', errors='coerce')
             if df['datetime'].isna().all():
                 df['datetime'] = pd.to_datetime(df['MESS_DATUM_BEGINN'], format='%Y%m%d%H', errors='coerce')
             df.set_index('datetime', inplace=True)
+            df.index = df.index.tz_localize('UTC')
             df.drop('MESS_DATUM_BEGINN', axis=1, inplace=True, errors='ignore')
         
         # Clean up
