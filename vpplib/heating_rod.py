@@ -106,9 +106,6 @@ class HeatingRod(Component):
         self.efficiency = efficiency
         self.el_power = el_power
         self.limit = 1
-        if thermal_energy_demand.index.tz is not None:
-            thermal_energy_demand = thermal_energy_demand.copy()
-            thermal_energy_demand.index = thermal_energy_demand.index.tz_localize(None)
         self.thermal_energy_demand = thermal_energy_demand
 
         # Ramp parameters
@@ -319,18 +316,7 @@ class HeatingRod(Component):
         """
         if isinstance(timestamp, int):
             return self.timeseries.iloc[timestamp]["el_demand"] * self.limit
-
-        elif isinstance(timestamp, str):
-            return self.timeseries.loc[pd.Timestamp(timestamp), "el_demand"] * self.limit
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            return self.timeseries.loc[timestamp, "el_demand"] * self.limit
-
-        else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
-            )
+        return self.timeseries.loc[self._normalize_timestamp(timestamp), "el_demand"] * self.limit
         
     
     def observationsForTimestamp(self, timestamp):
@@ -375,47 +361,19 @@ class HeatingRod(Component):
                 else:
                     el_demand, efficiency, heat_output = 0, 0, 0
 
-        elif isinstance(timestamp, str):
-
-            timestamp = pd.Timestamp(timestamp)
-
-            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-
-                heat_output, el_demand = self.timeseries.loc[timestamp]
-                efficiency = self.efficiency
-
-            else:
-
-                if self.isRunning:
-                    el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
-                    efficiency = self.efficiency
-                    heat_output = el_demand * efficiency
-                else:
-                    el_demand, efficiency, heat_output = 0, 0, 0
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-
-            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-
-                heat_output, el_demand = self.timeseries.loc[timestamp]
-                efficiency = self.efficiency
-
-            else:
-
-                if self.isRunning:
-                    el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
-                    efficiency = self.efficiency
-                    heat_output = el_demand * efficiency
-                else:
-                    el_demand, efficiency, heat_output = 0, 0, 0
-
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
-            )
+            timestamp = self._normalize_timestamp(timestamp)
+            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
+                heat_output, el_demand = self.timeseries.loc[timestamp]
+                efficiency = self.efficiency
+            else:
+                if self.isRunning:
+                    el_demand = self.el_power
+                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
+                    efficiency = self.efficiency
+                    heat_output = el_demand * efficiency
+                else:
+                    el_demand, efficiency, heat_output = 0, 0, 0
         
         observations = {'heat_output':heat_output, 
                         'efficiency':efficiency, 'el_demand':el_demand}
@@ -466,30 +424,14 @@ class HeatingRod(Component):
         This method updates the isRunning attribute based on the check result.
         """
         if isinstance(timestamp, int):
-            if timestamp - self.lastRampDown > self.min_stop_time:
-                self.isRunning = True
-            else:
-                self.isRunning = False
-
-        elif isinstance(timestamp, str):
-            timestamp = pd.Timestamp(timestamp)
-            if self.lastRampDown + self.min_stop_time * timestamp.freq < timestamp:
-                self.isRunning = True
-            else:
-                self.isRunning = False
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            if self.lastRampDown + self.min_stop_time * timestamp.freq < timestamp:
-                self.isRunning = True
-            else:
-                self.isRunning = False
-
+            self.isRunning = timestamp - self.lastRampDown > self.min_stop_time
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
+            timestamp = self._normalize_timestamp(timestamp)
+            self.isRunning = (
+                self.lastRampDown + self.min_stop_time * self.timeseries.index.freq
+                < timestamp
             )
-        
+
     def isLegitRampDown(self, timestamp):
         """
         Check if it's legitimate to ramp down the heating rod at the given timestamp.
@@ -511,28 +453,12 @@ class HeatingRod(Component):
         This method updates the isRunning attribute based on the check result.
         """
         if isinstance(timestamp, int):
-            if timestamp - self.lastRampUp > self.min_runtime:
-                self.isRunning = False
-            else:
-                self.isRunning = True
-
-        elif isinstance(timestamp, str):
-            timestamp = pd.Timestamp(timestamp)
-            if self.lastRampUp + self.min_runtime * timestamp.freq < timestamp:
-                self.isRunning = False
-            else:
-                self.isRunning = True
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            if self.lastRampUp + self.min_runtime * timestamp.freq < timestamp:
-                self.isRunning = False
-            else:
-                self.isRunning = True
-
+            self.isRunning = not (timestamp - self.lastRampUp > self.min_runtime)
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
+            timestamp = self._normalize_timestamp(timestamp)
+            self.isRunning = not (
+                self.lastRampUp + self.min_runtime * self.timeseries.index.freq
+                < timestamp
             )
         
     def rampUp(self, timestamp):

@@ -304,17 +304,8 @@ class Photovoltaic(Component):
             If the timestamp type is not supported.
         """
         if isinstance(timestamp, int):
-            return (
-                self.timeseries[self.identifier].iloc[timestamp] * self.limit
-            )
-        elif isinstance(timestamp, str):
-            return self.timeseries[self.identifier].loc[pd.Timestamp(timestamp)] * self.limit
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            return self.timeseries[self.identifier].loc[timestamp] * self.limit
-        else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+            return self.timeseries[self.identifier].iloc[timestamp] * self.limit
+        return self.timeseries[self.identifier].loc[self._normalize_timestamp(timestamp)] * self.limit
 
     def observations_for_timestamp(self, timestamp):
         """Get observations for the photovoltaic system at a specific timestamp.
@@ -342,14 +333,8 @@ class Photovoltaic(Component):
         """
         if isinstance(timestamp, int):
             el_generation = self.timeseries.iloc[timestamp]
-        elif isinstance(timestamp, str):
-            el_generation = self.timeseries.loc[pd.Timestamp(timestamp)]
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            el_generation = self.timeseries.loc[timestamp]
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+            el_generation = self.timeseries.loc[self._normalize_timestamp(timestamp)]
 
         observations = {"el_generation": el_generation}
         return observations

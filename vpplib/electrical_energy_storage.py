@@ -184,21 +184,9 @@ class ElectricalEnergyStorage(Component):
 
         """
         if isinstance(timestamp, int):
-
             state_of_charge, residual_load = self.timeseries.iloc[timestamp]
-
-        elif isinstance(timestamp, str):
-
-            state_of_charge, residual_load = self.timeseries.loc[pd.Timestamp(timestamp)]
-
-        elif isinstance(timestamp, (pd.Timestamp, dt.datetime)):
-
-            state_of_charge, residual_load = self.timeseries.loc[timestamp]
-
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+            state_of_charge, residual_load = self.timeseries.loc[self._normalize_timestamp(timestamp)]
 
         observations = {
             "state_of_charge": state_of_charge,
@@ -349,21 +337,8 @@ class ElectricalEnergyStorage(Component):
     def value_for_timestamp(self, timestamp):
 
         if isinstance(timestamp, int):
-
             return self.timeseries.iloc[timestamp]["residual_load"]
-
-        elif isinstance(timestamp, str):
-
-            return self.timeseries.loc[pd.Timestamp(timestamp), "residual_load"]
-
-        elif isinstance(timestamp, (pd.Timestamp, dt.datetime)):
-
-            return self.timeseries.loc[timestamp, "residual_load"]
-
-        else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+        return self.timeseries.loc[self._normalize_timestamp(timestamp), "residual_load"]
 
 
 class PySAMBatteryStateful(Component):
@@ -646,21 +621,8 @@ class PySAMBatteryStateful(Component):
     def value_for_timestamp(self, timestamp):
 
         if isinstance(timestamp, int):
-
             return self.timeseries.iloc[timestamp]["ac_power"]
-
-        elif isinstance(timestamp, str):
-
-            return self.timeseries.loc[pd.Timestamp(timestamp), "ac_power"]
-
-        elif isinstance(timestamp, (pd.Timestamp, dt.datetime)):
-
-            return self.timeseries.loc[timestamp, "ac_power"]
-
-        else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+        return self.timeseries.loc[self._normalize_timestamp(timestamp), "ac_power"]
 
     def observations_for_timestamp(self, timestamp):
         """.
@@ -690,21 +652,9 @@ class PySAMBatteryStateful(Component):
 
         """
         if isinstance(timestamp, int):
-
             state_of_charge, ac_power = self.timeseries.iloc[timestamp]
-
-        elif isinstance(timestamp, str):
-
-            state_of_charge, ac_power = self.timeseries.loc[pd.Timestamp(timestamp)]
-
-        elif isinstance(timestamp, (pd.Timestamp, dt.datetime)):
-
-            state_of_charge, ac_power = self.timeseries.loc[timestamp]
-
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+            state_of_charge, ac_power = self.timeseries.loc[self._normalize_timestamp(timestamp)]
 
         observations = {
             "state_of_charge": state_of_charge,

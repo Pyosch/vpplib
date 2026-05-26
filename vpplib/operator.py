@@ -479,7 +479,7 @@ class Operator(object):
             profiles[elm_param].index = pd.date_range(
                 start=self.virtual_power_plant.components[
                     next(iter(self.virtual_power_plant.components))
-                ].environment.start[:4],
+                ].environment.start.year,
                 periods=len(profiles[elm_param].index),
                 freq=self.virtual_power_plant.components[
                     next(iter(self.virtual_power_plant.components))

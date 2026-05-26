@@ -90,9 +90,6 @@ class HeatPump(Component):
         self.heat_pump_type = heat_pump_type
         self.el_power = el_power
         self.th_power = th_power
-        if thermal_energy_demand.index.tz is not None:
-            thermal_energy_demand = thermal_energy_demand.copy()
-            thermal_energy_demand.index = thermal_energy_demand.index.tz_localize(None)
         self.thermal_energy_demand = thermal_energy_demand
         self.limit = 1
 
@@ -174,8 +171,6 @@ class HeatPump(Component):
             data=cop_lst,
             index=self.environment.mean_temp_hours.index,
         )
-        if self.cop.index.tz is not None:
-            self.cop.index = self.cop.index.tz_localize(None)
         self.cop.columns = ["cop"]
 
         return self.cop
@@ -346,22 +341,8 @@ class HeatPump(Component):
     def value_for_timestamp(self, timestamp):
 
         if isinstance(timestamp, int):
-
             return self.timeseries.iloc[timestamp]["el_demand"] * self.limit
-
-        elif isinstance(timestamp, str):
-
-            return self.timeseries.loc[pd.Timestamp(timestamp), "el_demand"] * self.limit
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-
-            return self.timeseries.loc[timestamp, "el_demand"] * self.limit
-
-        else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
-            )
+        return self.timeseries.loc[self._normalize_timestamp(timestamp), "el_demand"] * self.limit
 
     def observations_for_timestamp(self, timestamp):
         """
@@ -398,15 +379,9 @@ class HeatPump(Component):
         """
 
         if isinstance(timestamp, int):
-
             if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
-
-                thermal_energy_output, cop, el_demand = self.timeseries.iloc[
-                    timestamp
-                ]
-
+                thermal_energy_output, cop, el_demand = self.timeseries.iloc[timestamp]
             else:
-
                 if self.is_running:
                     el_demand = self.el_power
                     temp = self.environment.mean_temp_quarter_hours.temperature.iloc[
@@ -416,57 +391,18 @@ class HeatPump(Component):
                     thermal_energy_output = el_demand * cop
                 else:
                     el_demand, cop, thermal_energy_output = 0, 0, 0
-
-        elif isinstance(timestamp, str):
-
-            timestamp = pd.Timestamp(timestamp)
-
-            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-
-                thermal_energy_output, cop, el_demand = self.timeseries.loc[
-                    timestamp
-                ]
-            else:
-
-                if self.is_running:
-                    el_demand = self.el_power
-                    temp_idx = self.environment.mean_temp_quarter_hours.index
-                    ts_temp = timestamp.tz_localize(temp_idx.tz) if temp_idx.tz is not None and timestamp.tzinfo is None else timestamp
-                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[
-                        ts_temp
-                    ]
-                    cop = self.get_current_cop(temp)
-                    thermal_energy_output = el_demand * cop
-                else:
-                    el_demand, cop, thermal_energy_output = 0, 0, 0
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-
-            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-
-                thermal_energy_output, cop, el_demand = self.timeseries.loc[
-                    timestamp
-                ]
-
-            else:
-
-                if self.is_running:
-                    el_demand = self.el_power
-                    temp_idx = self.environment.mean_temp_quarter_hours.index
-                    ts_temp = timestamp.tz_localize(temp_idx.tz) if temp_idx.tz is not None and timestamp.tzinfo is None else timestamp
-                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[
-                        ts_temp
-                    ]
-                    cop = self.get_current_cop(temp)
-                    thermal_energy_output = el_demand * cop
-                else:
-                    el_demand, cop, thermal_energy_output = 0, 0, 0
-
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
-            )
+            timestamp = self._normalize_timestamp(timestamp)
+            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
+                thermal_energy_output, cop, el_demand = self.timeseries.loc[timestamp]
+            else:
+                if self.is_running:
+                    el_demand = self.el_power
+                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
+                    cop = self.get_current_cop(temp)
+                    thermal_energy_output = el_demand * cop
+                else:
+                    el_demand, cop, thermal_energy_output = 0, 0, 0
 
         observations = {
             "thermal_energy_output": thermal_energy_output,
@@ -518,34 +454,12 @@ class HeatPump(Component):
         """
 
         if isinstance(timestamp, int):
-            if timestamp - self.last_ramp_down > self.min_stop_time:
-                self.is_running = True
-            else:
-                self.is_running = False
-
-        elif isinstance(timestamp, str):
-            timestamp = pd.Timestamp(timestamp)
-            if (
-                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
-                < timestamp
-            ):
-                self.is_running = True
-            else:
-                self.is_running = False
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            if (
-                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
-                < timestamp
-            ):
-                self.is_running = True
-            else:
-                self.is_running = False
-
+            self.is_running = timestamp - self.last_ramp_down > self.min_stop_time
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
+            timestamp = self._normalize_timestamp(timestamp)
+            self.is_running = (
+                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
+                < timestamp
             )
 
     def is_valid_ramp_down(self, timestamp):
@@ -572,34 +486,12 @@ class HeatPump(Component):
         """
 
         if isinstance(timestamp, int):
-            if timestamp - self.last_ramp_up > self.min_runtime:
-                self.is_running = False
-            else:
-                self.is_running = True
-
-        elif isinstance(timestamp, str):
-            timestamp = pd.Timestamp(timestamp)
-            if (
-                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
-                < timestamp
-            ):
-                self.is_running = False
-            else:
-                self.is_running = True
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            if (
-                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
-                < timestamp
-            ):
-                self.is_running = False
-            else:
-                self.is_running = True
-
+            self.is_running = not (timestamp - self.last_ramp_up > self.min_runtime)
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
+            timestamp = self._normalize_timestamp(timestamp)
+            self.is_running = not (
+                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
+                < timestamp
             )
 
     def ramp_up(self, timestamp):

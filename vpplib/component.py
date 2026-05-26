@@ -7,6 +7,7 @@ The Component class provides the foundation for all components in the virtual po
 including common attributes and methods that are inherited by specific component types
 like photovoltaic systems, energy storage, heat pumps, etc.
 """
+import pandas as pd
 
 
 class Component(object):
@@ -49,31 +50,51 @@ class Component(object):
         self.identifier = identifier
         self.environment = environment
 
+    def _normalize_timestamp(self, timestamp):
+        """Coerce a timestamp to match the timezone of self.timeseries.index.
+
+        Naive str or pd.Timestamp inputs are localized to the index timezone so
+        that .loc[] lookups work correctly on tz-aware indices.  Integer inputs
+        are returned unchanged (positional lookup via .iloc[]).
+        """
+        if isinstance(timestamp, int):
+            return timestamp
+        ts = pd.Timestamp(timestamp)
+        try:
+            idx_tz = self.timeseries.index.tz
+        except AttributeError:
+            idx_tz = None
+        if idx_tz is not None and ts.tzinfo is None:
+            ts = ts.tz_localize(idx_tz)
+        return ts
+
     def value_for_timestamp(self, timestamp):
         """Get the component's value for a specific timestamp.
-        
+
         This method returns the value of the component at the given timestamp.
         A positive result represents a load (consumption).
         A negative result represents a generation.
-        
+
         Parameters
         ----------
-        timestamp : datetime.datetime
+        timestamp : int, str, pd.Timestamp, or datetime.datetime
             The timestamp for which to retrieve the value.
-            
+
         Returns
         -------
         float
             The value of the component at the given timestamp.
             Positive for consumption, negative for generation.
-            
+
         Notes
         -----
         This method is implemented in the base class to return the value from
         the timeseries attribute. Child classes may override this method to
         implement custom behavior.
         """
-        return self.timeseries.loc[timestamp].item()
+        if isinstance(timestamp, int):
+            return self.timeseries.iloc[timestamp].item()
+        return self.timeseries.loc[self._normalize_timestamp(timestamp)].item()
 
     def observations_for_timestamp(self, timestamp):
         """Get component observations for a specific timestamp.

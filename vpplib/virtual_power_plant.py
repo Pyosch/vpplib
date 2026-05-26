@@ -648,7 +648,7 @@ class VirtualPowerPlant(object):
                               +"VALUES (?, ?, ?)",
                               (str(idx),
                                component,
-                               (self.components[component].value_for_timestamp(str(idx)) * -1)
+                               (self.components[component].value_for_timestamp(idx) * -1)
                                )
                               )
 
@@ -662,7 +662,7 @@ class VirtualPowerPlant(object):
                               +"VALUES (?, ?, ?)",
                               (str(idx),
                                component,
-                               (self.components[component].value_for_timestamp(str(idx)) * -1)
+                               (self.components[component].value_for_timestamp(idx) * -1)
                                )
                               )
 

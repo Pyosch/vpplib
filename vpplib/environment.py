@@ -58,8 +58,6 @@ class Environment(object):
         Whether to suppress output globally.
     force_end_time : bool
         Whether to force the end time.
-    use_timezone_aware_time_index : bool
-        Whether to use timezone-aware time index.
     """
     
     def __init__(
@@ -78,10 +76,10 @@ class Environment(object):
         temp_data=[],
         surpress_output_globally = True,
         force_end_time = False,
-        use_timezone_aware_time_index = False,
+        use_timezone_aware_time_index = None,
     ):
         """Initialize an Environment object.
-        
+
         Parameters
         ----------
         timebase : str or None, optional
@@ -112,8 +110,9 @@ class Environment(object):
             Whether to suppress output globally (default: True).
         force_end_time : bool, optional
             Whether to force the end time (default: False).
-        use_timezone_aware_time_index : bool, optional
-            Whether to use timezone-aware time index (default: False).
+        use_timezone_aware_time_index : bool or None, optional
+            Deprecated — timezone-aware indices are always used. This parameter
+            is accepted for backward compatibility but has no effect.
         """
         self.timebase = timebase
         self.timezone = zoneinfo.ZoneInfo(timezone)
@@ -129,7 +128,6 @@ class Environment(object):
         self.temp_data = temp_data
         self.__surpress_output_globally = surpress_output_globally
         self.__force_end_time = force_end_time
-        self.__use_timezone_aware_time_index = use_timezone_aware_time_index
         if not start is None and not end is None:
             
             if isinstance(self.start, str):
@@ -159,10 +157,8 @@ class Environment(object):
             if self.__internal_start_datetime_utc + datetime.timedelta(hours=1) > self.__internal_end_datetime_utc:
                 raise ValueError("End date must be at least one hour later than the start date")
 
-            # Normalize start/end to tz-naive string representation so that
-            # DataFrame slicing works regardless of index tz-awareness.
-            self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo=None))
-            self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo=None))
+            self.start = pd.Timestamp(self.__internal_start_datetime_with_class_timezone)
+            self.end   = pd.Timestamp(self.__internal_end_datetime_with_class_timezone)
 
     @property
     def __start_dt_utc(self):
@@ -176,7 +172,7 @@ class Environment(object):
         self.__internal_start_datetime_utc = new___start_dt_utc
         time_wo_offset = new___start_dt_utc.replace(tzinfo = self.timezone)
         self.__internal_start_datetime_with_class_timezone = time_wo_offset + time_wo_offset.utcoffset()
-        self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
+        self.start = pd.Timestamp(self.__internal_start_datetime_with_class_timezone)
         print("Setted new start time to: ", self.__internal_end_datetime_with_class_timezone) and not self.__surpress_output_globally
     
     @property
@@ -191,7 +187,7 @@ class Environment(object):
         self.__internal_end_datetime_utc = new___end_dt_utc
         time_wo_offset = new___end_dt_utc.replace(tzinfo = self.timezone)
         self.__internal_end_datetime_with_class_timezone = time_wo_offset + time_wo_offset.utcoffset()
-        self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
+        self.end = pd.Timestamp(self.__internal_end_datetime_with_class_timezone)
         print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.__surpress_output_globally
         
     @property
@@ -203,9 +199,9 @@ class Environment(object):
         if new_start_dt.tzinfo != self.timezone:
             raise ValueError('@__start_dt_target_tz.setter: new time not given in target timezone')
         new_start_dt = new_start_dt.replace(microsecond = 0)
-        self.__internal_start_datetime_with_class_timezone = new_start_dt  
+        self.__internal_start_datetime_with_class_timezone = new_start_dt
         self.__internal_start_datetime_utc = (new_start_dt - new_start_dt.utcoffset()).replace(tzinf = zoneinfo.ZoneInfo(key='UTC'))
-        self.start = str(self.__internal_start_datetime_with_class_timezone.replace(tzinfo = None))
+        self.start = pd.Timestamp(self.__internal_start_datetime_with_class_timezone)
         print("Setted new start time to: ", self.__internal_start_datetime_with_class_timezone)  and not self.__surpress_output_globally
         
     @property
@@ -219,7 +215,7 @@ class Environment(object):
         new_end_dt = new_end_dt.replace(microsecond=0)
         self.__internal_end_datetime_with_class_timezone = new_end_dt
         self.__internal_end_datetime_utc = (new_end_dt - new_end_dt.utcoffset()).replace(tzinfo = zoneinfo.ZoneInfo(key='UTC'))
-        self.end = str(self.__internal_end_datetime_with_class_timezone.replace(tzinfo = None))
+        self.end = pd.Timestamp(self.__internal_end_datetime_with_class_timezone)
         print("Setted new end time to: ", self.__internal_end_datetime_with_class_timezone)  and not self.__surpress_output_globally
 
 
@@ -600,8 +596,7 @@ class Environment(object):
             - Missing data at the end of the dataframe is not replaced -> NaN
             - The resulting DataFrame is truncated to match the target end datetime if necessary.
             - The columns are sorted alphabetically and rounded to two decimal places.
-            - The resulting DataFrame contains timestamps with timezoneinfo in class timezone when __use_timezone_aware_time_index == True
-                Otherwise timezoneinfo is not given but times are in class timezone
+            - The resulting DataFrame always contains timestamps with timezone info in the class timezone.
         """
         if time_freq is None:
             time_freq =  self.time_freq
@@ -638,28 +633,8 @@ class Environment(object):
             limit_area = 'inside' if self.__force_end_time else None)
         
         #Remove timestamps which are not needed
-        #For timezone aware timestamps:
-        if df.index[0].tzinfo != None:
-            if df.index[-1] > self.__end_dt_target_tz:
-                df = df[df.index[0]:self.__end_dt_target_tz]
-        #For timezone unaware timestamps:
-        else:
-            if df.index[-1] > self.__end_dt_target_tz.replace(tzinfo=None):
-                df = df[df.index[0]:self.__end_dt_target_tz.replace(tzinfo=None)]
-                
-        #Remove timezone info    
-        if not self.__use_timezone_aware_time_index and df.index[0].tzinfo != None:
-            timezone_unaware_date_list = list()
-            for time in df.index:
-                timezone_unaware_date_list.append(
-                    time.replace(tzinfo = None)
-                    )
-            df['time_wo_tz'] = timezone_unaware_date_list
-            df.set_index('time_wo_tz',inplace = True)
-            df.index.rename("time", inplace = True)
-            # DST fall-back creates duplicate naive timestamps — keep first (CEST) entry
-            if df.index.duplicated().any():
-                df = df[~df.index.duplicated(keep="first")]
+        if df.index[-1] > self.__end_dt_target_tz:
+            df = df[df.index[0]:self.__end_dt_target_tz]
 
         df = df.reindex(sorted(df.columns), axis=1)
         df = round(df,2)

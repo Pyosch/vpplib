@@ -420,22 +420,8 @@ class BatteryElectricVehicle(Component):
         """
 
         if isinstance(timestamp, int):
-
             return self.timeseries.iloc[timestamp]["car_charger"] * self.limit
-
-        elif isinstance(timestamp, str):
-
-            return self.timeseries.loc[pd.Timestamp(timestamp), "car_charger"] * self.limit
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-
-            return self.timeseries.loc[timestamp, "car_charger"] * self.limit
-
-        else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                + "pd.Timestamp, or str."
-            )
+        return self.timeseries.loc[self._normalize_timestamp(timestamp), "car_charger"] * self.limit
 
     def observations_for_timestamp(self, timestamp):
 
@@ -455,26 +441,9 @@ class BatteryElectricVehicle(Component):
 
         """
         if isinstance(timestamp, int):
-
-            car_charger, car_capacity, at_home = self.timeseries.iloc[
-                timestamp
-            ]
-
-        elif isinstance(timestamp, str):
-
-            car_charger, car_capacity, at_home = self.timeseries.loc[
-                pd.Timestamp(timestamp)
-            ]
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-
-            car_charger, car_capacity, at_home = self.timeseries.loc[timestamp]
-
+            car_charger, car_capacity, at_home = self.timeseries.iloc[timestamp]
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                + "pd.Timestamp, or str."
-            )
+            car_charger, car_capacity, at_home = self.timeseries.loc[self._normalize_timestamp(timestamp)]
 
         observations = {
             "car_charger": car_charger,

@@ -114,17 +114,20 @@ class TestDWDMOSMIXData:
 
 
 class TestTimezoneAwareness:
-    """Verify tz-aware vs naive output based on use_timezone_aware_time_index flag."""
+    """Verify that all Environment output always uses timezone-aware indices."""
 
-    def test_naive_output_when_flag_false(self, timestamp_now):
+    def test_aware_output_when_deprecated_flag_false(self, timestamp_now):
+        """Deprecated flag is accepted but ignored — output is always tz-aware."""
         env = Environment(
             start=timestamp_now + datetime.timedelta(days=-5),
             end=timestamp_now + datetime.timedelta(days=-1),
-            use_timezone_aware_time_index=False,
+            use_timezone_aware_time_index=False,  # deprecated no-op
             surpress_output_globally=True,
         )
         env.get_dwd_pv_data(lat=50.941357, lon=6.958307)
-        assert env.pv_data.index.tz is None, "naive output expected when use_timezone_aware_time_index=False"
+        assert env.pv_data.index.tz is not None, "tz-aware output expected regardless of deprecated flag"
+        assert isinstance(env.start, pd.Timestamp)
+        assert env.start.tzinfo is not None
 
     def test_aware_output_when_flag_true(self, environment_obs):
         assert environment_obs.pv_data.index.tz is not None, "tz-aware output expected when use_timezone_aware_time_index=True"

@@ -100,9 +100,6 @@ class CombinedHeatAndPower(Component):
 
         # Configure attributes
         self.identifier = identifier
-        if thermal_energy_demand.index.tz is not None:
-            thermal_energy_demand = thermal_energy_demand.copy()
-            thermal_energy_demand.index = thermal_energy_demand.index.tz_localize(None)
         self.thermal_energy_demand = thermal_energy_demand
         self.el_power = el_power
         self.th_power = th_power
@@ -210,34 +207,12 @@ class CombinedHeatAndPower(Component):
         """
 
         if isinstance(timestamp, int):
-            if timestamp - self.last_ramp_down > self.min_stop_time:
-                self.is_running = True
-            else:
-                self.is_running = False
-
-        elif isinstance(timestamp, str):
-            timestamp = pd.Timestamp(timestamp)
-            if (
-                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
-                < timestamp
-            ):
-                self.is_running = True
-            else:
-                self.is_running = False
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            if (
-                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
-                < timestamp
-            ):
-                self.is_running = True
-            else:
-                self.is_running = False
-
+            self.is_running = timestamp - self.last_ramp_down > self.min_stop_time
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
+            timestamp = self._normalize_timestamp(timestamp)
+            self.is_running = (
+                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
+                < timestamp
             )
 
         return self.is_running
@@ -262,34 +237,12 @@ class CombinedHeatAndPower(Component):
         """
 
         if isinstance(timestamp, int):
-            if timestamp - self.last_ramp_up > self.min_runtime:
-                self.is_running = False
-            else:
-                self.is_running = True
-
-        elif isinstance(timestamp, str):
-            timestamp = pd.Timestamp(timestamp)
-            if (
-                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
-                < timestamp
-            ):
-                self.is_running = False
-            else:
-                self.is_running = True
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            if (
-                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
-                < timestamp
-            ):
-                self.is_running = False
-            else:
-                self.is_running = True
-
+            self.is_running = not (timestamp - self.last_ramp_up > self.min_runtime)
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, "
-                "pd.Timestamp, or str."
+            timestamp = self._normalize_timestamp(timestamp)
+            self.is_running = not (
+                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
+                < timestamp
             )
 
         return self.is_running

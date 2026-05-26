@@ -122,15 +122,15 @@ class ElectrolysisSimses(Component):
         # SimSES needs step size in sec
         self.simulation_config.set('GENERAL', 'TIME_STEP',
                                    str(self.environment.timebase * 60))
-        self.simulation_config.set('GENERAL', 'START',
-                                   str(dt.datetime.strptime(
-                                       self.environment.start,
-                                       "%Y-%m-%d %H:%M:%S")
-                                       - dt.timedelta(
-                                       minutes=self.environment.timebase*9))
-                                   )
-        self.simulation_config.set('GENERAL', 'END',
-                                   self.environment.end)
+        start_naive = self.environment.start.to_pydatetime().replace(tzinfo=None)
+        self.simulation_config.set(
+            'GENERAL', 'START',
+            str(start_naive - dt.timedelta(minutes=self.environment.timebase * 9))
+        )
+        self.simulation_config.set(
+            'GENERAL', 'END',
+            str(self.environment.end.to_pydatetime().replace(tzinfo=None))
+        )
         # possible extensions to GENERAL:
         # self.simulation_config.set('GENERAL', 'LOOP', 1)
         # self.simulation_config.set('GENERAL', 'EXPORT_DATA', True)
@@ -233,11 +233,9 @@ class ElectrolysisSimses(Component):
             DESCRIPTION.
 
         """
+        naive_dt = pd.Timestamp(timestep).to_pydatetime().replace(tzinfo=None)
         self.simses.run_one_simulation_step(
-            time.mktime(
-                dt.datetime.strptime(str(timestep),
-                                     "%Y-%m-%d %H:%M:%S").timetuple()
-            ),
+            time.mktime(naive_dt.timetuple()),
             (load * -1000)
         )
 
@@ -284,21 +282,8 @@ class ElectrolysisSimses(Component):
     def value_for_timestamp(self, timestamp):
 
         if isinstance(timestamp, int):
-
             return self.timeseries.iloc[timestamp]["ac_power"]
-
-        elif isinstance(timestamp, str):
-
-            return self.timeseries.loc[pd.Timestamp(timestamp), "ac_power"]
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-
-            return self.timeseries.loc[timestamp, "ac_power"]
-
-        else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+        return self.timeseries.loc[self._normalize_timestamp(timestamp), "ac_power"]
 
     def observations_for_timestamp(self, timestamp):
         """.
@@ -334,21 +319,9 @@ class ElectrolysisSimses(Component):
 
         """
         if isinstance(timestamp, int):
-
             state_of_charge, ac_power = self.timeseries.iloc[timestamp]
-
-        elif isinstance(timestamp, str):
-
-            state_of_charge, ac_power = self.timeseries.loc[pd.Timestamp(timestamp)]
-
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-
-            state_of_charge, ac_power = self.timeseries.loc[timestamp]
-
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+            state_of_charge, ac_power = self.timeseries.loc[self._normalize_timestamp(timestamp)]
 
         observations = {
             "state_of_charge": state_of_charge,

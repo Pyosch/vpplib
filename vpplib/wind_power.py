@@ -386,14 +386,7 @@ class WindPower(Component):
         """
         if isinstance(timestamp, int):
             return self.timeseries.iloc[timestamp].item() * self.limit
-        elif isinstance(timestamp, str):
-            return self.timeseries.loc[pd.Timestamp(timestamp)].item() * self.limit
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            return self.timeseries.loc[timestamp].item() * self.limit
-        else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+        return self.timeseries.loc[self._normalize_timestamp(timestamp)].item() * self.limit
 
     def observations_for_timestamp(self, timestamp):
         """
@@ -428,13 +421,7 @@ class WindPower(Component):
         """
         if isinstance(timestamp, int):
             wind_generation = self.timeseries.iloc[timestamp]
-        elif isinstance(timestamp, str):
-            wind_generation = self.timeseries.loc[pd.Timestamp(timestamp)]
-        elif isinstance(timestamp, (pd.Timestamp, datetime.datetime)):
-            wind_generation = self.timeseries.loc[timestamp]
         else:
-            raise ValueError(
-                "timestamp must be int, datetime.datetime, pd.Timestamp, or str."
-            )
+            wind_generation = self.timeseries.loc[self._normalize_timestamp(timestamp)]
         observations = {"wind_generation": wind_generation}
         return observations
