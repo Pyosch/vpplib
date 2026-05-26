@@ -46,7 +46,18 @@ pytest -m integration
 
 # Run tests with verbose output
 pytest -v
+
+# Run every example with matplotlib output suppressed and stop on first failure
+$env:MPLBACKEND = 'Agg'
+Get-ChildItem 'C:\Users\sbirk\Documents\Code\vpplib\examples\*.py' |
+	Sort-Object Name |
+	ForEach-Object {
+		Write-Host "Running $($_.Name)"
+		python $_.FullName
+		if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+	}
 ```
+
 ## Overview
 
 For the simulation of the virtual power plant a basic data structure is developed. It consists of multiple classes to design a virtual power plant, build models of the components and operate it in a distribution grid.
