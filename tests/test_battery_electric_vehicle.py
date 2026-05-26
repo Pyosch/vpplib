@@ -32,3 +32,9 @@ class TestBEV:
         ts = bev_obs.timeseries
         assert "car_charger" in ts.columns
         assert "at_home" in ts.columns
+
+    def test_observations_for_timestamp_str(self, bev_obs):
+        """String timestamp path — exercised by demo_battery_electric_vehicle.py but not tested."""
+        ts = str(bev_obs.timeseries.index[48])
+        obs = bev_obs.observations_for_timestamp(ts)
+        assert isinstance(obs, dict)
