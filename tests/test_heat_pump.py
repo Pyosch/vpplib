@@ -41,3 +41,22 @@ class TestHeatPumpObservation:
         ts = heat_pump_obs.timeseries
         if "el_demand" in ts.columns:
             assert (ts["el_demand"] >= 0).all()
+
+
+class TestHeatPumpMOSMIX:
+    """HeatPump with MOSMIX forecast data — mirrors the MOSMIX block in demo_heat_pump.py."""
+
+    def test_timeseries_not_empty(self, heat_pump_mosmix):
+        assert heat_pump_mosmix.timeseries is not None
+        assert not heat_pump_mosmix.timeseries.empty
+
+    def test_has_cop(self, heat_pump_mosmix):
+        assert heat_pump_mosmix.cop is not None
+
+    def test_value_for_timestamp_int(self, heat_pump_mosmix):
+        val = heat_pump_mosmix.value_for_timestamp(48)
+        assert isinstance(val, (int, float))
+
+    def test_observations_for_timestamp_int(self, heat_pump_mosmix):
+        obs = heat_pump_mosmix.observations_for_timestamp(48)
+        assert isinstance(obs, dict)

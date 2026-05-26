@@ -38,3 +38,25 @@ class TestHeatingRodObservation:
         ts = heating_rod_obs.timeseries
         if "el_demand" in ts.columns:
             assert (ts["el_demand"] >= 0).all()
+
+
+class TestHeatingRodMOSMIX:
+    """Heating rod with MOSMIX forecast data — mirrors the MOSMIX block in demo_heating_rod.py."""
+
+    def test_timeseries_not_empty(self, heating_rod_mosmix):
+        assert heating_rod_mosmix.timeseries is not None
+        assert not heating_rod_mosmix.timeseries.empty
+
+    def test_value_for_timestamp_int(self, heating_rod_mosmix):
+        val = heating_rod_mosmix.valueForTimestamp(48)
+        assert isinstance(val, (int, float))
+
+    def test_observations_for_timestamp_int(self, heating_rod_mosmix):
+        obs = heating_rod_mosmix.observationsForTimestamp(48)
+        assert isinstance(obs, dict)
+
+    def test_el_demand_non_negative(self, heating_rod_mosmix):
+        """Heating rod electrical demand should be >= 0 (consumption)."""
+        ts = heating_rod_mosmix.timeseries
+        if "el_demand" in ts.columns:
+            assert (ts["el_demand"] >= 0).all()

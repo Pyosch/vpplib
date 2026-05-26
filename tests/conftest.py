@@ -333,3 +333,42 @@ def tes_and_hp_obs(environment_obs, user_profile_obs):
         thermal_energy_loss_per_day=0.13,
     )
     return tes, hp
+
+
+@pytest.fixture(scope="session")
+def heating_rod_mosmix(environment_mosmix, user_profile_mosmix):
+    """HeatingRod using MOSMIX forecast data — mirrors demo_heating_rod.py MOSMIX block."""
+    hr = HeatingRod(
+        identifier="test_hr_mosmix",
+        unit="kW",
+        environment=environment_mosmix,
+        thermal_energy_demand=user_profile_mosmix.thermal_energy_demand,
+        el_power=3,
+        rampUpTime=1 / 15,
+        rampDownTime=1 / 15,
+        min_runtime=1,
+        min_stop_time=2,
+    )
+    hr.prepareTimeSeries()
+    return hr
+
+
+@pytest.fixture(scope="session")
+def heat_pump_mosmix(environment_mosmix, user_profile_mosmix):
+    """HeatPump using MOSMIX forecast data — mirrors demo_heat_pump.py MOSMIX block."""
+    hp = HeatPump(
+        identifier="test_hp_mosmix",
+        unit="kW",
+        environment=environment_mosmix,
+        thermal_energy_demand=user_profile_mosmix.thermal_energy_demand,
+        el_power=5,
+        th_power=8,
+        heat_pump_type="Air",
+        heat_sys_temp=60,
+        ramp_up_time=1 / 15,
+        ramp_down_time=1 / 15,
+        min_runtime=1,
+        min_stop_time=2,
+    )
+    hp.prepare_time_series()
+    return hp
