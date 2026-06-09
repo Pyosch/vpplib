@@ -12,6 +12,7 @@ import pandas as pd
 from vpplib.environment import Environment
 from vpplib.heat_pump import HeatPump
 from vpplib.heating_rod import HeatingRod
+from vpplib.combined_heat_and_power import CombinedHeatAndPower
 
 
 def _env_and_demand(hours=6):
@@ -91,3 +92,28 @@ def test_heating_rod_ramp_respects_min_stop_and_run_time():
     assert hr.rampDown(idx[7]) is True
     assert hr.isRunning is False
     assert hr.lastRampDown == idx[7]
+
+
+def test_chp_ramp_respects_min_stop_and_run_time():
+    env, idx, demand = _env_and_demand()
+    chp = CombinedHeatAndPower(
+        thermal_energy_demand=demand, el_power=5, th_power=8,
+        ramp_up_time=1, ramp_down_time=1, min_runtime=2, min_stop_time=3,
+        overall_efficiency=0.9, unit="kW", identifier="chp", environment=env,
+    )
+    assert chp.is_running is False
+    assert chp.last_ramp_up == idx[0] and chp.last_ramp_down == idx[0]
+
+    assert chp.ramp_up(idx[2]) is False
+    assert chp.is_running is False
+
+    assert chp.ramp_up(idx[4]) is True
+    assert chp.is_running is True
+    assert chp.last_ramp_up == idx[4]
+
+    assert chp.ramp_down(idx[5]) is False
+    assert chp.is_running is True
+
+    assert chp.ramp_down(idx[7]) is True
+    assert chp.is_running is False
+    assert chp.last_ramp_down == idx[7]
