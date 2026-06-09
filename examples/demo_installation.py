@@ -8,6 +8,13 @@ Test script to verify that vpplib can be installed and used with the minimal req
 import sys
 import importlib
 
+# Ensure the ✓/✗ status symbols below can be printed on consoles whose default
+# encoding is not UTF-8 (e.g. the Windows cp1252 console).
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except (AttributeError, ValueError):
+    pass
+
 def test_imports():
     """Test importing key modules from vpplib."""
     modules = [
