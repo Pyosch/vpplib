@@ -10,6 +10,30 @@ like photovoltaic systems, energy storage, heat pumps, etc.
 import pandas as pd
 
 
+def align_timestamp_tz(timestamp, index_tz):
+    """Return ``timestamp`` adjusted to match a target index timezone.
+
+    Handles every combination of tz-naive and tz-aware inputs so that ``.loc[]``
+    slicing and value lookups do not raise "Cannot compare tz-naive and tz-aware
+    datetime-like objects". Wall-clock time is preserved.
+
+    Parameters
+    ----------
+    timestamp : str or datetime-like
+        The timestamp (or slice bound) to align.
+    index_tz : tzinfo or None
+        The timezone of the target index (``index.tz``); ``None`` for tz-naive.
+
+    Returns
+    -------
+    pandas.Timestamp
+    """
+    ts = pd.Timestamp(timestamp)
+    if index_tz is not None:
+        return ts.tz_localize(index_tz) if ts.tzinfo is None else ts.tz_convert(index_tz)
+    return ts.tz_localize(None) if ts.tzinfo is not None else ts
+
+
 class Component(object):
     """Base class for all components in a virtual power plant.
     
