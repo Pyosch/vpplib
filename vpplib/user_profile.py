@@ -9,9 +9,12 @@ based on building characteristics, weather data, and user preferences. It can be
 simulate different usage patterns for various components in the virtual power plant.
 """
 
+import logging
 import traceback
 import pandas as pd
 import os
+
+logger = logging.getLogger(__name__)
 
 class UserProfile(object):
     """
@@ -449,6 +452,20 @@ class UserProfile(object):
             self.consumerfactor = self.thermal_energy_demand_yearly / (
                 sum(self.h_del["h_del"])
             )
+            # h_del is a daily series, so its length is the number of days the
+            # factor is calibrated on. Calibrating on much less than a year scales
+            # the demand so the short window carries the full yearly demand.
+            n_days = len(self.h_del)
+            if n_days < 360:
+                logger.warning(
+                    "consumerfactor was calibrated on only %d day(s): the thermal "
+                    "energy demand is scaled so this short period carries the full "
+                    "yearly demand (%.0f kWh). For a representative short-window "
+                    "simulation, calibrate over a full reference year and pass the "
+                    "resulting consumerfactor to UserProfile.",
+                    n_days,
+                    self.thermal_energy_demand_yearly,
+                )
         return self.consumerfactor
 
     # %%:
