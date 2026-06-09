@@ -378,31 +378,29 @@ class HeatPump(Component):
         all values are set to zero.
         """
 
+        # The observation reflects the *controlled* operation: when the heat pump
+        # is running it draws el_power and delivers el_power * COP, otherwise zero.
+        # It must NOT fall back to a pre-filled (uncontrolled) timeseries value,
+        # which would make operate_storage unable to charge the storage.
         if isinstance(timestamp, int):
-            if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
-                thermal_energy_output, cop, el_demand = self.timeseries.iloc[timestamp]
+            if self.is_running:
+                el_demand = self.el_power
+                temp = self.environment.mean_temp_quarter_hours.temperature.iloc[
+                    timestamp
+                ]["temperature"]
+                cop = self.get_current_cop(temp)
+                thermal_energy_output = el_demand * cop
             else:
-                if self.is_running:
-                    el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.iloc[
-                        timestamp
-                    ]["temperature"]
-                    cop = self.get_current_cop(temp)
-                    thermal_energy_output = el_demand * cop
-                else:
-                    el_demand, cop, thermal_energy_output = 0, 0, 0
+                el_demand, cop, thermal_energy_output = 0, 0, 0
         else:
             timestamp = self._normalize_timestamp(timestamp)
-            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-                thermal_energy_output, cop, el_demand = self.timeseries.loc[timestamp]
+            if self.is_running:
+                el_demand = self.el_power
+                temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
+                cop = self.get_current_cop(temp)
+                thermal_energy_output = el_demand * cop
             else:
-                if self.is_running:
-                    el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
-                    cop = self.get_current_cop(temp)
-                    thermal_energy_output = el_demand * cop
-                else:
-                    el_demand, cop, thermal_energy_output = 0, 0, 0
+                el_demand, cop, thermal_energy_output = 0, 0, 0
 
         observations = {
             "thermal_energy_output": thermal_energy_output,

@@ -352,36 +352,25 @@ class HeatingRod(Component):
         ValueError
             If the timestamp is not of a supported type.
         """
+        # The observation reflects the *controlled* operation: when running the
+        # heating rod draws el_power and delivers el_power * efficiency, otherwise
+        # zero. It must NOT fall back to a pre-filled (uncontrolled) timeseries
+        # value, which would make operate_storage unable to charge the storage.
         if isinstance(timestamp, int):
-
-            if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
-
-                heat_output, el_demand = self.timeseries.iloc[timestamp]
+            if self.isRunning:
+                el_demand = self.el_power
                 efficiency = self.efficiency
-
+                heat_output = el_demand * efficiency
             else:
-
-                if self.isRunning:
-                    el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.iloc[timestamp]
-                    efficiency = self.efficiency
-                    heat_output = el_demand * efficiency
-                else:
-                    el_demand, efficiency, heat_output = 0, 0, 0
-
+                el_demand, efficiency, heat_output = 0, 0, 0
         else:
             timestamp = self._normalize_timestamp(timestamp)
-            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-                heat_output, el_demand = self.timeseries.loc[timestamp]
+            if self.isRunning:
+                el_demand = self.el_power
                 efficiency = self.efficiency
+                heat_output = el_demand * efficiency
             else:
-                if self.isRunning:
-                    el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
-                    efficiency = self.efficiency
-                    heat_output = el_demand * efficiency
-                else:
-                    el_demand, efficiency, heat_output = 0, 0, 0
+                el_demand, efficiency, heat_output = 0, 0, 0
         
         observations = {'heat_output':heat_output, 
                         'efficiency':efficiency, 'el_demand':el_demand}
