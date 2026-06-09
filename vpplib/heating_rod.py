@@ -395,8 +395,42 @@ class HeatingRod(Component):
         """
         self.timeseries.loc[timestamp, "heat_output"] = observation["heat_output"]
         self.timeseries.loc[timestamp, "el_demand"] = observation["el_demand"]
-        
+
         return self.timeseries
+
+    # =========================================================================
+    # snake_case compatibility layer
+    # -------------------------------------------------------------------------
+    # HeatingRod historically uses camelCase (isRunning, rampUp, ...) and returns
+    # 'heat_output' from its observation, whereas ThermalEnergyStorage.operate_storage
+    # expects the same snake_case API as HeatPump / CombinedHeatAndPower
+    # (is_running, ramp_up/ramp_down, observations_for_timestamp -> thermal_energy_output).
+    # These thin wrappers let a HeatingRod charge a ThermalEnergyStorage directly.
+    # =========================================================================
+    @property
+    def is_running(self):
+        return self.isRunning
+
+    @is_running.setter
+    def is_running(self, value):
+        self.isRunning = value
+
+    def ramp_up(self, timestamp):
+        return self.rampUp(timestamp)
+
+    def ramp_down(self, timestamp):
+        return self.rampDown(timestamp)
+
+    def observations_for_timestamp(self, timestamp):
+        """snake_case wrapper around :meth:`observationsForTimestamp`.
+
+        Adds the ``thermal_energy_output`` key (equal to ``heat_output``) that
+        ``ThermalEnergyStorage.operate_storage`` expects.
+        """
+        observations = self.observationsForTimestamp(timestamp)
+        observations["thermal_energy_output"] = observations["heat_output"]
+        return observations
+
     #%% ramping functions
     
     
