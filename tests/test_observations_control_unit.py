@@ -52,6 +52,25 @@ def test_heat_pump_observation_uses_full_capacity_when_running():
     assert obs_off == {"thermal_energy_output": 0, "cop": 0, "el_demand": 0}
 
 
+def test_heat_pump_observation_int_timestamp_when_running():
+    """Point J: the integer-timestamp branch must not double-index temperature."""
+    env, idx = _env_idx()
+    demand = pd.DataFrame({"thermal_energy_demand": [0.5] * len(idx)}, index=idx)
+    hp = HeatPump(
+        identifier="hp", unit="kW", environment=env, thermal_energy_demand=demand,
+        heat_pump_type="Air", heat_sys_temp=60, el_power=5, th_power=8,
+        ramp_up_time=1, ramp_down_time=1, min_runtime=1, min_stop_time=2,
+    )
+    hp.environment.mean_temp_quarter_hours = pd.DataFrame(
+        {"temperature": [5.0] * len(idx)}, index=idx
+    )
+    hp.is_running = True
+    obs = hp.observations_for_timestamp(0)  # integer position -> .iloc[0]
+    assert obs["el_demand"] == 5
+    assert obs["cop"] > 0
+    assert obs["thermal_energy_output"] == 5 * obs["cop"]
+
+
 def test_heating_rod_observation_uses_full_capacity_when_running():
     env, idx = _env_idx()
     demand = pd.DataFrame({"thermal_energy_demand": [0.5] * len(idx)}, index=idx)

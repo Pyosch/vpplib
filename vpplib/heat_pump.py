@@ -387,7 +387,7 @@ class HeatPump(Component):
                 el_demand = self.el_power
                 temp = self.environment.mean_temp_quarter_hours.temperature.iloc[
                     timestamp
-                ]["temperature"]
+                ]
                 cop = self.get_current_cop(temp)
                 thermal_energy_output = el_demand * cop
             else:
