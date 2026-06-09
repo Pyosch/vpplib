@@ -234,9 +234,17 @@ class HeatingRod(Component):
             self.get_timeseries_year()
         
         self.timeseries = self.timeseries_year.loc[self.environment.start:self.environment.end]
-        
+
         return self.timeseries
-    
+
+    def prepare_time_series(self):
+        """snake_case alias for :meth:`prepareTimeSeries`.
+
+        Without this, a snake_case call would hit the base-class stub in
+        ``component.py`` and set ``self.timeseries`` to an empty list.
+        """
+        return self.prepareTimeSeries()
+
     def get_timeseries_year(self):
         """
         Generate the annual time series for heat output and electrical demand.
