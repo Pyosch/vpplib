@@ -207,9 +207,7 @@ class CombinedHeatAndPower(Component):
 
         """
 
-        if isinstance(timestamp, int):
-            return timestamp - self.last_ramp_down > self.min_stop_time
-        timestamp = self._normalize_timestamp(timestamp)
+        timestamp = self._require_timestamp(timestamp)
         return (
             self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
             < timestamp
@@ -235,9 +233,7 @@ class CombinedHeatAndPower(Component):
 
         """
 
-        if isinstance(timestamp, int):
-            return timestamp - self.last_ramp_up > self.min_runtime
-        timestamp = self._normalize_timestamp(timestamp)
+        timestamp = self._require_timestamp(timestamp)
         return (
             self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
             < timestamp

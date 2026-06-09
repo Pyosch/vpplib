@@ -430,10 +430,10 @@ class HeatPump(Component):
         
         Parameters
         ----------
-        timestamp : int or pandas._libs.tslibs.timestamps.Timestamp
-            The current time at which to check if ramp up is allowed. Can be an integer (e.g., seconds since epoch)
-            or a pandas Timestamp.
-            
+        timestamp : pandas.Timestamp
+            The current time. Integer (positional) timestamps are not supported,
+            because ``last_ramp_*`` are stored as timestamps.
+
         Returns
         -------
         bool
@@ -442,20 +442,16 @@ class HeatPump(Component):
 
         Raises
         ------
-        ValueError
-            If `timestamp` is not of type int or pandas._libs.tslibs.timestamps.Timestamp.
-            
+        TypeError
+            If `timestamp` is an int instead of a pandas.Timestamp.
+
         Notes
         -----
-        - For integer timestamps, checks if the difference between the current timestamp and `last_ramp_down` 
-          exceeds `min_stop_time`.
-        - For pandas Timestamps, checks if the sum of `last_ramp_down` and the minimum stop time (scaled by the 
-          timeseries frequency) is less than the current timestamp.
+        Checks whether ``last_ramp_down`` plus the minimum stop time (scaled by the
+        timeseries frequency) is earlier than the current timestamp.
         """
 
-        if isinstance(timestamp, int):
-            return timestamp - self.last_ramp_down > self.min_stop_time
-        timestamp = self._normalize_timestamp(timestamp)
+        timestamp = self._require_timestamp(timestamp)
         return (
             self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
             < timestamp
@@ -467,9 +463,10 @@ class HeatPump(Component):
         
         Parameters
         ----------
-        timestamp : int or pandas._libs.tslibs.timestamps.Timestamp
-            The current time, either as an integer (e.g., seconds since epoch) or as a pandas Timestamp.
-            
+        timestamp : pandas.Timestamp
+            The current time. Integer (positional) timestamps are not supported,
+            because ``last_ramp_*`` are stored as timestamps.
+
         Returns
         -------
         bool
@@ -478,17 +475,15 @@ class HeatPump(Component):
 
         Raises
         ------
-        ValueError
-            If `timestamp` is not of type int or pandas._libs.tslibs.timestamps.Timestamp.
+        TypeError
+            If `timestamp` is an int instead of a pandas.Timestamp.
 
         Notes
         -----
         This predicate has no side effects; ``ramp_down`` updates the state.
         """
 
-        if isinstance(timestamp, int):
-            return timestamp - self.last_ramp_up > self.min_runtime
-        timestamp = self._normalize_timestamp(timestamp)
+        timestamp = self._require_timestamp(timestamp)
         return (
             self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
             < timestamp

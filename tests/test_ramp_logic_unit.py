@@ -8,6 +8,7 @@ Run with ``pytest -m "not integration"`` (no DWD/network needed).
 """
 
 import pandas as pd
+import pytest
 
 from vpplib.environment import Environment
 from vpplib.heat_pump import HeatPump
@@ -117,3 +118,36 @@ def test_chp_ramp_respects_min_stop_and_run_time():
     assert chp.ramp_down(idx[7]) is True
     assert chp.is_running is False
     assert chp.last_ramp_down == idx[7]
+
+
+def test_ramp_predicates_reject_integer_timestamps():
+    """last_ramp_* are timestamps, so the ramp predicates require a Timestamp."""
+    env, idx, demand = _env_and_demand()
+    hp = HeatPump(
+        identifier="hp", unit="kW", environment=env, thermal_energy_demand=demand,
+        heat_pump_type="Air", heat_sys_temp=60, el_power=5, th_power=8,
+        ramp_up_time=1, ramp_down_time=1, min_runtime=2, min_stop_time=3,
+    )
+    with pytest.raises(TypeError):
+        hp.is_valid_ramp_up(0)
+    with pytest.raises(TypeError):
+        hp.is_valid_ramp_down(0)
+
+    hr = HeatingRod(
+        identifier="hr", unit="kW", environment=env, thermal_energy_demand=demand,
+        el_power=3, rampUpTime=1, rampDownTime=1, min_runtime=2, min_stop_time=3,
+    )
+    with pytest.raises(TypeError):
+        hr.isLegitRampUp(0)
+    with pytest.raises(TypeError):
+        hr.isLegitRampDown(0)
+
+    chp = CombinedHeatAndPower(
+        thermal_energy_demand=demand, el_power=5, th_power=8,
+        ramp_up_time=1, ramp_down_time=1, min_runtime=2, min_stop_time=3,
+        overall_efficiency=0.9, unit="kW", identifier="chp", environment=env,
+    )
+    with pytest.raises(TypeError):
+        chp.is_valid_ramp_up(0)
+    with pytest.raises(TypeError):
+        chp.is_valid_ramp_down(0)

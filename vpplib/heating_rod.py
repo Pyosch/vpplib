@@ -446,22 +446,21 @@ class HeatingRod(Component):
         
         Parameters
         ----------
-        timestamp : int or pandas.Timestamp
-            The timestamp at which to check if ramping up is legitimate.
-            
+        timestamp : pandas.Timestamp
+            The timestamp at which to check. Integer (positional) timestamps are
+            not supported, because ``lastRampDown`` is stored as a timestamp.
+
         Raises
         ------
-        ValueError
-            If the timestamp is not of a supported type.
-            
+        TypeError
+            If `timestamp` is an int instead of a pandas.Timestamp.
+
         Returns
         -------
         bool
             True if the minimum stop time has elapsed since the last ramp down.
         """
-        if isinstance(timestamp, int):
-            return timestamp - self.lastRampDown > self.min_stop_time
-        timestamp = self._normalize_timestamp(timestamp)
+        timestamp = self._require_timestamp(timestamp)
         return (
             self.lastRampDown + self.min_stop_time * self.timeseries.index.freq
             < timestamp
@@ -475,22 +474,21 @@ class HeatingRod(Component):
         
         Parameters
         ----------
-        timestamp : int or pandas.Timestamp
-            The timestamp at which to check if ramping down is legitimate.
-            
+        timestamp : pandas.Timestamp
+            The timestamp at which to check. Integer (positional) timestamps are
+            not supported, because ``lastRampUp`` is stored as a timestamp.
+
         Raises
         ------
-        ValueError
-            If the timestamp is not of a supported type.
-            
+        TypeError
+            If `timestamp` is an int instead of a pandas.Timestamp.
+
         Returns
         -------
         bool
             True if the minimum runtime has elapsed since the last ramp up.
         """
-        if isinstance(timestamp, int):
-            return timestamp - self.lastRampUp > self.min_runtime
-        timestamp = self._normalize_timestamp(timestamp)
+        timestamp = self._require_timestamp(timestamp)
         return (
             self.lastRampUp + self.min_runtime * self.timeseries.index.freq
             < timestamp

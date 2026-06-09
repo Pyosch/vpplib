@@ -40,7 +40,7 @@ class ThermalEnergyStorage(Component):
     mass : float
         Mass of the storage medium in kg
     cp : float
-        Specific heat capacity of the storage medium in J/(kg·K)
+        Specific heat capacity of the storage medium in kJ/(kg·K)
     state_of_charge : float
         Usable thermal energy stored above ``ambient_temperature``, in kWh
     thermal_energy_loss_per_day : float
@@ -82,7 +82,7 @@ class ThermalEnergyStorage(Component):
         mass : float
             Mass of the storage medium in kg
         cp : float
-            Specific heat capacity of the storage medium in J/(kg·K)
+            Specific heat capacity of the storage medium in kJ/(kg·K)
         thermal_energy_loss_per_day : float
             Fraction of thermal energy lost per day (e.g., 0.1 for 10% loss)
         unit : str
