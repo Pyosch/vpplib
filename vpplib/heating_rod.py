@@ -514,9 +514,8 @@ class HeatingRod(Component):
             return None
         if self.isLegitRampUp(timestamp):
             self.isRunning = True
-            if not isinstance(timestamp, int):
-                timestamp = self._normalize_timestamp(timestamp)
-            self.lastRampUp = timestamp
+            # isLegitRampUp already rejected ints, so timestamp is a Timestamp.
+            self.lastRampUp = self._normalize_timestamp(timestamp)
             return True
         return False
 
@@ -541,8 +540,7 @@ class HeatingRod(Component):
             return None
         if self.isLegitRampDown(timestamp):
             self.isRunning = False
-            if not isinstance(timestamp, int):
-                timestamp = self._normalize_timestamp(timestamp)
-            self.lastRampDown = timestamp
+            # isLegitRampDown already rejected ints, so timestamp is a Timestamp.
+            self.lastRampDown = self._normalize_timestamp(timestamp)
             return True
         return False

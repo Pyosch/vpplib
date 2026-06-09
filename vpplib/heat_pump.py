@@ -516,9 +516,8 @@ class HeatPump(Component):
             return None
         if self.is_valid_ramp_up(timestamp):
             self.is_running = True
-            if not isinstance(timestamp, int):
-                timestamp = self._normalize_timestamp(timestamp)
-            self.last_ramp_up = timestamp
+            # is_valid_ramp_up already rejected ints, so timestamp is a Timestamp.
+            self.last_ramp_up = self._normalize_timestamp(timestamp)
             return True
         return False
 
@@ -544,8 +543,7 @@ class HeatPump(Component):
             return None
         if self.is_valid_ramp_down(timestamp):
             self.is_running = False
-            if not isinstance(timestamp, int):
-                timestamp = self._normalize_timestamp(timestamp)
-            self.last_ramp_down = timestamp
+            # is_valid_ramp_down already rejected ints, so timestamp is a Timestamp.
+            self.last_ramp_down = self._normalize_timestamp(timestamp)
             return True
         return False
