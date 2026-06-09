@@ -10,6 +10,35 @@ like photovoltaic systems, energy storage, heat pumps, etc.
 import pandas as pd
 
 
+def align_timestamp_tz(timestamp, index_tz):
+    """Return ``timestamp`` adjusted to match a target index timezone.
+
+    Handles every combination of tz-naive and tz-aware inputs so that ``.loc[]``
+    slicing and value lookups do not raise "Cannot compare tz-naive and tz-aware
+    datetime-like objects".
+
+    A tz-naive input is interpreted as wall-clock time in ``index_tz`` (its
+    wall-clock value is kept). A tz-aware input that is converted to a different
+    timezone keeps the same instant, so its wall-clock representation changes
+    accordingly.
+
+    Parameters
+    ----------
+    timestamp : str or datetime-like
+        The timestamp (or slice bound) to align.
+    index_tz : tzinfo or None
+        The timezone of the target index (``index.tz``); ``None`` for tz-naive.
+
+    Returns
+    -------
+    pandas.Timestamp
+    """
+    ts = pd.Timestamp(timestamp)
+    if index_tz is not None:
+        return ts.tz_localize(index_tz) if ts.tzinfo is None else ts.tz_convert(index_tz)
+    return ts.tz_localize(None) if ts.tzinfo is not None else ts
+
+
 class Component(object):
     """Base class for all components in a virtual power plant.
     
@@ -67,6 +96,19 @@ class Component(object):
         if idx_tz is not None and ts.tzinfo is None:
             ts = ts.tz_localize(idx_tz)
         return ts
+
+    def _require_timestamp(self, timestamp):
+        """Normalize a timestamp for ramp predicates, rejecting integers.
+
+        The ramp predicates compare against ``last_ramp_*``, which are stored as
+        pandas Timestamps, so positional integer timestamps cannot be used here.
+        """
+        if isinstance(timestamp, int):
+            raise TypeError(
+                "ramp predicates require a pandas.Timestamp; integer (positional) "
+                "timestamps are not supported because last_ramp_* are timestamps."
+            )
+        return self._normalize_timestamp(timestamp)
 
     def value_for_timestamp(self, timestamp):
         """Get the component's value for a specific timestamp.

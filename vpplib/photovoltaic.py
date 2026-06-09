@@ -8,7 +8,7 @@ The Photovoltaic class inherits from the Component class and implements methods
 for preparing time series data, limiting power output, and retrieving observations.
 """
 
-from vpplib.component import Component
+from vpplib.component import Component, align_timestamp_tz
 
 import datetime
 import pandas as pd
@@ -205,19 +205,19 @@ class Photovoltaic(Component):
         if len(self.environment.pv_data) == 0:
             raise ValueError("self.environment.pv_data is empty.")
 
-        if 'poa_global' in self.environment.pv_data.columns:
-            
-            self.modelchain.run_model_from_poa(
-                data=self.environment.pv_data.loc[
-                    self.environment.start: self.environment.end
-                ],
-            )
+        # Align the slice bounds with the weather-data index timezone. Depending
+        # on the Environment configuration ``start``/``end`` may be tz-naive while
+        # the DWD weather data is tz-aware (or vice versa), which would otherwise
+        # raise "Cannot compare tz-naive and tz-aware datetime-like objects".
+        pv_data = self.environment.pv_data
+        start = align_timestamp_tz(self.environment.start, pv_data.index.tz)
+        end = align_timestamp_tz(self.environment.end, pv_data.index.tz)
+        weather = pv_data.loc[start:end]
+
+        if 'poa_global' in pv_data.columns:
+            self.modelchain.run_model_from_poa(data=weather)
         else:
-            self.modelchain.run_model(
-                weather=self.environment.pv_data.loc[
-                    self.environment.start: self.environment.end
-                ],
-            )
+            self.modelchain.run_model(weather=weather)
 
         timeseries = pd.DataFrame(
             self.modelchain.results.ac / 1000)  # convert to kW

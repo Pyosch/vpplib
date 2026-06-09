@@ -17,7 +17,7 @@ Key features:
 import datetime
 
 import pandas as pd
-from .component import Component
+from .component import Component, align_timestamp_tz
 
 class HeatingRod(Component):
     """
@@ -233,10 +233,22 @@ class HeatingRod(Component):
         if pd.isna(next(iter(self.timeseries_year.heat_output))) == True:
             self.get_timeseries_year()
         
-        self.timeseries = self.timeseries_year.loc[self.environment.start:self.environment.end]
-        
+        index_tz = self.timeseries_year.index.tz
+        self.timeseries = self.timeseries_year.loc[
+            align_timestamp_tz(self.environment.start, index_tz):
+            align_timestamp_tz(self.environment.end, index_tz)
+        ]
+
         return self.timeseries
-    
+
+    def prepare_time_series(self):
+        """snake_case alias for :meth:`prepareTimeSeries`.
+
+        Without this, a snake_case call would hit the base-class stub in
+        ``component.py`` and set ``self.timeseries`` to an empty list.
+        """
+        return self.prepareTimeSeries()
+
     def get_timeseries_year(self):
         """
         Generate the annual time series for heat output and electrical demand.
@@ -344,36 +356,25 @@ class HeatingRod(Component):
         ValueError
             If the timestamp is not of a supported type.
         """
+        # The observation reflects the *controlled* operation: when running the
+        # heating rod draws el_power and delivers el_power * efficiency, otherwise
+        # zero. It must NOT fall back to a pre-filled (uncontrolled) timeseries
+        # value, which would make operate_storage unable to charge the storage.
         if isinstance(timestamp, int):
-
-            if pd.isna(next(iter(self.timeseries.iloc[timestamp]))) == False:
-
-                heat_output, el_demand = self.timeseries.iloc[timestamp]
+            if self.isRunning:
+                el_demand = self.el_power
                 efficiency = self.efficiency
-
+                heat_output = el_demand * efficiency
             else:
-
-                if self.isRunning:
-                    el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.iloc[timestamp]
-                    efficiency = self.efficiency
-                    heat_output = el_demand * efficiency
-                else:
-                    el_demand, efficiency, heat_output = 0, 0, 0
-
+                el_demand, efficiency, heat_output = 0, 0, 0
         else:
             timestamp = self._normalize_timestamp(timestamp)
-            if pd.isna(next(iter(self.timeseries.loc[timestamp]))) == False:
-                heat_output, el_demand = self.timeseries.loc[timestamp]
+            if self.isRunning:
+                el_demand = self.el_power
                 efficiency = self.efficiency
+                heat_output = el_demand * efficiency
             else:
-                if self.isRunning:
-                    el_demand = self.el_power
-                    temp = self.environment.mean_temp_quarter_hours.temperature.loc[timestamp]
-                    efficiency = self.efficiency
-                    heat_output = el_demand * efficiency
-                else:
-                    el_demand, efficiency, heat_output = 0, 0, 0
+                el_demand, efficiency, heat_output = 0, 0, 0
         
         observations = {'heat_output':heat_output, 
                         'efficiency':efficiency, 'el_demand':el_demand}
@@ -398,8 +399,42 @@ class HeatingRod(Component):
         """
         self.timeseries.loc[timestamp, "heat_output"] = observation["heat_output"]
         self.timeseries.loc[timestamp, "el_demand"] = observation["el_demand"]
-        
+
         return self.timeseries
+
+    # =========================================================================
+    # snake_case compatibility layer
+    # -------------------------------------------------------------------------
+    # HeatingRod historically uses camelCase (isRunning, rampUp, ...) and returns
+    # 'heat_output' from its observation, whereas ThermalEnergyStorage.operate_storage
+    # expects the same snake_case API as HeatPump / CombinedHeatAndPower
+    # (is_running, ramp_up/ramp_down, observations_for_timestamp -> thermal_energy_output).
+    # These thin wrappers let a HeatingRod charge a ThermalEnergyStorage directly.
+    # =========================================================================
+    @property
+    def is_running(self):
+        return self.isRunning
+
+    @is_running.setter
+    def is_running(self, value):
+        self.isRunning = value
+
+    def ramp_up(self, timestamp):
+        return self.rampUp(timestamp)
+
+    def ramp_down(self, timestamp):
+        return self.rampDown(timestamp)
+
+    def observations_for_timestamp(self, timestamp):
+        """snake_case wrapper around :meth:`observationsForTimestamp`.
+
+        Adds the ``thermal_energy_output`` key (equal to ``heat_output``) that
+        ``ThermalEnergyStorage.operate_storage`` expects.
+        """
+        observations = self.observationsForTimestamp(timestamp)
+        observations["thermal_energy_output"] = observations["heat_output"]
+        return observations
+
     #%% ramping functions
     
     
@@ -411,26 +446,25 @@ class HeatingRod(Component):
         
         Parameters
         ----------
-        timestamp : int or pandas.Timestamp
-            The timestamp at which to check if ramping up is legitimate.
-            
+        timestamp : pandas.Timestamp
+            The timestamp at which to check. Integer (positional) timestamps are
+            not supported, because ``lastRampDown`` is stored as a timestamp.
+
         Raises
         ------
-        ValueError
-            If the timestamp is not of a supported type.
-            
-        Notes
-        -----
-        This method updates the isRunning attribute based on the check result.
+        TypeError
+            If `timestamp` is an int instead of a pandas.Timestamp.
+
+        Returns
+        -------
+        bool
+            True if the minimum stop time has elapsed since the last ramp down.
         """
-        if isinstance(timestamp, int):
-            self.isRunning = timestamp - self.lastRampDown > self.min_stop_time
-        else:
-            timestamp = self._normalize_timestamp(timestamp)
-            self.isRunning = (
-                self.lastRampDown + self.min_stop_time * self.timeseries.index.freq
-                < timestamp
-            )
+        timestamp = self._require_timestamp(timestamp)
+        return (
+            self.lastRampDown + self.min_stop_time * self.timeseries.index.freq
+            < timestamp
+        )
 
     def isLegitRampDown(self, timestamp):
         """
@@ -440,27 +474,26 @@ class HeatingRod(Component):
         
         Parameters
         ----------
-        timestamp : int or pandas.Timestamp
-            The timestamp at which to check if ramping down is legitimate.
-            
+        timestamp : pandas.Timestamp
+            The timestamp at which to check. Integer (positional) timestamps are
+            not supported, because ``lastRampUp`` is stored as a timestamp.
+
         Raises
         ------
-        ValueError
-            If the timestamp is not of a supported type.
-            
-        Notes
-        -----
-        This method updates the isRunning attribute based on the check result.
+        TypeError
+            If `timestamp` is an int instead of a pandas.Timestamp.
+
+        Returns
+        -------
+        bool
+            True if the minimum runtime has elapsed since the last ramp up.
         """
-        if isinstance(timestamp, int):
-            self.isRunning = not (timestamp - self.lastRampUp > self.min_runtime)
-        else:
-            timestamp = self._normalize_timestamp(timestamp)
-            self.isRunning = not (
-                self.lastRampUp + self.min_runtime * self.timeseries.index.freq
-                < timestamp
-            )
-        
+        timestamp = self._require_timestamp(timestamp)
+        return (
+            self.lastRampUp + self.min_runtime * self.timeseries.index.freq
+            < timestamp
+        )
+
     def rampUp(self, timestamp):
         """
         Attempt to ramp up the heating rod at the given timestamp.
@@ -479,12 +512,12 @@ class HeatingRod(Component):
         """
         if self.isRunning:
             return None
-        else:
-            if self.isLegitRampUp(timestamp):
-                self.isRunning = True
-                return True
-            else: 
-                return False
+        if self.isLegitRampUp(timestamp):
+            self.isRunning = True
+            # isLegitRampUp already rejected ints, so timestamp is a Timestamp.
+            self.lastRampUp = self._normalize_timestamp(timestamp)
+            return True
+        return False
 
 
     def rampDown(self, timestamp):
@@ -505,9 +538,9 @@ class HeatingRod(Component):
         """
         if not self.isRunning:
             return None
-        else:
-            if self.isLegitRampDown(timestamp):
-                self.isRunning = False
-                return True
-            else: 
-                return False
+        if self.isLegitRampDown(timestamp):
+            self.isRunning = False
+            # isLegitRampDown already rejected ints, so timestamp is a Timestamp.
+            self.lastRampDown = self._normalize_timestamp(timestamp)
+            return True
+        return False

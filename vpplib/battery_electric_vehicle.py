@@ -363,28 +363,20 @@ class BatteryElectricVehicle(Component):
         for hour, weekday in zip(self.hour, self.weekday):
             if (hour == "00:00:00") & (weekday < 5):
                 departure = self.week_trip_start[
-                    random.randrange(
-                        0, (len(self.week_trip_start) - 1), 1
-                    )
+                    random.randrange(len(self.week_trip_start))
                 ]
 
                 arrival = self.week_trip_end[
-                    random.randrange(
-                        0, (len(self.week_trip_end) - 1), 1
-                    )
+                    random.randrange(len(self.week_trip_end))
                 ]
 
             elif (hour == "00:00:00") & (weekday >= 5):
                 departure = self.weekend_trip_start[
-                    random.randrange(
-                        0, (len(self.weekend_trip_start) - 1), 1
-                    )
+                    random.randrange(len(self.weekend_trip_start))
                 ]
 
                 arrival = self.weekend_trip_end[
-                    random.randrange(
-                        0, (len(self.weekend_trip_end) - 1), 1
-                    )
+                    random.randrange(len(self.weekend_trip_end))
                 ]
 
             if (hour > arrival) | (hour < departure):
