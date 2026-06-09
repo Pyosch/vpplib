@@ -9,8 +9,12 @@ and accounts for thermal energy losses over time. It can be used in conjunction 
 energy generators like heat pumps, heating rods, or combined heat and power units.
 """
 
+import logging
+
 import pandas as pd
 from vpplib.component import Component
+
+logger = logging.getLogger(__name__)
 
 
 class ThermalEnergyStorage(Component):
@@ -61,6 +65,7 @@ class ThermalEnergyStorage(Component):
         identifier=None,
         environment=None,
         initial_temperature=None,
+        raise_on_undersupply=True,
     ):
         """
         Initialize a ThermalEnergyStorage object.
@@ -89,6 +94,11 @@ class ThermalEnergyStorage(Component):
             Start temperature in °C. If None (default), the storage starts at
             ``target_temperature - hysteresis``. The state of charge is derived
             from the resulting current temperature, so both stay consistent.
+        raise_on_undersupply : bool, optional
+            If True (default), ``get_needs_loading`` raises ``ValueError`` when the
+            temperature drops below ``min_temperature`` (backwards compatible). If
+            False, it instead sets ``self.undersupplied = True``, logs a warning
+            and lets the simulation continue.
 
         Notes
         -----
@@ -135,6 +145,8 @@ class ThermalEnergyStorage(Component):
             / (24 * (60 / self.environment.timebase))
         )
         self.needs_loading = None
+        self.raise_on_undersupply = raise_on_undersupply
+        self.undersupplied = False
 
     def operate_storage(self, timestamp, thermal_energy_generator):
         """
@@ -223,15 +235,19 @@ class ThermalEnergyStorage(Component):
         Raises
         ------
         ValueError
-            If the current temperature falls below the minimum allowable temperature,
-            indicating insufficient thermal energy production
-            
+            If the current temperature falls below the minimum allowable
+            temperature and ``raise_on_undersupply`` is True (the default).
+
         Notes
         -----
         The method implements hysteresis control:
         - If temperature <= (target - hysteresis), set needs_loading to True
         - If temperature >= (target + hysteresis), set needs_loading to False
         - Otherwise, maintain the previous state
+
+        If the temperature drops below ``min_temperature`` and
+        ``raise_on_undersupply`` is False, ``self.undersupplied`` is set to True
+        and a warning is logged instead of raising.
         """
         if self.current_temperature <= (
             self.target_temperature - self.hysteresis
@@ -244,9 +260,18 @@ class ThermalEnergyStorage(Component):
             self.needs_loading = False
 
         if self.current_temperature < self.min_temperature:
-            raise ValueError(
-                "Thermal energy production to low to maintain "
-                + "heat storage temperature!"
+            self.undersupplied = True
+            if self.raise_on_undersupply:
+                raise ValueError(
+                    "Thermal energy production to low to maintain "
+                    + "heat storage temperature!"
+                )
+            logger.warning(
+                "%s: thermal energy production too low to maintain the minimum "
+                "temperature (%.2f < %.2f °C).",
+                self.identifier,
+                self.current_temperature,
+                self.min_temperature,
             )
 
         return self.needs_loading
