@@ -60,6 +60,7 @@ class ThermalEnergyStorage(Component):
         unit,
         identifier=None,
         environment=None,
+        initial_temperature=None,
     ):
         """
         Initialize a ThermalEnergyStorage object.
@@ -84,7 +85,11 @@ class ThermalEnergyStorage(Component):
             Unique identifier for the thermal energy storage
         environment : Environment, optional
             Environment object containing simulation parameters and weather data
-            
+        initial_temperature : float, optional
+            Start temperature in °C. If None (default), the storage starts at
+            ``target_temperature - hysteresis``. The state of charge is derived
+            from the resulting current temperature, so both stay consistent.
+
         Notes
         -----
         The storage is initialized at (target_temperature - hysteresis), which is the
@@ -100,7 +105,14 @@ class ThermalEnergyStorage(Component):
         # Configure attributes
         self.identifier = identifier
         self.target_temperature = target_temperature
-        self.current_temperature = target_temperature - hysteresis
+        # Default start temperature is the lower hysteresis threshold; callers may
+        # override it via ``initial_temperature`` (state_of_charge is derived from
+        # current_temperature below, so it stays consistent).
+        self.current_temperature = (
+            target_temperature - hysteresis
+            if initial_temperature is None
+            else initial_temperature
+        )
         self.min_temperature = min_temperature
         self.timeseries = pd.DataFrame(
             columns=["temperature"],
