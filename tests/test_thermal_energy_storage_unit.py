@@ -37,16 +37,26 @@ def _tes(initial_temperature=None, raise_on_undersupply=True):
     )
 
 
+def _usable_kwh(temp, mass=300, cp=4.18, ambient=20.0):
+    """Usable energy above ambient in kWh (matches the model in point C)."""
+    return mass * cp * (temp - ambient) / 3600.0
+
+
 def test_default_start_temperature_unchanged():
     tes = _tes()
     assert tes.current_temperature == 60 - 5  # target - hysteresis
-    assert tes.state_of_charge == 300 * 4.18 * ((60 - 5) + 273.15)
+    assert tes.state_of_charge == _usable_kwh(60 - 5)
 
 
 def test_initial_temperature_sets_consistent_soc():
     tes = _tes(initial_temperature=50)
     assert tes.current_temperature == 50
-    assert tes.state_of_charge == 300 * 4.18 * (50 + 273.15)
+    assert tes.state_of_charge == _usable_kwh(50)
+
+
+def test_state_of_charge_round_trips_to_temperature():
+    tes = _tes(initial_temperature=52)
+    assert tes._temperature_from_energy(tes.state_of_charge) == 52
 
 
 def test_undersupply_raises_by_default():

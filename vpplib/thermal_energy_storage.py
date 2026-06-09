@@ -42,7 +42,7 @@ class ThermalEnergyStorage(Component):
     cp : float
         Specific heat capacity of the storage medium in J/(kg·K)
     state_of_charge : float
-        Current thermal energy content of the storage in Joules
+        Usable thermal energy stored above ``ambient_temperature``, in kWh
     thermal_energy_loss_per_day : float
         Fraction of thermal energy lost per day (e.g., 0.1 for 10% loss)
     efficiency_per_timestep : float
@@ -65,6 +65,7 @@ class ThermalEnergyStorage(Component):
         identifier=None,
         environment=None,
         initial_temperature=None,
+        ambient_temperature=20.0,
         raise_on_undersupply=True,
     ):
         """
@@ -94,6 +95,10 @@ class ThermalEnergyStorage(Component):
             Start temperature in °C. If None (default), the storage starts at
             ``target_temperature - hysteresis``. The state of charge is derived
             from the resulting current temperature, so both stay consistent.
+        ambient_temperature : float, optional
+            Reference temperature in °C for the *usable* stored energy
+            (default 20). ``state_of_charge`` is the energy stored above this
+            temperature and the standby loss acts on it.
         raise_on_undersupply : bool, optional
             If True (default), ``get_needs_loading`` raises ``ValueError`` when the
             temperature drops below ``min_temperature`` (backwards compatible). If
@@ -136,7 +141,9 @@ class ThermalEnergyStorage(Component):
         self.hysteresis = hysteresis
         self.mass = mass
         self.cp = cp
-        self.state_of_charge = mass * cp * (self.current_temperature + 273.15)
+        self.ambient_temperature = ambient_temperature
+        # state_of_charge is the usable thermal energy above ambient, in kWh.
+        self.state_of_charge = self._energy_from_temperature(self.current_temperature)
         # Data sheets indicate that a thermal storage loses about 10% of its
         # standby energy per day (excluding pipe losses).
         self.thermal_energy_loss_per_day = thermal_energy_loss_per_day
@@ -147,6 +154,17 @@ class ThermalEnergyStorage(Component):
         self.needs_loading = None
         self.raise_on_undersupply = raise_on_undersupply
         self.undersupplied = False
+
+    def _energy_from_temperature(self, temperature):
+        """Usable thermal energy above ``ambient_temperature`` in kWh.
+
+        ``cp`` is given in kJ/(kg·K); the factor 1/3600 converts kJ to kWh.
+        """
+        return self.mass * self.cp * (temperature - self.ambient_temperature) / 3600.0
+
+    def _temperature_from_energy(self, energy_kwh):
+        """Inverse of :meth:`_energy_from_temperature` (kWh -> °C)."""
+        return self.ambient_temperature + energy_kwh * 3600.0 / (self.mass * self.cp)
 
     def operate_storage(self, timestamp, thermal_energy_generator):
         """
@@ -193,19 +211,17 @@ class ThermalEnergyStorage(Component):
         )
         thermal_production = observation["thermal_energy_output"]
 
-        # Formula: E = m * cp * T
-        #     <=> T = E / (m * cp)
-        self.state_of_charge -= (
-            (thermal_energy_demand - thermal_production)
-            * 1000  # kWh to Wh ?? Why?
-            / (60 / self.environment.timebase)
-        )
+        # Energy balance for this timestep, in kWh of usable energy above ambient.
+        # Both the generator output and the demand are power rates [kW] (the
+        # demand profile holds hourly rates sampled at the timestep resolution),
+        # so multiply by the timestep length in hours.
+        timestep_hours = self.environment.timebase / 60.0
+        self.state_of_charge += (
+            thermal_production - thermal_energy_demand
+        ) * timestep_hours
+        # Standby loss acts on the usable energy above ambient.
         self.state_of_charge *= self.efficiency_per_timestep
-        self.current_temperature = (
-            self.state_of_charge
-#            * 3600  # kWh to KJ
-            / (self.mass * self.cp)
-        ) - 273.15
+        self.current_temperature = self._temperature_from_energy(self.state_of_charge)
 
         if thermal_energy_generator.is_running:
             el_load = observation["el_demand"]
