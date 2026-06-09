@@ -22,6 +22,8 @@ import pandapower as pp
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 
+from vpplib.component import align_timestamp_tz
+
 
 class Operator(object):
     """
@@ -281,14 +283,17 @@ class Operator(object):
                     == "baseload"
                 ):
 
+                    bus_series = baseload[
+                        str(
+                            self.net.load.loc[
+                                self.net.load.name == name, 'bus'
+                            ].item()
+                        )
+                    ]
+                    # The baseload index may be tz-naive while idx (from a
+                    # component timeseries) is tz-aware, or vice versa.
                     self.net.load.loc[self.net.load.name == name, 'p_mw'] = (
-                        baseload[
-                            str(
-                                self.net.load.loc[
-                                    self.net.load.name == name, 'bus'
-                                ].item()
-                            )
-                        ][idx]
+                        bus_series[align_timestamp_tz(idx, bus_series.index.tz)]
                         / 1000000
                     )
                     self.net.load.loc[self.net.load.name == name, 'q_mvar'] = 0
