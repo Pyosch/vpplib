@@ -34,3 +34,25 @@ def test_prepare_time_series_returns_dataframe():
     assert isinstance(result, pd.DataFrame)
     assert isinstance(hr.timeseries, pd.DataFrame)
     assert not hr.timeseries.empty
+
+
+def test_prepare_time_series_handles_tz_aware_demand():
+    """tz audit: slicing a tz-aware timeseries_year with tz-naive env bounds
+    must not raise 'Cannot compare tz-naive and tz-aware datetime-like objects'."""
+    env = Environment(
+        timebase=15, start="2020-01-01 00:00:00", end="2020-01-01 06:00:00",
+        time_freq="15 min", surpress_output_globally=True,
+    )
+    # DWD-derived demand profiles are tz-aware while env.start/end may be naive.
+    idx = pd.date_range(
+        "2020-01-01 00:00:00", "2020-01-01 06:00:00", freq="15min", tz="Europe/Berlin"
+    )
+    demand = pd.DataFrame({"thermal_energy_demand": [1.0] * len(idx)}, index=idx)
+    hr = HeatingRod(
+        identifier="hr", unit="kW", environment=env, thermal_energy_demand=demand,
+        el_power=3, rampUpTime=1, rampDownTime=1, min_runtime=1, min_stop_time=2,
+        efficiency=0.95,
+    )
+    result = hr.prepare_time_series()  # must not raise
+    assert isinstance(result, pd.DataFrame)
+    assert not result.empty

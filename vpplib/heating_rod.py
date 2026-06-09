@@ -17,7 +17,7 @@ Key features:
 import datetime
 
 import pandas as pd
-from .component import Component
+from .component import Component, align_timestamp_tz
 
 class HeatingRod(Component):
     """
@@ -233,7 +233,11 @@ class HeatingRod(Component):
         if pd.isna(next(iter(self.timeseries_year.heat_output))) == True:
             self.get_timeseries_year()
         
-        self.timeseries = self.timeseries_year.loc[self.environment.start:self.environment.end]
+        index_tz = self.timeseries_year.index.tz
+        self.timeseries = self.timeseries_year.loc[
+            align_timestamp_tz(self.environment.start, index_tz):
+            align_timestamp_tz(self.environment.end, index_tz)
+        ]
 
         return self.timeseries
 

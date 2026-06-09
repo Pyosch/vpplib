@@ -13,7 +13,7 @@ import datetime
 
 import pandas as pd
 
-from .component import Component
+from .component import Component, align_timestamp_tz
 
 
 # windpowerlib imports
@@ -260,11 +260,13 @@ class WindPower(Component):
             ).run_model(self.environment.wind_data)
 
         else:
+            index_tz = self.environment.wind_data.index.tz
             self.ModelChain = ModelChain(
                 self.wind_turbine, **modelchain_data
             ).run_model(
                 self.environment.wind_data[
-                    self.environment.start : self.environment.end
+                    align_timestamp_tz(self.environment.start, index_tz):
+                    align_timestamp_tz(self.environment.end, index_tz)
                 ]
             )
 
