@@ -419,18 +419,18 @@ class HeatingRod(Component):
         ValueError
             If the timestamp is not of a supported type.
             
-        Notes
-        -----
-        This method updates the isRunning attribute based on the check result.
+        Returns
+        -------
+        bool
+            True if the minimum stop time has elapsed since the last ramp down.
         """
         if isinstance(timestamp, int):
-            self.isRunning = timestamp - self.lastRampDown > self.min_stop_time
-        else:
-            timestamp = self._normalize_timestamp(timestamp)
-            self.isRunning = (
-                self.lastRampDown + self.min_stop_time * self.timeseries.index.freq
-                < timestamp
-            )
+            return timestamp - self.lastRampDown > self.min_stop_time
+        timestamp = self._normalize_timestamp(timestamp)
+        return (
+            self.lastRampDown + self.min_stop_time * self.timeseries.index.freq
+            < timestamp
+        )
 
     def isLegitRampDown(self, timestamp):
         """
@@ -448,19 +448,19 @@ class HeatingRod(Component):
         ValueError
             If the timestamp is not of a supported type.
             
-        Notes
-        -----
-        This method updates the isRunning attribute based on the check result.
+        Returns
+        -------
+        bool
+            True if the minimum runtime has elapsed since the last ramp up.
         """
         if isinstance(timestamp, int):
-            self.isRunning = not (timestamp - self.lastRampUp > self.min_runtime)
-        else:
-            timestamp = self._normalize_timestamp(timestamp)
-            self.isRunning = not (
-                self.lastRampUp + self.min_runtime * self.timeseries.index.freq
-                < timestamp
-            )
-        
+            return timestamp - self.lastRampUp > self.min_runtime
+        timestamp = self._normalize_timestamp(timestamp)
+        return (
+            self.lastRampUp + self.min_runtime * self.timeseries.index.freq
+            < timestamp
+        )
+
     def rampUp(self, timestamp):
         """
         Attempt to ramp up the heating rod at the given timestamp.
@@ -479,12 +479,13 @@ class HeatingRod(Component):
         """
         if self.isRunning:
             return None
-        else:
-            if self.isLegitRampUp(timestamp):
-                self.isRunning = True
-                return True
-            else: 
-                return False
+        if self.isLegitRampUp(timestamp):
+            self.isRunning = True
+            if not isinstance(timestamp, int):
+                timestamp = self._normalize_timestamp(timestamp)
+            self.lastRampUp = timestamp
+            return True
+        return False
 
 
     def rampDown(self, timestamp):
@@ -505,9 +506,10 @@ class HeatingRod(Component):
         """
         if not self.isRunning:
             return None
-        else:
-            if self.isLegitRampDown(timestamp):
-                self.isRunning = False
-                return True
-            else: 
-                return False
+        if self.isLegitRampDown(timestamp):
+            self.isRunning = False
+            if not isinstance(timestamp, int):
+                timestamp = self._normalize_timestamp(timestamp)
+            self.lastRampDown = timestamp
+            return True
+        return False

@@ -436,10 +436,10 @@ class HeatPump(Component):
             
         Returns
         -------
-        None
-            Updates the `is_running` attribute of the instance based on whether the minimum stop time has elapsed
-            since the last ramp down.
-            
+        bool
+            True if the minimum stop time has elapsed since the last ramp down
+            (i.e. the heat pump may be switched on), otherwise False.
+
         Raises
         ------
         ValueError
@@ -454,13 +454,12 @@ class HeatPump(Component):
         """
 
         if isinstance(timestamp, int):
-            self.is_running = timestamp - self.last_ramp_down > self.min_stop_time
-        else:
-            timestamp = self._normalize_timestamp(timestamp)
-            self.is_running = (
-                self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
-                < timestamp
-            )
+            return timestamp - self.last_ramp_down > self.min_stop_time
+        timestamp = self._normalize_timestamp(timestamp)
+        return (
+            self.last_ramp_down + self.min_stop_time * self.timeseries.index.freq
+            < timestamp
+        )
 
     def is_valid_ramp_down(self, timestamp):
         """
@@ -473,26 +472,27 @@ class HeatPump(Component):
             
         Returns
         -------
-        None
-        
+        bool
+            True if the minimum runtime has elapsed since the last ramp up
+            (i.e. the heat pump may be switched off), otherwise False.
+
         Raises
         ------
         ValueError
             If `timestamp` is not of type int or pandas._libs.tslibs.timestamps.Timestamp.
-            
+
         Notes
         -----
-        This method updates the `is_running` attribute based on whether the minimum runtime has elapsed since the last ramp up.
+        This predicate has no side effects; ``ramp_down`` updates the state.
         """
 
         if isinstance(timestamp, int):
-            self.is_running = not (timestamp - self.last_ramp_up > self.min_runtime)
-        else:
-            timestamp = self._normalize_timestamp(timestamp)
-            self.is_running = not (
-                self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
-                < timestamp
-            )
+            return timestamp - self.last_ramp_up > self.min_runtime
+        timestamp = self._normalize_timestamp(timestamp)
+        return (
+            self.last_ramp_up + self.min_runtime * self.timeseries.index.freq
+            < timestamp
+        )
 
     def ramp_up(self, timestamp):
         """
@@ -519,12 +519,13 @@ class HeatPump(Component):
 
         if self.is_running:
             return None
-        else:
-            if self.is_valid_ramp_up(timestamp):
-                self.is_running = True
-                return True
-            else:
-                return False
+        if self.is_valid_ramp_up(timestamp):
+            self.is_running = True
+            if not isinstance(timestamp, int):
+                timestamp = self._normalize_timestamp(timestamp)
+            self.last_ramp_up = timestamp
+            return True
+        return False
 
     def ramp_down(self, timestamp):
         """
@@ -546,9 +547,10 @@ class HeatPump(Component):
 
         if not self.is_running:
             return None
-        else:
-            if self.is_valid_ramp_down(timestamp):
-                self.is_running = False
-                return True
-            else:
-                return False
+        if self.is_valid_ramp_down(timestamp):
+            self.is_running = False
+            if not isinstance(timestamp, int):
+                timestamp = self._normalize_timestamp(timestamp)
+            self.last_ramp_down = timestamp
+            return True
+        return False
